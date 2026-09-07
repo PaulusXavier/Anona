@@ -268,7 +268,7 @@
 
       <div class="tool-step" data-step="3">
         <h3><i data-lucide="repeat" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Famílias Recorrentes</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado — e com <strong>uma aba por técnico</strong>, para cada um ver rapidinho quais das famílias dele retornaram.</p>
+        <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado — e com <strong>uma aba por técnico</strong> (só quem ficou com o mesmo técnico nos dois meses) e uma aba separada <strong>"Mudaram de técnico"</strong> para quem trocou de mão na divisão.</p>
         <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2 text-center" style="border-color:var(--verde); color:var(--verde)">
           <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
           <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
@@ -1185,11 +1185,19 @@
     const dataRows = linhas.map(linhaParaArray);
 
     // Agrupa as famílias recorrentes por técnico ATUAL (quem está com a
-    // família agora, no mês atual) — cada técnico ganha sua própria aba,
-    // só com as famílias dele, para saber rapidamente quais retornaram.
+    // família agora, no mês atual) — cada técnico ganha sua própria aba, só
+    // com as famílias dele. As famílias que mudaram de técnico de um mês
+    // para o outro (comum quando a divisão do Território Volante é refeita
+    // e as faixas alfabéticas mudam) NÃO entram na aba de nenhum técnico —
+    // vão para uma aba separada "Mudaram de técnico", com os dois nomes.
     const NAO_IDENTIFICADO = 'Não identificado';
+    const mudouDeTecnico = l => l.tecnicoAnterior && l.tecnicoAtual
+      && normalizeText(l.tecnicoAnterior) !== normalizeText(l.tecnicoAtual);
+    const linhasMudaram = linhas.filter(mudouDeTecnico);
+    const linhasMesmoTecnico = linhas.filter(l => !mudouDeTecnico(l));
+
     const porTecnico = new Map();
-    linhas.forEach(l => {
+    linhasMesmoTecnico.forEach(l => {
       const tecnico = l.tecnicoAtual || l.tecnicoAnterior || NAO_IDENTIFICADO;
       if (!porTecnico.has(tecnico)) porTecnico.set(tecnico, []);
       porTecnico.get(tecnico).push(l);
@@ -1212,8 +1220,9 @@
       ['Mês anterior', mesAnterior],
       ['Mês atual', mesAtual],
       ['Famílias que se repetem nos dois meses', linhas.length],
+      ['Famílias que mudaram de técnico entre os dois meses', linhasMudaram.length],
       [],
-      ['Famílias recorrentes por técnico (mês atual)']
+      ['Famílias recorrentes por técnico (mesmo técnico nos dois meses)']
     ];
     tecnicosOrdenados.forEach(t => resumo.push([t, porTecnico.get(t).length]));
     XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(resumo), safeSheetName('Resumo', used));
@@ -1225,12 +1234,23 @@
       abasTecnico.set(t, nomeAba);
       XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet([header, ...linhasTecnico]), nomeAba);
     });
+    const ABA_MUDARAM = 'Mudaram de técnico';
+    if (linhasMudaram.length) {
+      const headerMudaram = [...header, 'Mudança de técnico'];
+      const linhaParaArrayMudanca = l => [
+        ...linhaParaArray(l),
+        `${l.tecnicoAnterior} (${mesAnterior}) → ${l.tecnicoAtual} (${mesAtual})`
+      ];
+      const linhasMudaramOrdenadas = [...linhasMudaram].sort((x,y) => x.nome.localeCompare(y.nome, 'pt-BR', {sensitivity:'base'}));
+      XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet([headerMudaram, ...linhasMudaramOrdenadas.map(linhaParaArrayMudanca)]), safeSheetName(ABA_MUDARAM, used));
+    }
 
     // Mesma paleta de cores usada na divisão do Território Volante, para
     // manter a identidade visual de cada técnico entre as duas planilhas.
     const coresTecnico = { 'Paulo Xavier': '0B2F7A', 'Danilo Braga': '159947', 'Keomara Teles': 'DB2777' };
     const corPorAba = name => {
       if (name === 'Resumo' || name === 'Todas as famílias') return 'B45309';
+      if (name === ABA_MUDARAM) return '9333EA';
       const tecnico = [...abasTecnico.entries()].find(([, aba]) => aba === name)?.[0];
       return coresTecnico[tecnico] || (tecnico === NAO_IDENTIFICADO ? '6B7280' : '0F766E');
     };
@@ -1294,7 +1314,8 @@
     link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + btoa(binary);
     link.download = nomeArquivo;
     document.body.appendChild(link); link.click(); link.remove();
-    alert(`Relatório gerado e baixado com sucesso: ${nomeArquivo} (${linhas.length} família(s) recorrente(s), em ${tecnicosOrdenados.length} aba(s) de técnico)`);
+    const mensagemMudaram = linhasMudaram.length ? `, ${linhasMudaram.length} mudaram de técnico` : '';
+    alert(`Relatório gerado e baixado com sucesso: ${nomeArquivo} (${linhas.length} família(s) recorrente(s), em ${tecnicosOrdenados.length} aba(s) de técnico${mensagemMudaram})`);
   }
 
   window.__comparacaoVolante = { anterior: null, atual: null };
