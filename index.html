@@ -16,22 +16,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --azul:#0B2F7A;
-    --azul-deep:#061D52;
-    --amarelo:#FFCC29;
+    --azul:#0D2E63;
+    --azul-deep:#071A3D;
+    --amarelo:#D89B32;
+    --amarelo-soft:#F3D9A3;
     --amarelo-text:#6B4E00;
-    --verde:#159947;
-    --paper:#EEF3F0;
-    --ink:#12203F;
-    --line:rgba(11,47,122,.14);
-    --line-soft:rgba(11,47,122,.08);
+    --verde:#146B47;
+    --verde-soft:#DCEFE1;
+    --azul-soft:#E3E9F5;
+    --paper:#F2EEE3;
+    --card:#FFFDF8;
+    --ink:#1D2333;
+    --line:rgba(13,46,99,.16);
+    --line-soft:rgba(13,46,99,.09);
+    --radius-doc:.65rem;
+    --radius-focus:1.4rem;
   }
   body{
     font-family:'Inter',sans-serif;
     color:var(--ink);
     background-color:var(--paper);
     background-image:
-      radial-gradient(circle at 1px 1px, rgba(11,47,122,.06) 1px, transparent 0);
+      radial-gradient(circle at 1px 1px, rgba(13,46,99,.07) 1px, transparent 0);
     background-size:22px 22px;
     position:relative;
   }
@@ -52,13 +58,38 @@
     opacity:.07;
   }
   .display{ font-family:'Fraunces',serif; font-optical-sizing:auto; letter-spacing:-.01em; }
-  .flag-ribbon{ height:5px; background:linear-gradient(90deg, var(--verde) 0 33%, var(--amarelo) 33% 66%, var(--azul) 66% 100%); }
+  .flag-ribbon{ height:4px; background:linear-gradient(90deg, var(--verde) 0 33%, var(--amarelo) 33% 66%, var(--azul) 66% 100%); }
 
-  /* ---------- cartões: dois registros deliberados ---------- */
-  .panel{ background:#fff; border:1px solid var(--line); border-radius:1.25rem; }
-  .panel-tool{ background:#fff; border:1px solid var(--line); border-radius:1.1rem; }
+  /* ---------- cartões: dois registros deliberados ----------
+     .panel  = o "documento principal" (calendário, dia selecionado): branco
+     puro, cantos mais generosos, sombra quase imperceptível — é onde o olho
+     deve pousar primeiro.
+     .panel-tool = os "formulários" da lateral (upload de planilha, NIS,
+     exportação): fundo levemente amarelado como papel, cantos mais retos,
+     sem sombra — para parecerem utilitários, não o conteúdo principal. */
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius-focus); box-shadow:0 1px 2px rgba(13,46,99,.05); }
+  .panel-tool{ background:linear-gradient(180deg,var(--card),#FAF6EC); border:1px solid var(--line); border-radius:var(--radius-doc); }
   .eyebrow{ font-family:'Fraunces',serif; font-weight:600; font-size:.95rem; color:var(--ink); display:flex; align-items:center; gap:.55rem; }
-  .eyebrow .chip{ width:1.9rem; height:1.9rem; border-radius:.6rem; display:flex; align-items:center; justify-content:center; background:#EEF1FB; flex-shrink:0; }
+  .eyebrow .chip{ width:1.9rem; height:1.9rem; border-radius:.55rem; display:flex; align-items:center; justify-content:center; background:var(--verde-soft); flex-shrink:0; }
+
+  /* ---------- ferramentas de planilha: um "carnê" de 4 passos ----------
+     As quatro etapas do fluxo mensal (guardar a planilha do MDS, dividir
+     por técnico, comparar recorrentes, gerar o PDF individual) viram
+     canhotos numerados dentro de um único cartão, separados por um
+     tracejado — como as folhas destacáveis de um carnê — em vez de quatro
+     cartões repetidos. */
+  .tool-step{ position:relative; padding:1rem 0 1rem 2.35rem; border-top:1px dashed var(--line); }
+  .tool-step:first-child{ border-top:none; padding-top:.15rem; }
+  .tool-step:first-child::before{ top:.25rem; }
+  .tool-step::before{
+    content:attr(data-step);
+    position:absolute; left:0; top:1.15rem;
+    width:1.55rem; height:1.55rem; border-radius:50%;
+    background:var(--verde); color:#fff;
+    font-family:'Fraunces',serif; font-weight:600; font-size:.78rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tool-step h3{ font-family:'Fraunces',serif; font-weight:600; font-size:.92rem; color:var(--ink); margin-bottom:.4rem; display:flex; align-items:center; gap:.4rem; }
 
   /* ---------- calendário ---------- */
   .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--line-soft); border:1px solid var(--line-soft); }
@@ -70,8 +101,8 @@
   .day-cell.payday::before{
     content:"";
     position:absolute; top:5px; right:5px; width:15px; height:15px; border-radius:50%;
-    background:radial-gradient(circle at 32% 28%, #FFE9A8, var(--amarelo) 62%, #C9971A 100%);
-    box-shadow:0 0 0 2px rgba(255,204,41,.22);
+    background:radial-gradient(circle at 32% 28%, var(--amarelo-soft), var(--amarelo) 62%, #A9781F 100%);
+    box-shadow:0 0 0 2px rgba(216,155,50,.28);
     pointer-events:none;
   }
   .badge{ font-size:9.5px; font-weight:700; letter-spacing:.02em; padding:2px 7px; border-radius:99px; }
@@ -110,7 +141,7 @@
 <div id="lockScreen" class="fixed inset-0 z-[9999] flex items-center justify-center px-4" style="background:linear-gradient(165deg,var(--azul-deep),var(--azul) 65%,var(--azul-deep));">
   <div class="bg-white rounded-2xl shadow-xl p-7 w-full max-w-sm text-center relative overflow-hidden">
     <div class="flag-ribbon absolute top-0 left-0 right-0"></div>
-    <div class="mx-auto mb-4 mt-2 w-12 h-12 rounded-xl flex items-center justify-center" style="background:#EEF1FB;">
+    <div class="mx-auto mb-4 mt-2 w-12 h-12 rounded-xl flex items-center justify-center" style="background:var(--azul-soft);">
       <i data-lucide="lock" class="w-6 h-6" style="color:var(--azul)"></i>
     </div>
     <h1 class="display font-bold text-xl mb-1">Anona</h1>
@@ -187,78 +218,77 @@
       <div class="id-card-strip"></div>
       <div class="p-5">
         <h2 class="eyebrow mb-3">
-          <span class="chip"><i data-lucide="credit-card" class="w-4 h-4" style="color:var(--azul)"></i></span> Seu NIS
+          <span class="chip" style="background:var(--amarelo-soft)"><i data-lucide="credit-card" class="w-4 h-4" style="color:var(--amarelo-text)"></i></span> Seu NIS
         </h2>
         <p class="text-xs text-slate-500 mb-3">Digite o <strong>último dígito</strong> do seu NIS para destacar seu dia de pagamento no calendário.</p>
         <input id="nisInput" maxlength="1" inputmode="numeric" placeholder="Ex: 7"
-          class="display w-full text-center text-3xl font-semibold tracking-widest border-2 rounded-xl py-2 focus:outline-none focus:ring-2" style="border-color:var(--azul); color:var(--azul); --tw-ring-color:var(--azul)">
+          class="display w-full text-center text-3xl font-semibold tracking-widest border-2 rounded-xl py-2 focus:outline-none focus:ring-2" style="border-color:var(--amarelo); color:var(--amarelo-text); --tw-ring-color:var(--amarelo)">
       </div>
     </div>
 
     <div class="panel-tool p-5">
-      <h2 class="eyebrow mb-3">
-        <span class="chip"><i data-lucide="file-spreadsheet" class="w-4 h-4" style="color:var(--azul)"></i></span> Repercussão de Condicionalidades
+      <h2 class="eyebrow mb-1">
+        <span class="chip"><i data-lucide="folder-kanban" class="w-4 h-4" style="color:var(--verde)"></i></span> Planilhas do Território Volante
       </h2>
-      <p class="text-xs text-slate-500 mb-3">Guarde aqui a planilha que o MDS manda todo mês ímpar. Fica sincronizada na nuvem (se você estiver logado) e você baixa de novo quando precisar.</p>
-      <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-3" style="border-color:var(--azul); color:var(--azul)">
-        <i data-lucide="upload" class="w-4 h-4"></i> Enviar planilha (.xlsx)
-        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleReportUpload(this)">
-      </label>
-      <select id="reportAnoFilter" onchange="renderReports()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold mb-3 focus:outline-none focus:ring-2" style="--tw-ring-color:var(--azul)">
-        <option value="all">Todos os anos</option>
-      </select>
-      <div class="border-t border-slate-100 pt-3 mt-1 space-y-2">
-        <label class="text-[11px] font-semibold text-slate-500">Filtrar planilha por bairro</label>
-        <select id="reportFileFilter" onchange="loadReportFilterOptions()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--azul)">
-          <option value="">Escolha uma planilha</option>
+      <p class="text-xs text-slate-500 mb-1">O fluxo mensal, do recebimento da planilha do MDS ao relatório final — na ordem em que você normalmente usa.</p>
+
+      <div class="tool-step" data-step="1">
+        <h3><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Repercussão de Condicionalidades</h3>
+        <p class="text-xs text-slate-500 mb-3">Guarde aqui a planilha que o MDS manda todo mês ímpar. Fica sincronizada na nuvem (se você estiver logado) e você baixa de novo quando precisar.</p>
+        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-3" style="border-color:var(--verde); color:var(--verde)">
+          <i data-lucide="upload" class="w-4 h-4"></i> Enviar planilha (.xlsx)
+          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleReportUpload(this)">
+        </label>
+        <select id="reportAnoFilter" onchange="renderReports()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold mb-3 focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+          <option value="all">Todos os anos</option>
         </select>
-        <select id="reportBairroFilter" multiple size="5" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2" style="--tw-ring-color:var(--azul)" disabled></select>
-        <p class="text-[10px] text-slate-400">Use Ctrl (Windows) ou Command (Mac) para selecionar vários bairros. Sem seleção, baixa todos.</p>
-        <button onclick="downloadFilteredReport()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
-          <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar planilha filtrada
-        </button>
+        <div class="border-t border-slate-100 pt-3 mt-1 space-y-2">
+          <label class="text-[11px] font-semibold text-slate-500">Filtrar planilha por bairro</label>
+          <select id="reportFileFilter" onchange="loadReportFilterOptions()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+            <option value="">Escolha uma planilha</option>
+          </select>
+          <select id="reportBairroFilter" multiple size="5" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)" disabled></select>
+          <p class="text-[10px] text-slate-400">Use Ctrl (Windows) ou Command (Mac) para selecionar vários bairros. Sem seleção, baixa todos.</p>
+          <button onclick="downloadFilteredReport()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--verde)">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar planilha filtrada
+          </button>
+        </div>
+        <div id="reportsList" class="space-y-2"></div>
       </div>
-      <div id="reportsList" class="space-y-2"></div>
-    </div>
 
-    <div class="panel-tool p-5">
-      <h2 class="eyebrow mb-3">
-        <span class="chip"><i data-lucide="users" class="w-4 h-4" style="color:var(--azul)"></i></span> Território Volante — Divisão por técnico
-      </h2>
-      <p class="text-xs text-slate-500 mb-3">Envie aqui a tabela de condicionalidades só do Território Volante. O app ordena as famílias de A a Z e divide em três partes iguais: a primeira parte para o <strong>Paulo Xavier</strong>, a segunda para o <strong>Danilo Braga</strong> e a terceira para a <strong>Keomara Teles</strong>.</p>
-      <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--azul); color:var(--azul)">
-        <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
-        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
-      </label>
-      <p class="text-[10px] text-slate-400 mt-2">Gera e baixa na hora uma planilha com 3 abas: <strong>Paulo Xavier</strong> (Psicólogo), <strong>Danilo Braga</strong> (Psicólogo) e <strong>Keomara Teles</strong> (Assistente Social) — nada é guardado na nuvem, o arquivo original não é alterado.</p>
-    </div>
+      <div class="tool-step" data-step="2">
+        <h3><i data-lucide="users" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Divisão por técnico</h3>
+        <p class="text-xs text-slate-500 mb-3">Envie aqui a tabela de condicionalidades só do Território Volante. O app ordena as famílias de A a Z e divide em três partes iguais: a primeira parte para o <strong>Paulo Xavier</strong>, a segunda para o <strong>Danilo Braga</strong> e a terceira para a <strong>Keomara Teles</strong>.</p>
+        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
+          <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
+          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
+        </label>
+        <p class="text-[10px] text-slate-400 mt-2">Gera e baixa na hora uma planilha com 3 abas: <strong>Paulo Xavier</strong> (Psicólogo), <strong>Danilo Braga</strong> (Psicólogo) e <strong>Keomara Teles</strong> (Assistente Social) — nada é guardado na nuvem, o arquivo original não é alterado.</p>
+      </div>
 
-    <div class="panel-tool p-5">
-      <h2 class="eyebrow mb-3">
-        <span class="chip"><i data-lucide="repeat" class="w-4 h-4" style="color:var(--azul)"></i></span> Famílias Recorrentes — Comparar Repercussões
-      </h2>
-      <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado — e com <strong>uma aba por técnico</strong>, para cada um ver rapidinho quais das famílias dele retornaram.</p>
-      <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2 text-center" style="border-color:var(--azul); color:var(--azul)">
-        <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
-        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
-      </label>
-      <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 text-center" style="border-color:var(--azul); color:var(--azul)">
-        <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAtualLabel">Planilha do mês atual</span>
-        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'atual')">
-      </label>
-      <p class="text-[10px] text-slate-400 mt-2">Assim que os dois arquivos forem enviados, a comparação é gerada e baixada automaticamente. Nada é guardado — os arquivos originais não são alterados.</p>
-    </div>
+      <div class="tool-step" data-step="3">
+        <h3><i data-lucide="repeat" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Famílias Recorrentes</h3>
+        <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado — e com <strong>uma aba por técnico</strong>, para cada um ver rapidinho quais das famílias dele retornaram.</p>
+        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2 text-center" style="border-color:var(--verde); color:var(--verde)">
+          <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
+          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
+        </label>
+        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 text-center" style="border-color:var(--verde); color:var(--verde)">
+          <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAtualLabel">Planilha do mês atual</span>
+          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'atual')">
+        </label>
+        <p class="text-[10px] text-slate-400 mt-2">Assim que os dois arquivos forem enviados, a comparação é gerada e baixada automaticamente. Nada é guardado — os arquivos originais não são alterados.</p>
+      </div>
 
-    <div class="panel-tool p-5">
-      <h2 class="eyebrow mb-3">
-        <span class="chip"><i data-lucide="file-text" class="w-4 h-4" style="color:var(--azul)"></i></span> Relatório de Repercussão Individual
-      </h2>
-      <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros e um gráfico da quantidade de efeitos.</p>
-      <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--azul); color:var(--azul)">
-        <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
-        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
-      </label>
-      <p class="text-[10px] text-slate-400 mt-2">Todas as colunas ficam numa página só (na horizontal); as linhas continuam nas páginas seguintes. Nada é guardado — o arquivo original não é alterado.</p>
+      <div class="tool-step" data-step="4">
+        <h3><i data-lucide="file-text" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatório Individual</h3>
+        <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros e um gráfico da quantidade de efeitos.</p>
+        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
+          <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
+          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
+        </label>
+        <p class="text-[10px] text-slate-400 mt-2">Todas as colunas ficam numa página só (na horizontal); as linhas continuam nas páginas seguintes. Nada é guardado — o arquivo original não é alterado.</p>
+      </div>
     </div>
 
     <div class="panel-tool p-5">
@@ -306,7 +336,7 @@
 
       <div class="passbook-section">
         <h3 class="passbook-label">Atendimento</h3>
-        <div class="flex justify-between gap-2 text-sm font-bold rounded-xl px-3 py-2.5" style="background:rgba(255,204,41,.14); color:var(--amarelo)">
+        <div class="flex justify-between gap-2 text-sm font-bold rounded-xl px-3 py-2.5" style="background:rgba(216,155,50,.18); color:var(--amarelo)">
           <span>Disque Social (MDS): 121</span>
           <span>Caixa: 111</span>
         </div>
@@ -380,7 +410,7 @@
       <i data-lucide="x" class="w-5 h-5"></i>
     </button>
 
-    <div class="mx-auto mb-3 w-12 h-12 rounded-xl flex items-center justify-center" style="background:#EEF1FB;">
+    <div class="mx-auto mb-3 w-12 h-12 rounded-xl flex items-center justify-center" style="background:var(--azul-soft);">
       <i data-lucide="cloud" class="w-6 h-6" style="color:var(--azul)"></i>
     </div>
     <h3 id="authModalTitle" class="display font-semibold text-xl mb-1 text-center">Sincronizar suas notas</h3>
@@ -2281,7 +2311,7 @@ function render(){
   let summaryHtml = '';
   if (payday) {
     summaryHtml += `<div class="border-l-2 pl-3" style="border-color:var(--amarelo)">
-      <span class="badge" style="background:#FFE9A8;color:var(--amarelo-text);">Seu pagamento</span>
+      <span class="badge" style="background:var(--amarelo-soft);color:var(--amarelo-text);">Seu pagamento</span>
       <h4 class="text-[11px] font-bold text-slate-800">Dia ${payday}</h4>
       <p class="text-[10px] text-slate-500 mt-1">Data prevista para NIS final ${document.getElementById('nisInput').value}.</p>
     </div>`;
