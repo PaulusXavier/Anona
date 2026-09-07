@@ -849,6 +849,27 @@
     }
     if (!header || !dataRows.length) throw new Error('Não encontrei dados na tabela enviada.');
 
+    // Procura o mês/período de repercussão em qualquer célula de qualquer aba
+    // do arquivo enviado (ex.: "Período da Repercussão: Ago/Set-26"), tanto no
+    // relatório bruto do MDS quanto na aba "Resumo do território" que o
+    // próprio app gera.
+    let mesRepercussao = '';
+    for (const sheetName of wb.SheetNames) {
+      const rowsBusca = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
+      for (const row of rowsBusca) {
+        for (const cell of row) {
+          const text = String(cell || '').trim();
+          if (!text) continue;
+          if (/per[íi]odo da repercuss[ãa]o/i.test(text) || /^m[êe]s de repercuss[ãa]o/i.test(text)) {
+            mesRepercussao = text.replace(/^[^:]*:\s*/, '').trim() || text;
+            break;
+          }
+        }
+        if (mesRepercussao) break;
+      }
+      if (mesRepercussao) break;
+    }
+
     // Descobre qual coluna tem o NOME da família/responsável para ordenar de A a Z.
     // Importante: procurar "nome" PRIMEIRO — senão colunas como "NIS do
     // Responsável Familiar" (que também contém "responsável"+"familiar",
@@ -882,10 +903,10 @@
     const used = new Set();
     const primeiraLetra = v => { const t = String(v || '').trim(); return t ? t.charAt(0).toUpperCase() : '—'; };
 
-    const summary = [['Técnico responsável','Formação','Nº de famílias','Faixa alfabética']];
+    const summary = [['Técnico responsável','Formação','Nº de famílias','Faixa alfabética (A a Z)','Mês de Repercussão']];
     profissionais.forEach(p => {
       const faixa = p.rows.length ? `${primeiraLetra(p.rows[0][nameIdx])} a ${primeiraLetra(p.rows[p.rows.length-1][nameIdx])}` : '—';
-      summary.push([p.nome, p.formacao, p.rows.length, faixa]);
+      summary.push([p.nome, p.formacao, p.rows.length, faixa, mesRepercussao || 'Não identificado no arquivo enviado']);
     });
     XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(summary), safeSheetName('Resumo da divisão', used));
     profissionais.forEach(p => {
