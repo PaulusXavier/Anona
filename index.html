@@ -564,7 +564,10 @@
     }
   };
 
-  window.doLogout = async () => { await signOut(auth); };
+  window.doLogout = async () => {
+    try { await signOut(auth); }
+    catch (e) { console.warn('Não consegui sair da conta agora:', e); }
+  };
 
   function showAuthError(e) {
     const map = {
@@ -605,8 +608,13 @@
 
   async function loadNotesFromCloud() {
     if (!currentUser) return;
-    const snap = await getDoc(doc(db, 'users', currentUser.uid));
-    notes = migrateNotes(snap.exists() && snap.data().notes ? snap.data().notes : {});
+    try {
+      const snap = await getDoc(doc(db, 'users', currentUser.uid));
+      notes = migrateNotes(snap.exists() && snap.data().notes ? snap.data().notes : {});
+    } catch (e) {
+      console.warn('Não consegui buscar as notas na nuvem agora, usando a cópia deste aparelho:', e);
+      notes = migrateNotes(JSON.parse(localStorage.getItem('pbf_notes_local') || '{}'));
+    }
     render();
   }
 
@@ -634,8 +642,13 @@
 
   async function loadReports() {
     // Planilhas ficam somente neste navegador; não são enviadas para a nuvem.
-    reports = JSON.parse(localStorage.getItem('pbf_repercussao_local') || '[]')
-      .filter(r => r && r.dataBase64 && r.dataBase64.length > 100);
+    try {
+      reports = JSON.parse(localStorage.getItem('pbf_repercussao_local') || '[]')
+        .filter(r => r && r.dataBase64 && r.dataBase64.length > 100);
+    } catch (e) {
+      console.warn('Não consegui ler as planilhas guardadas neste aparelho (dado corrompido?):', e);
+      reports = [];
+    }
     localStorage.setItem('pbf_repercussao_local', JSON.stringify(reports));
     renderReports();
   }
@@ -1218,6 +1231,7 @@
       if (window.__comparacaoVolante.anterior && window.__comparacaoVolante.atual) {
         gerarComparacaoFamiliasRecorrentes(window.__comparacaoVolante.anterior, window.__comparacaoVolante.atual);
       }
+      input.value = '';
     } catch (e) {
       console.error(e);
       alert('Não consegui ler esta planilha. Confirme se ela tem as colunas do relatório de condicionalidades (Efeito, NIS do Responsável Familiar etc.).');
@@ -1830,23 +1844,23 @@
       input.value = '';
       return;
     }
-    const originalBase64 = await fileToBase64(file);
-    const filenameGuess = guessMesAno(file.name);
-    const workbookGuess = guessMesAnoFromWorkbook(originalBase64);
-    let autoGuess = (workbookGuess.mes !== null && workbookGuess.ano !== null) ? workbookGuess : filenameGuess;
-    if (autoGuess.mes === null || autoGuess.ano === null) {
-      const dateInName = file.name.match(/(\d{2})(\d{2})(20\d{2})/);
-      if (dateInName) autoGuess = { mes: parseInt(dateInName[2], 10) - 1, ano: parseInt(dateInName[3], 10) };
-    }
-    if (autoGuess.mes === null || autoGuess.mes < 0 || autoGuess.mes > 11 || !autoGuess.ano) {
-      const now = new Date();
-      autoGuess = { mes: now.getMonth(), ano: now.getFullYear() };
-    }
-    const mes = autoGuess.mes;
-    const ano = autoGuess.ano;
-
     try {
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
+      const originalBase64 = await fileToBase64(file);
+      const filenameGuess = guessMesAno(file.name);
+      const workbookGuess = guessMesAnoFromWorkbook(originalBase64);
+      let autoGuess = (workbookGuess.mes !== null && workbookGuess.ano !== null) ? workbookGuess : filenameGuess;
+      if (autoGuess.mes === null || autoGuess.ano === null) {
+        const dateInName = file.name.match(/(\d{2})(\d{2})(20\d{2})/);
+        if (dateInName) autoGuess = { mes: parseInt(dateInName[2], 10) - 1, ano: parseInt(dateInName[3], 10) };
+      }
+      if (autoGuess.mes === null || autoGuess.mes < 0 || autoGuess.mes > 11 || !autoGuess.ano) {
+        const now = new Date();
+        autoGuess = { mes: now.getMonth(), ano: now.getFullYear() };
+      }
+      const mes = autoGuess.mes;
+      const ano = autoGuess.ano;
+
       const dataBase64 = makeCrasFormattedWorkbook(originalBase64);
       const nomeMes = MESES_NOMES[mes] || 'Mês';
       const nomeArquivo = `Repercussão ${nomeMes} de ${ano} (CRAS Cristiana).xlsx`;
@@ -2008,10 +2022,12 @@
 
   window.__persistNote = async (key, value) => {
     if (value && value.text) notes[key] = value; else delete notes[key];
+    // Sempre guarda uma cópia local, mesmo com usuário logado — assim a
+    // nota não se perde se a sincronização com a nuvem falhar (sem
+    // internet, sessão expirada, permissão negada, etc.).
+    localStorage.setItem('pbf_notes_local', JSON.stringify(notes));
     if (currentUser) {
       await setDoc(doc(db, 'users', currentUser.uid), { notes }, { merge: true });
-    } else {
-      localStorage.setItem('pbf_notes_local', JSON.stringify(notes));
     }
   };
 
@@ -2321,8 +2337,16 @@ async function saveNote(){
   const key = formatDate(selectedDay);
   const statusEl = document.getElementById('noteStatus');
   statusEl.innerText = 'Salvando…';
-  await window.__persistNote(key, val ? { text: val, emphasis } : null);
-  statusEl.innerText = 'Salvo ✓';
+  try {
+    await window.__persistNote(key, val ? { text: val, emphasis } : null);
+    statusEl.innerText = 'Salvo ✓';
+  } catch (e) {
+    console.error(e);
+    // A cópia local já foi gravada dentro de __persistNote antes da
+    // tentativa de sincronizar — então a nota não se perdeu, só não
+    // subiu para a nuvem ainda.
+    statusEl.innerText = 'Salvo neste aparelho (sem conseguir sincronizar agora)';
+  }
   render();
 }
 
