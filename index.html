@@ -237,7 +237,7 @@
       <h2 class="eyebrow mb-3">
         <span class="chip"><i data-lucide="repeat" class="w-4 h-4" style="color:var(--azul)"></i></span> Famílias Recorrentes — Comparar Repercussões
       </h2>
-      <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado.</p>
+      <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado — e com <strong>uma aba por técnico</strong>, para cada um ver rapidinho quais das famílias dele retornaram.</p>
       <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2 text-center" style="border-color:var(--azul); color:var(--azul)">
         <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
         <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
@@ -1062,8 +1062,16 @@
     const wb = XLSX.read(bytesFromBase64(base64), {type:'array'});
     const familias = new Map();
     let mes = '';
-    wb.SheetNames.forEach(sheetName => {
-      if (normalizeText(sheetName).includes('resumo')) return;
+    // Quando o arquivo enviado já vem dividido por técnico (uma aba por
+    // pessoa, como "Território Volante - Divisão por técnico" ou a planilha
+    // organizada por bairro/técnico), há mais de uma aba de dados — nesse
+    // caso o NOME DA ABA (ex.: "Paulo Xavier - Psicólogo" -> "Paulo Xavier")
+    // é a fonte confiável de quem é o técnico responsável, porque a coluna
+    // "Técnico/equipe" das planilhas do Território Volante só traz o valor
+    // genérico "Território Volante" / "Equipe volante" em todas as linhas.
+    const abasComDados = wb.SheetNames.filter(sn => !normalizeText(sn).includes('resumo'));
+    const dividioPorTecnico = abasComDados.length > 1;
+    abasComDados.forEach(sheetName => {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''})
         .filter(row => row.some(v => String(v).trim() !== ''));
       if (!rows.length) return;
@@ -1077,27 +1085,34 @@
       if (nomeIdx < 0) nomeIdx = headerNorm.findIndex(h => h.includes('nome') && h.includes('responsavel'));
       const bairroIdx = headerNorm.findIndex(h => h === 'bairro');
       const enderecoIdx = headerNorm.findIndex(h => h.includes('endereco'));
-      const tecnicoIdx = headerNorm.findIndex(h => h.includes('tecnico') && h.includes('equipe'));
+      const tecnicoColunaIdx = headerNorm.findIndex(h => h.includes('tecnico') && h.includes('equipe'));
       const integranteIdx = headerNorm.findIndex(h => h.includes('nome') && h.includes('integrante'));
       const mesIdx = headerNorm.findIndex(h => h.includes('mes') && h.includes('repercuss'));
+      const tecnicoDaAba = sheetName.split(' - ')[0].trim();
       rows.slice(1).forEach(row => {
         const nis = nisIdx >= 0 ? String(row[nisIdx] || '').trim() : '';
         const cpf = cpfIdx >= 0 ? String(row[cpfIdx] || '').trim() : '';
         const chave = nis || cpf;
         if (!chave) return;
         if (!mes && mesIdx >= 0 && String(row[mesIdx] || '').trim()) mes = String(row[mesIdx]).trim();
+        const tecnicoColuna = tecnicoColunaIdx >= 0 ? String(row[tecnicoColunaIdx] || '').trim() : '';
+        const tecnicoGenerico = /^(territ[oó]rio volante|equipe volante)$/i.test(tecnicoColuna);
+        // Prioridade: nome da aba (quando dividido por técnico) > valor da
+        // coluna "Técnico/equipe" (quando não é o rótulo genérico) > vazio.
+        const tecnico = dividioPorTecnico ? tecnicoDaAba : (tecnicoColuna && !tecnicoGenerico ? tecnicoColuna : '');
         if (!familias.has(chave)) {
           familias.set(chave, {
             nis: nis || '—', cpf: cpf || '—',
             nome: nomeIdx >= 0 ? String(row[nomeIdx] || '').trim() : '',
             bairro: bairroIdx >= 0 ? String(row[bairroIdx] || '').trim() : '',
             endereco: enderecoIdx >= 0 ? String(row[enderecoIdx] || '').trim() : '',
-            tecnico: tecnicoIdx >= 0 ? String(row[tecnicoIdx] || '').trim() : '',
+            tecnico: tecnico,
             integrantes: [], registros: 0
           });
         }
         const fam = familias.get(chave);
         fam.registros++;
+        if (!fam.tecnico && tecnico) fam.tecnico = tecnico;
         const integranteNome = integranteIdx >= 0 ? String(row[integranteIdx] || '').trim() : '';
         const efeito = String(row[efeitoIdx] || '').trim();
         if (integranteNome || efeito) fam.integrantes.push(`${integranteNome || '—'} (${efeito || '—'})`);
@@ -1132,40 +1147,82 @@
       `Técnico (${mesAnterior})`, `Integrantes com efeito (${mesAnterior})`, `Nº de registros (${mesAnterior})`,
       `Técnico (${mesAtual})`, `Integrantes com efeito (${mesAtual})`, `Nº de registros (${mesAtual})`
     ];
-    const dataRows = linhas.map(l => [
+    const linhaParaArray = l => [
       l.nome, l.nis, l.cpf, l.bairro, l.endereco,
       l.tecnicoAnterior, l.integrantesAnterior, l.registrosAnterior,
       l.tecnicoAtual, l.integrantesAtual, l.registrosAtual
-    ]);
+    ];
+    const dataRows = linhas.map(linhaParaArray);
+
+    // Agrupa as famílias recorrentes por técnico ATUAL (quem está com a
+    // família agora, no mês atual) — cada técnico ganha sua própria aba,
+    // só com as famílias dele, para saber rapidamente quais retornaram.
+    const NAO_IDENTIFICADO = 'Não identificado';
+    const porTecnico = new Map();
+    linhas.forEach(l => {
+      const tecnico = l.tecnicoAtual || l.tecnicoAnterior || NAO_IDENTIFICADO;
+      if (!porTecnico.has(tecnico)) porTecnico.set(tecnico, []);
+      porTecnico.get(tecnico).push(l);
+    });
+    // Ordem preferida para os técnicos conhecidos do Território Volante;
+    // qualquer outro nome (ex.: técnicos organizados por bairro) entra
+    // depois, em ordem alfabética, e "Não identificado" sempre por último.
+    const ordemConhecida = ['Paulo Xavier', 'Danilo Braga', 'Keomara Teles'];
+    const tecnicosOrdenados = [...porTecnico.keys()].sort((a, b) => {
+      if (a === NAO_IDENTIFICADO) return 1;
+      if (b === NAO_IDENTIFICADO) return -1;
+      const ia = ordemConhecida.indexOf(a), ib = ordemConhecida.indexOf(b);
+      if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return a.localeCompare(b, 'pt-BR', {sensitivity:'base'});
+    });
 
     const out = XLSX.utils.book_new();
     const used = new Set();
     const resumo = [
       ['Mês anterior', mesAnterior],
       ['Mês atual', mesAtual],
-      ['Famílias que se repetem nos dois meses', linhas.length]
+      ['Famílias que se repetem nos dois meses', linhas.length],
+      [],
+      ['Famílias recorrentes por técnico (mês atual)']
     ];
+    tecnicosOrdenados.forEach(t => resumo.push([t, porTecnico.get(t).length]));
     XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(resumo), safeSheetName('Resumo', used));
-    XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet([header, ...dataRows]), safeSheetName('Famílias recorrentes', used));
+    XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet([header, ...dataRows]), safeSheetName('Todas as famílias', used));
+    const abasTecnico = new Map(); // nome do técnico -> nome real da aba
+    tecnicosOrdenados.forEach(t => {
+      const linhasTecnico = porTecnico.get(t).map(linhaParaArray);
+      const nomeAba = safeSheetName(t, used);
+      abasTecnico.set(t, nomeAba);
+      XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet([header, ...linhasTecnico]), nomeAba);
+    });
+
+    // Mesma paleta de cores usada na divisão do Território Volante, para
+    // manter a identidade visual de cada técnico entre as duas planilhas.
+    const coresTecnico = { 'Paulo Xavier': '0B2F7A', 'Danilo Braga': '159947', 'Keomara Teles': 'DB2777' };
+    const corPorAba = name => {
+      if (name === 'Resumo' || name === 'Todas as famílias') return 'B45309';
+      const tecnico = [...abasTecnico.entries()].find(([, aba]) => aba === name)?.[0];
+      return coresTecnico[tecnico] || (tecnico === NAO_IDENTIFICADO ? '6B7280' : '0F766E');
+    };
 
     const bordaLeve = {
       top:{style:'thin',color:{rgb:'D9D9D9'}}, bottom:{style:'thin',color:{rgb:'D9D9D9'}},
       left:{style:'thin',color:{rgb:'D9D9D9'}}, right:{style:'thin',color:{rgb:'D9D9D9'}}
     };
-    const corPrincipal = 'B45309';
     out.SheetNames.forEach(name => {
       const ws = out.Sheets[name];
       const range = XLSX.utils.decode_range(ws['!ref']);
+      const corAba = corPorAba(name);
       const estiloCabecalho = {
         font:{name:'Arial', sz:12, bold:true, color:{rgb:'FFFFFF'}},
-        fill:{patternType:'solid', fgColor:{rgb:corPrincipal}},
+        fill:{patternType:'solid', fgColor:{rgb:corAba}},
         alignment:{horizontal:'center', vertical:'center', wrapText:true},
-        border:{ top:{style:'thin',color:{rgb:corPrincipal}}, bottom:{style:'medium',color:{rgb:corPrincipal}},
-                 left:{style:'thin',color:{rgb:corPrincipal}}, right:{style:'thin',color:{rgb:corPrincipal}} }
+        border:{ top:{style:'thin',color:{rgb:corAba}}, bottom:{style:'medium',color:{rgb:corAba}},
+                 left:{style:'thin',color:{rgb:corAba}}, right:{style:'thin',color:{rgb:corAba}} }
       };
       const estiloCelula = { font:{name:'Arial', sz:11, color:{rgb:'1F2937'}}, alignment:{vertical:'center', wrapText:true}, border:bordaLeve };
       const estiloCelulaAlternada = { ...estiloCelula, fill:{patternType:'solid', fgColor:{rgb:'FDF3E7'}} };
-      ws['!tabColor'] = { rgb: corPrincipal };
+      ws['!tabColor'] = { rgb: corAba };
       ws['!rows'] = [];
       for (let r = range.s.r; r <= range.e.r; r++) {
         ws['!rows'][r] = { hpt: r === range.s.r ? 46 : 30 };
@@ -1194,7 +1251,7 @@
       ws['!margins'] = { left:0.25, right:0.25, top:0.5, bottom:0.5, header:0.2, footer:0.2 };
     });
     out.Workbook = out.Workbook || {};
-    out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPrincipal} }));
+    out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
 
     const written = XLSX.write(out, {bookType:'xlsx', type:'array'});
     const bytes = written instanceof ArrayBuffer ? new Uint8Array(written) : written;
@@ -1207,7 +1264,7 @@
     link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + btoa(binary);
     link.download = nomeArquivo;
     document.body.appendChild(link); link.click(); link.remove();
-    alert(`Relatório gerado e baixado com sucesso: ${nomeArquivo} (${linhas.length} família(s) recorrente(s))`);
+    alert(`Relatório gerado e baixado com sucesso: ${nomeArquivo} (${linhas.length} família(s) recorrente(s), em ${tecnicosOrdenados.length} aba(s) de técnico)`);
   }
 
   window.__comparacaoVolante = { anterior: null, atual: null };
