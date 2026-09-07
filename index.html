@@ -849,25 +849,15 @@
     }
     if (!header || !dataRows.length) throw new Error('Não encontrei dados na tabela enviada.');
 
-    // Procura o mês/período de repercussão em qualquer célula de qualquer aba
-    // do arquivo enviado (ex.: "Período da Repercussão: Ago/Set-26"), tanto no
-    // relatório bruto do MDS quanto na aba "Resumo do território" que o
-    // próprio app gera.
+    // "Mês da Repercussão" é uma COLUNA da planilha (igual "Efeito"), com o
+    // mesmo valor repetido em (quase) todas as linhas — pega o valor da
+    // primeira linha que tiver algo preenchido nessa coluna.
+    const headerNormBusca = header.map(v => normalizeText(v));
+    const mesIdx = headerNormBusca.findIndex(h => h.includes('mes') && h.includes('repercuss'));
     let mesRepercussao = '';
-    for (const sheetName of wb.SheetNames) {
-      const rowsBusca = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
-      for (const row of rowsBusca) {
-        for (const cell of row) {
-          const text = String(cell || '').trim();
-          if (!text) continue;
-          if (/per[íi]odo da repercuss[ãa]o/i.test(text) || /^m[êe]s de repercuss[ãa]o/i.test(text)) {
-            mesRepercussao = text.replace(/^[^:]*:\s*/, '').trim() || text;
-            break;
-          }
-        }
-        if (mesRepercussao) break;
-      }
-      if (mesRepercussao) break;
+    if (mesIdx >= 0) {
+      const linhaComMes = dataRows.find(row => String(row[mesIdx] || '').trim());
+      if (linhaComMes) mesRepercussao = String(linhaComMes[mesIdx]).trim();
     }
 
     // Descobre qual coluna tem o NOME da família/responsável para ordenar de A a Z.
@@ -990,7 +980,7 @@
     const bytes = written instanceof ArrayBuffer ? new Uint8Array(written) : written;
     let binary=''; const chunk=0x8000;
     for (let i=0;i<bytes.length;i+=chunk) binary += String.fromCharCode(...bytes.slice(i,i+chunk));
-    return btoa(binary);
+    return { base64: btoa(binary), mesRepercussao };
   }
 
   window.__handleVolanteUpload = async (input) => {
@@ -1004,8 +994,16 @@
     try {
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
       const base64 = await fileToBase64(file);
-      const outBase64 = makeVolanteDivisaoWorkbook(base64);
-      const nomeArquivo = 'Território Volante - Divisão por técnico.xlsx';
+      const { base64: outBase64, mesRepercussao } = makeVolanteDivisaoWorkbook(base64);
+      // Deixa o texto do mês de repercussão seguro para usar em nome de
+      // arquivo (troca barras/dois-pontos e afins por hífen/espaço).
+      const mesArquivo = String(mesRepercussao || '').trim()
+        .replace(/[\\/:*?"<>|]/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const nomeArquivo = mesArquivo
+        ? `Território Volante - Divisão por técnico - ${mesArquivo}.xlsx`
+        : 'Território Volante - Divisão por técnico.xlsx';
       const link = document.createElement('a');
       link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + outBase64;
       link.download = nomeArquivo;
