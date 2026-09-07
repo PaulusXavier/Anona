@@ -235,6 +235,22 @@
 
     <div class="panel-tool p-5">
       <h2 class="eyebrow mb-3">
+        <span class="chip"><i data-lucide="repeat" class="w-4 h-4" style="color:var(--azul)"></i></span> Famílias Recorrentes — Comparar Repercussões
+      </h2>
+      <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado.</p>
+      <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2 text-center" style="border-color:var(--azul); color:var(--azul)">
+        <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
+        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
+      </label>
+      <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 text-center" style="border-color:var(--azul); color:var(--azul)">
+        <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAtualLabel">Planilha do mês atual</span>
+        <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'atual')">
+      </label>
+      <p class="text-[10px] text-slate-400 mt-2">Assim que os dois arquivos forem enviados, a comparação é gerada e baixada automaticamente. Nada é guardado — os arquivos originais não são alterados.</p>
+    </div>
+
+    <div class="panel-tool p-5">
+      <h2 class="eyebrow mb-3">
         <span class="chip"><i data-lucide="file-text" class="w-4 h-4" style="color:var(--azul)"></i></span> Relatório de Repercussão Individual
       </h2>
       <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros e um gráfico da quantidade de efeitos.</p>
@@ -1013,6 +1029,198 @@
     } catch (e) {
       console.error(e);
       alert('Não consegui dividir esta tabela. Confirme se a primeira linha tem os títulos das colunas e se há famílias nas linhas seguintes.');
+      input.value = '';
+    }
+  };
+
+  // =====================================================================
+  // FAMÍLIAS RECORRENTES — cruza duas planilhas de repercussão (mês
+  // anterior e mês atual) e entrega só as famílias que aparecem nos dois
+  // meses, com os dados dos dois lado a lado. O cruzamento é feito pelo
+  // NIS do Responsável Familiar (ou CPF do Responsável, se o NIS estiver
+  // vazio) — nada é guardado, os arquivos originais não são alterados.
+  // =====================================================================
+
+  // Lê uma planilha de condicionalidades (relatório bruto do MDS, planilha
+  // já dividida por técnico do Território Volante, etc.) e agrupa as
+  // linhas por família (chave = NIS do Responsável Familiar, ou CPF do
+  // Responsável se o NIS estiver vazio).
+  function lerFamiliasRepercussao(base64) {
+    const wb = XLSX.read(bytesFromBase64(base64), {type:'array'});
+    const familias = new Map();
+    let mes = '';
+    wb.SheetNames.forEach(sheetName => {
+      if (normalizeText(sheetName).includes('resumo')) return;
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''})
+        .filter(row => row.some(v => String(v).trim() !== ''));
+      if (!rows.length) return;
+      const header = rows[0];
+      const headerNorm = header.map(v => normalizeText(v));
+      const efeitoIdx = headerNorm.findIndex(h => h === 'efeito');
+      if (efeitoIdx < 0) return; // não é uma aba de condicionalidades (ex.: aba de resumo)
+      let nisIdx = headerNorm.findIndex(h => h.includes('nis') && h.includes('responsavel'));
+      const cpfIdx = headerNorm.findIndex(h => h.includes('cpf') && h.includes('responsavel'));
+      let nomeIdx = headerNorm.findIndex(h => h === 'nome do responsavel familiar');
+      if (nomeIdx < 0) nomeIdx = headerNorm.findIndex(h => h.includes('nome') && h.includes('responsavel'));
+      const bairroIdx = headerNorm.findIndex(h => h === 'bairro');
+      const enderecoIdx = headerNorm.findIndex(h => h.includes('endereco'));
+      const tecnicoIdx = headerNorm.findIndex(h => h.includes('tecnico') && h.includes('equipe'));
+      const integranteIdx = headerNorm.findIndex(h => h.includes('nome') && h.includes('integrante'));
+      const mesIdx = headerNorm.findIndex(h => h.includes('mes') && h.includes('repercuss'));
+      rows.slice(1).forEach(row => {
+        const nis = nisIdx >= 0 ? String(row[nisIdx] || '').trim() : '';
+        const cpf = cpfIdx >= 0 ? String(row[cpfIdx] || '').trim() : '';
+        const chave = nis || cpf;
+        if (!chave) return;
+        if (!mes && mesIdx >= 0 && String(row[mesIdx] || '').trim()) mes = String(row[mesIdx]).trim();
+        if (!familias.has(chave)) {
+          familias.set(chave, {
+            nis: nis || '—', cpf: cpf || '—',
+            nome: nomeIdx >= 0 ? String(row[nomeIdx] || '').trim() : '',
+            bairro: bairroIdx >= 0 ? String(row[bairroIdx] || '').trim() : '',
+            endereco: enderecoIdx >= 0 ? String(row[enderecoIdx] || '').trim() : '',
+            tecnico: tecnicoIdx >= 0 ? String(row[tecnicoIdx] || '').trim() : '',
+            integrantes: [], registros: 0
+          });
+        }
+        const fam = familias.get(chave);
+        fam.registros++;
+        const integranteNome = integranteIdx >= 0 ? String(row[integranteIdx] || '').trim() : '';
+        const efeito = String(row[efeitoIdx] || '').trim();
+        if (integranteNome || efeito) fam.integrantes.push(`${integranteNome || '—'} (${efeito || '—'})`);
+      });
+    });
+    return { mes, familias };
+  }
+
+  // Monta a planilha de comparação com as famílias que aparecem nos dois
+  // meses enviados, mostrando os dados dos dois períodos lado a lado.
+  function gerarComparacaoFamiliasRecorrentes(anterior, atual) {
+    const chavesComuns = [...anterior.familias.keys()].filter(chave => atual.familias.has(chave));
+    if (!chavesComuns.length) {
+      alert('Nenhuma família se repetiu entre os dois meses enviados.');
+      return;
+    }
+    const mesAnterior = anterior.mes || 'Mês anterior';
+    const mesAtual = atual.mes || 'Mês atual';
+    const linhas = chavesComuns.map(chave => {
+      const a = anterior.familias.get(chave);
+      const b = atual.familias.get(chave);
+      return {
+        nome: b.nome || a.nome, nis: b.nis !== '—' ? b.nis : a.nis, cpf: b.cpf !== '—' ? b.cpf : a.cpf,
+        bairro: b.bairro || a.bairro, endereco: b.endereco || a.endereco,
+        tecnicoAnterior: a.tecnico, integrantesAnterior: a.integrantes.join('; '), registrosAnterior: a.registros,
+        tecnicoAtual: b.tecnico, integrantesAtual: b.integrantes.join('; '), registrosAtual: b.registros
+      };
+    }).sort((x,y) => x.nome.localeCompare(y.nome, 'pt-BR', {sensitivity:'base'}));
+
+    const header = [
+      'Nome do Responsável Familiar', 'NIS do Responsável Familiar', 'CPF do Responsável', 'Bairro', 'Endereço',
+      `Técnico (${mesAnterior})`, `Integrantes com efeito (${mesAnterior})`, `Nº de registros (${mesAnterior})`,
+      `Técnico (${mesAtual})`, `Integrantes com efeito (${mesAtual})`, `Nº de registros (${mesAtual})`
+    ];
+    const dataRows = linhas.map(l => [
+      l.nome, l.nis, l.cpf, l.bairro, l.endereco,
+      l.tecnicoAnterior, l.integrantesAnterior, l.registrosAnterior,
+      l.tecnicoAtual, l.integrantesAtual, l.registrosAtual
+    ]);
+
+    const out = XLSX.utils.book_new();
+    const used = new Set();
+    const resumo = [
+      ['Mês anterior', mesAnterior],
+      ['Mês atual', mesAtual],
+      ['Famílias que se repetem nos dois meses', linhas.length]
+    ];
+    XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(resumo), safeSheetName('Resumo', used));
+    XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet([header, ...dataRows]), safeSheetName('Famílias recorrentes', used));
+
+    const bordaLeve = {
+      top:{style:'thin',color:{rgb:'D9D9D9'}}, bottom:{style:'thin',color:{rgb:'D9D9D9'}},
+      left:{style:'thin',color:{rgb:'D9D9D9'}}, right:{style:'thin',color:{rgb:'D9D9D9'}}
+    };
+    const corPrincipal = 'B45309';
+    out.SheetNames.forEach(name => {
+      const ws = out.Sheets[name];
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const estiloCabecalho = {
+        font:{name:'Arial', sz:12, bold:true, color:{rgb:'FFFFFF'}},
+        fill:{patternType:'solid', fgColor:{rgb:corPrincipal}},
+        alignment:{horizontal:'center', vertical:'center', wrapText:true},
+        border:{ top:{style:'thin',color:{rgb:corPrincipal}}, bottom:{style:'medium',color:{rgb:corPrincipal}},
+                 left:{style:'thin',color:{rgb:corPrincipal}}, right:{style:'thin',color:{rgb:corPrincipal}} }
+      };
+      const estiloCelula = { font:{name:'Arial', sz:11, color:{rgb:'1F2937'}}, alignment:{vertical:'center', wrapText:true}, border:bordaLeve };
+      const estiloCelulaAlternada = { ...estiloCelula, fill:{patternType:'solid', fgColor:{rgb:'FDF3E7'}} };
+      ws['!tabColor'] = { rgb: corPrincipal };
+      ws['!rows'] = [];
+      for (let r = range.s.r; r <= range.e.r; r++) {
+        ws['!rows'][r] = { hpt: r === range.s.r ? 46 : 30 };
+        const linhaClara = r % 2 === 0;
+        for (let c = range.s.c; c <= range.e.c; c++) {
+          const address = XLSX.utils.encode_cell({r,c});
+          if (!ws[address]) ws[address] = { v:'', t:'s' };
+          ws[address].s = (name !== 'Resumo' && r === range.s.r) ? estiloCabecalho
+            : (linhaClara ? estiloCelulaAlternada : estiloCelula);
+        }
+      }
+      if (name !== 'Resumo') {
+        ws['!autofilter'] = { ref: ws['!ref'] };
+        ws['!freeze'] = { xSplit:0, ySplit:1 };
+      }
+      ws['!cols'] = [];
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        let max = 12;
+        for (let r = range.s.r; r <= range.e.r; r++) {
+          const cell = ws[XLSX.utils.encode_cell({r,c})];
+          const value = cell && cell.v != null ? String(cell.v) : '';
+          max = Math.max(max, value.length);
+        }
+        ws['!cols'][c] = { wch: Math.min(max + 4, 42) };
+      }
+      ws['!margins'] = { left:0.25, right:0.25, top:0.5, bottom:0.5, header:0.2, footer:0.2 };
+    });
+    out.Workbook = out.Workbook || {};
+    out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPrincipal} }));
+
+    const written = XLSX.write(out, {bookType:'xlsx', type:'array'});
+    const bytes = written instanceof ArrayBuffer ? new Uint8Array(written) : written;
+    let binary=''; const chunk=0x8000;
+    for (let i=0;i<bytes.length;i+=chunk) binary += String.fromCharCode(...bytes.slice(i,i+chunk));
+
+    const sanitiza = t => String(t || '').trim().replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+    const nomeArquivo = `Famílias Recorrentes - ${sanitiza(mesAnterior)} e ${sanitiza(mesAtual)}.xlsx`;
+    const link = document.createElement('a');
+    link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + btoa(binary);
+    link.download = nomeArquivo;
+    document.body.appendChild(link); link.click(); link.remove();
+    alert(`Relatório gerado e baixado com sucesso: ${nomeArquivo} (${linhas.length} família(s) recorrente(s))`);
+  }
+
+  window.__comparacaoVolante = { anterior: null, atual: null };
+
+  window.__handleComparacaoUpload = async (input, papel) => {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Esse arquivo está grande demais (acima de 5 MB).');
+      input.value = '';
+      return;
+    }
+    try {
+      if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
+      const base64 = await fileToBase64(file);
+      const dados = lerFamiliasRepercussao(base64);
+      if (!dados.familias.size) throw new Error('Não encontrei famílias nesta planilha.');
+      window.__comparacaoVolante[papel] = dados;
+      const labelEl = document.getElementById(papel === 'anterior' ? 'comparacaoAnteriorLabel' : 'comparacaoAtualLabel');
+      if (labelEl) labelEl.textContent = `${dados.mes || 'Mês não identificado'} — ${dados.familias.size} família(s) (${file.name})`;
+      if (window.__comparacaoVolante.anterior && window.__comparacaoVolante.atual) {
+        gerarComparacaoFamiliasRecorrentes(window.__comparacaoVolante.anterior, window.__comparacaoVolante.atual);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Não consegui ler esta planilha. Confirme se ela tem as colunas do relatório de condicionalidades (Efeito, NIS do Responsável Familiar etc.).');
       input.value = '';
     }
   };
