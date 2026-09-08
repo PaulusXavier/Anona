@@ -133,27 +133,124 @@
   /* ---------- carteirinha do NIS ---------- */
   .id-card{ border-radius:1rem; overflow:hidden; border:1px solid var(--line); }
   .id-card-strip{ height:8px; background:linear-gradient(90deg,var(--verde),var(--amarelo),var(--azul)); }
+
+  /* ---------- selo casa+coração+família em relevo sobre fundos azuis ----------
+     Usado no cabeçalho e nas telas de acesso (senha / sincronizar). Antes
+     esta classe não tinha regra própria e o selo do cabeçalho ficava
+     invisível — corrigido aqui e reaproveitado nas telas de login. */
+  .brand-seal{
+    position:absolute;
+    width:min(60vw, 340px); aspect-ratio:400/420;
+    background-repeat:no-repeat; background-position:center; background-size:contain;
+    opacity:.1;
+    pointer-events:none;
+  }
+
+  /* ---------- telas de acesso (senha do app / sincronizar notas) ----------
+     Fundo "caderneta": mesmo azul profundo do cabeçalho, com a textura de
+     pontilhado e o selo da família em relevo, para as duas telas de entrada
+     do app parecerem a capa de um mesmo documento, e não uma tela genérica. */
+  .access-bg{
+    background:linear-gradient(165deg,var(--azul-deep),var(--azul) 60%,var(--azul-deep));
+    position:relative; overflow:hidden;
+  }
+  .access-bg::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.09) 1px, transparent 0);
+    background-size:20px 20px;
+  }
+  /* brilho suave vindo de cima, para o fundo azul ter mais profundidade
+     em vez de ficar chapado */
+  .access-bg::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(60% 50% at 50% -10%, rgba(255,255,255,.14), transparent 70%);
+  }
+  .access-card{
+    background:var(--card);
+    border-radius:1.6rem;
+    box-shadow:0 30px 70px -18px rgba(4,15,40,.6), 0 2px 8px rgba(4,15,40,.14);
+    position:relative; overflow:hidden;
+  }
+  .access-icon{
+    width:3.1rem; height:3.1rem; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 32% 26%, var(--amarelo-soft), var(--amarelo) 68%, #A9781F 100%);
+    box-shadow:0 0 0 5px rgba(216,155,50,.16), 0 6px 16px -4px rgba(216,155,50,.55);
+  }
+  /* ---------- divisória "canhoto de bilhete" ----------
+     Uma linha tracejada com dois recortes circulares nas bordas, como a
+     parte destacável de um bilhete/carnê — reforça a linguagem visual de
+     "documento" que o resto do app já usa (.tool-step, .passbook, .id-card)
+     também nas telas de entrada. */
+  .ticket-notch{ position:relative; border-top:1.5px dashed var(--line); margin:0 -1.75rem; }
+  .ticket-notch::before, .ticket-notch::after{
+    content:""; position:absolute; top:-.5rem; width:1rem; height:1rem;
+    border-radius:50%; background:var(--azul-deep);
+  }
+  .ticket-notch::before{ left:-.5rem; }
+  .ticket-notch::after{ right:-.5rem; }
+  .access-input{
+    width:100%; border:1px solid var(--line); border-radius:1rem;
+    padding:.7rem .9rem .7rem 2.5rem; font-size:.875rem;
+    background:#fff; transition:border-color .15s, box-shadow .15s;
+  }
+  .access-input:focus{ outline:none; border-color:var(--azul); box-shadow:0 0 0 3px rgba(13,46,99,.14); }
+  .access-input-wrap{ position:relative; }
+  .access-input-wrap > svg, .access-input-wrap > .lucide{
+    position:absolute; left:.85rem; top:50%; transform:translateY(-50%);
+    width:1rem; height:1rem; color:var(--azul); opacity:.55; pointer-events:none;
+  }
+  .access-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:.25rem; background:var(--azul-soft); border-radius:.9rem; padding:.25rem; }
+  .access-tab{ padding:.5rem 0; border-radius:.7rem; font-size:.75rem; font-weight:700; transition:all .15s; color:var(--azul); opacity:.55; display:flex; align-items:center; justify-content:center; gap:.3rem; }
+  .access-tab.active{ background:var(--card); opacity:1; box-shadow:0 1px 4px rgba(13,46,99,.18); }
+  .access-tab svg{ width:.85rem; height:.85rem; }
+  @keyframes shake{
+    10%,90%{ transform:translateX(-1px); } 20%,80%{ transform:translateX(2px); }
+    30%,50%,70%{ transform:translateX(-4px); } 40%,60%{ transform:translateX(4px); }
+  }
+  .shake{ animation:shake .4s both; }
+  @media (prefers-reduced-motion: reduce){ .shake{ animation:none; } }
 </style>
 </head>
 <body>
 
 <!-- TELA DE SENHA (bloqueia o app até digitar a senha correta) -->
-<div id="lockScreen" class="fixed inset-0 z-[9999] flex items-center justify-center px-4" style="background:linear-gradient(165deg,var(--azul-deep),var(--azul) 65%,var(--azul-deep));">
-  <div class="bg-white rounded-2xl shadow-xl p-7 w-full max-w-sm text-center relative overflow-hidden">
-    <div class="flag-ribbon absolute top-0 left-0 right-0"></div>
-    <div class="mx-auto mb-4 mt-2 w-12 h-12 rounded-xl flex items-center justify-center" style="background:var(--azul-soft);">
-      <i data-lucide="lock" class="w-6 h-6" style="color:var(--azul)"></i>
+<div id="lockScreen" class="access-bg fixed inset-0 z-[9999] flex items-center justify-center px-4 py-8">
+  <div class="brand-seal" aria-hidden="true" style="left:50%; top:8%; transform:translateX(-50%); opacity:.07; background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBkPSJNMjAwIDEzOCBDIDE5MCAxMjAsIDE2MSAxMjYsIDE2MSAxNTAgQyAxNjEgMTc0LCAyMDAgMjAyLCAyMDAgMjAyIEMgMjAwIDIwMiwgMjM5IDE3NCwgMjM5IDE1MCBDIDIzOSAxMjYsIDIxMCAxMjAsIDIwMCAxMzggWiIgZmlsbD0iI0ZGQ0MyOSIgc3Ryb2tlPSJub25lIi8+CiAgPGcgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZmlsbD0ibm9uZSI+CiAgICA8cGF0aCBkPSJNMTEyIDM3MiBRMTU4IDQwMCAyMDAgMzgyIFEyNDIgNDAwIDI4OCAzNzIiLz4KICAgIDxjaXJjbGUgY3g9IjExMiIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik05NSAzNjYgQzkzIDM4NCA5MSA0MDIgOTEgNDEwIEwxMzMgNDEwIEMxMzMgNDAyIDEzMSAzODQgMTI5IDM2NiIvPgogICAgPGNpcmNsZSBjeD0iMjAwIiBjeT0iMzU4IiByPSIxMyIvPgogICAgPHBhdGggZD0iTTE4NiAzNzQgQzE4NSAzODggMTg0IDQwNCAxODQgNDEwIEwyMTYgNDEwIEMyMTYgNDA0IDIxNSAzODggMjE0IDM3NCIvPgogICAgPGNpcmNsZSBjeD0iMjg4IiBjeT0iMzQ2IiByPSIxNyIvPgogICAgPHBhdGggZD0iTTI3MSAzNjYgQzI2OSAzODQgMjY3IDQwMiAyNjcgNDEwIEwzMDkgNDEwIEMzMDkgNDAyIDMwNyAzODggMzA1IDM2NiIvPgogIDwvZz4KPC9zdmc+Cg==');"></div>
+
+  <div class="access-card fade-in w-full max-w-sm" id="lockCard">
+    <div class="flag-ribbon"></div>
+    <div class="px-7 pt-7 pb-5 text-center">
+      <div class="access-icon mx-auto mb-4">
+        <i data-lucide="lock" class="w-5 h-5" style="color:var(--azul-deep)"></i>
+      </div>
+      <h1 class="display font-bold text-2xl mb-1" style="color:var(--azul-deep)">Anona</h1>
+      <p id="lockYearSubtitle" class="text-[11px] font-bold tracking-wide uppercase mb-1" style="color:var(--amarelo-text)">Bolsa Família 2026</p>
+      <p class="text-xs text-slate-400">Paulo Xavier · CRP-20/09816 · Psicólogo</p>
     </div>
-    <h1 class="display font-bold text-xl mb-1">Anona</h1>
-    <p id="lockYearSubtitle" class="text-xs text-slate-400 mb-4">Bolsa Família 2026</p>
-    <p class="text-xs text-slate-500 mb-4">Digite a senha para abrir o app.</p>
-    <form id="lockForm" class="space-y-3" autocomplete="off">
-      <input id="lockPass" type="password" placeholder="Senha" autocomplete="current-password"
-        class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
-        style="--tw-ring-color:var(--azul)" />
-      <p id="lockError" class="text-xs font-semibold hidden" style="color:#c0392b;">Senha incorreta. Tente de novo.</p>
-      <button type="submit" class="w-full text-white py-2.5 rounded-xl text-sm font-bold transition hover:opacity-90" style="background:var(--azul)">Entrar</button>
-    </form>
+
+    <div class="ticket-notch"></div>
+
+    <div class="px-7 pt-6 pb-7">
+      <p class="text-xs text-slate-500 mb-3 text-center">Digite a senha para abrir o app.</p>
+      <form id="lockForm" class="space-y-3 text-left" autocomplete="off">
+        <div class="access-input-wrap">
+          <i data-lucide="key-round"></i>
+          <input id="lockPass" type="password" placeholder="Digite a senha do app" autocomplete="current-password"
+            class="access-input" style="padding-right:2.5rem" />
+          <button type="button" onclick="toggleLockPassVisibility()" aria-label="Mostrar ou ocultar senha"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+            <i data-lucide="eye" id="lockPassEyeIcon" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <p id="lockError" class="text-xs font-semibold hidden bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex items-center gap-1.5" style="color:#c0392b;">
+          <i data-lucide="alert-circle" class="w-3.5 h-3.5 flex-shrink-0"></i> Senha incorreta. Tente de novo.
+        </p>
+        <button type="submit" class="w-full text-white py-3 rounded-xl text-sm font-bold transition hover:opacity-90 hover:-translate-y-px active:translate-y-0 shadow-lg flex items-center justify-center gap-2" style="background:var(--azul); box-shadow:0 10px 24px -8px rgba(13,46,99,.55)">
+          Entrar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -163,7 +260,7 @@
 <header class="text-white shadow-lg relative overflow-hidden" style="background:linear-gradient(165deg,var(--azul-deep),var(--azul) 65%,var(--azul-deep));">
   <div class="absolute inset-0 pointer-events-none" style="background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.08) 1px, transparent 0); background-size:18px 18px;"></div>
   <!-- selo casa + coracao + familia (ilustracao propria, tema Bolsa Familia) -->
-  <div class="header-seal pointer-events-none" aria-hidden="true" style="background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBkPSJNMjAwIDEzOCBDIDE5MCAxMjAsIDE2MSAxMjYsIDE2MSAxNTAgQyAxNjEgMTc0LCAyMDAgMjAyLCAyMDAgMjAyIEMgMjAwIDIwMiwgMjM5IDE3NCwgMjM5IDE1MCBDIDIzOSAxMjYsIDIxMCAxMjAsIDIwMCAxMzggWiIgZmlsbD0iI0ZGQ0MyOSIgc3Ryb2tlPSJub25lIi8+CiAgPGcgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZmlsbD0ibm9uZSI+CiAgICA8cGF0aCBkPSJNMTEyIDM3MiBRMTU4IDQwMCAyMDAgMzgyIFEyNDIgNDAwIDI4OCAzNzIiLz4KICAgIDxjaXJjbGUgY3g9IjExMiIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik05NSAzNjYgQzkzIDM4NCA5MSA0MDIgOTEgNDEwIEwxMzMgNDEwIEMxMzMgNDAyIDEzMSAzODQgMTI5IDM2NiIvPgogICAgPGNpcmNsZSBjeD0iMjAwIiBjeT0iMzU4IiByPSIxMyIvPgogICAgPHBhdGggZD0iTTE4NiAzNzQgQzE4NSAzODggMTg0IDQwNCAxODQgNDEwIEwyMTYgNDEwIEMyMTYgNDA0IDIxNSAzODggMjE0IDM3NCIvPgogICAgPGNpcmNsZSBjeD0iMjg4IiBjeT0iMzQ2IiByPSIxNyIvPgogICAgPHBhdGggZD0iTTI3MSAzNjYgQzI2OSAzODQgMjY3IDQwMiAyNjcgNDEwIEwzMDkgNDEwIEMzMDkgNDAyIDMwNyAzODQgMzA1IDM2NiIvPgogIDwvZz4KPC9zdmc+Cg==');"></div>
+  <div class="brand-seal pointer-events-none" aria-hidden="true" style="right:-40px; top:-60px; opacity:.09; background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBkPSJNMjAwIDEzOCBDIDE5MCAxMjAsIDE2MSAxMjYsIDE2MSAxNTAgQyAxNjEgMTc0LCAyMDAgMjAyLCAyMDAgMjAyIEMgMjAwIDIwMiwgMjM5IDE3NCwgMjM5IDE1MCBDIDIzOSAxMjYsIDIxMCAxMjAsIDIwMCAxMzggWiIgZmlsbD0iI0ZGQ0MyOSIgc3Ryb2tlPSJub25lIi8+CiAgPGcgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZmlsbD0ibm9uZSI+CiAgICA8cGF0aCBkPSJNMTEyIDM3MiBRMTU4IDQwMCAyMDAgMzgyIFEyNDIgNDAwIDI4OCAzNzIiLz4KICAgIDxjaXJjbGUgY3g9IjExMiIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik05NSAzNjYgQzkzIDM4NCA5MSA0MDIgOTEgNDEwIEwxMzMgNDEwIEMxMzMgNDAyIDEzMSAzODQgMTI5IDM2NiIvPgogICAgPGNpcmNsZSBjeD0iMjAwIiBjeT0iMzU4IiByPSIxMyIvPgogICAgPHBhdGggZD0iTTE4NiAzNzQgQzE4NSAzODggMTg0IDQwNCAxODQgNDEwIEwyMTYgNDEwIEMyMTYgNDA0IDIxNSAzODggMjE0IDM3NCIvPgogICAgPGNpcmNsZSBjeD0iMjg4IiBjeT0iMzQ2IiByPSIxNyIvPgogICAgPHBhdGggZD0iTTI3MSAzNjYgQzI2OSAzODQgMjY3IDQwMiAyNjcgNDEwIEwzMDkgNDEwIEMzMDkgNDAyIDMwNyAzODggMzA1IDM2NiIvPgogIDwvZz4KPC9zdmc+Cg==');"></div>
   <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3 relative">
     <div class="flex items-center gap-3">
       <div class="bg-white/10 p-2 rounded-xl"><i data-lucide="calendar-heart" class="w-6 h-6" style="color:var(--amarelo)"></i></div>
@@ -405,50 +502,67 @@
 
 <!-- MODAL LOGIN -->
 <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-  <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm fade-in relative">
-    <button type="button" onclick="closeAuthModal()" aria-label="Fechar" class="absolute top-3 right-3 text-slate-300 hover:text-slate-500 transition p-1">
-      <i data-lucide="x" class="w-5 h-5"></i>
-    </button>
-
-    <div class="mx-auto mb-3 w-12 h-12 rounded-xl flex items-center justify-center" style="background:var(--azul-soft);">
-      <i data-lucide="cloud" class="w-6 h-6" style="color:var(--azul)"></i>
-    </div>
-    <h3 id="authModalTitle" class="display font-semibold text-xl mb-1 text-center">Sincronizar suas notas</h3>
-    <p id="authModalSubtitle" class="text-xs text-slate-500 mb-4 text-center">Entre com e-mail e senha para acessar suas anotações em qualquer aparelho.</p>
-
-    <div class="grid grid-cols-2 gap-1 bg-slate-100 rounded-xl p-1 mb-4 text-xs font-bold">
-      <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="py-1.5 rounded-lg transition">Entrar</button>
-      <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="py-1.5 rounded-lg transition">Criar conta</button>
-    </div>
-
-    <form id="authForm" autocomplete="off" onsubmit="event.preventDefault(); submitAuthForm();">
-      <label for="authEmail" class="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1"><i data-lucide="mail" class="w-3.5 h-3.5"></i> E-mail</label>
-      <input id="authEmail" type="email" placeholder="seu@email.com" autocomplete="username" required
-        class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2" style="--tw-ring-color:var(--azul)">
-
-      <label for="authPass" class="text-[11px] font-bold text-slate-500 mb-1 flex items-center gap-1"><i data-lucide="lock" class="w-3.5 h-3.5"></i> Senha</label>
-      <div class="relative mb-1">
-        <input id="authPass" type="password" placeholder="Mín. 6 caracteres" autocomplete="current-password" required minlength="6"
-          class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2" style="--tw-ring-color:var(--azul)">
-        <button type="button" onclick="toggleAuthPassVisibility()" aria-label="Mostrar ou ocultar senha"
-          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
-          <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
-        </button>
-      </div>
-      <div class="text-right mb-3">
-        <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="text-[11px] font-semibold hover:underline" style="color:var(--azul)">Esqueci minha senha</button>
-      </div>
-
-      <p id="authError" class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
-      <p id="authSuccess" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
-
-      <button type="submit" id="authSubmitBtn" class="w-full text-white py-2.5 rounded-xl text-sm font-bold transition hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2" style="background:var(--azul)">
-        <i data-lucide="loader-2" id="authSubmitSpinner" class="w-4 h-4 animate-spin hidden"></i>
-        <span id="authSubmitLabel">Entrar</span>
+  <div class="access-card fade-in w-full max-w-sm relative">
+    <!-- faixa "capa da caderneta": mesmo azul do cabeçalho e da tela de senha,
+         para o login por e-mail parecer parte do mesmo documento, não um
+         popup genérico à parte -->
+    <div class="access-bg pt-8 pb-11 px-6 text-center relative">
+      <div class="flag-ribbon absolute top-0 left-0 right-0"></div>
+      <button type="button" onclick="closeAuthModal()" aria-label="Fechar" class="absolute top-3 right-3 text-white/60 hover:text-white transition p-1.5 hover:bg-white/10 rounded-lg">
+        <i data-lucide="x" class="w-4 h-4"></i>
       </button>
-    </form>
+      <div class="access-icon mx-auto mb-3">
+        <i data-lucide="cloud" class="w-5 h-5" style="color:var(--azul-deep)"></i>
+      </div>
+      <h3 id="authModalTitle" class="display font-semibold text-lg text-white mb-1">Sincronizar suas notas</h3>
+      <p id="authModalSubtitle" class="text-[11.5px] text-blue-200 leading-snug px-2">Entre com e-mail e senha para acessar suas anotações em qualquer aparelho.</p>
+    </div>
 
-    <button onclick="closeAuthModal()" class="w-full text-center text-xs text-slate-400 mt-4 hover:text-slate-600">Continuar sem sincronizar (só neste aparelho)</button>
+    <div class="px-6 pt-5 pb-6 -mt-5 relative rounded-t-[1.4rem]" style="background:var(--card); box-shadow:0 -6px 16px -8px rgba(4,15,40,.18)">
+      <div class="access-tabs mb-4">
+        <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="access-tab"><i data-lucide="log-in"></i> Entrar</button>
+        <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="access-tab"><i data-lucide="user-plus"></i> Criar conta</button>
+      </div>
+
+      <form id="authForm" autocomplete="off" onsubmit="event.preventDefault(); submitAuthForm();">
+        <label for="authEmail" class="text-[11px] font-bold text-slate-500 mb-1 block">E-mail</label>
+        <div class="access-input-wrap mb-3">
+          <i data-lucide="mail"></i>
+          <input id="authEmail" type="email" placeholder="seu@email.com" autocomplete="username" required class="access-input">
+        </div>
+
+        <label for="authPass" class="text-[11px] font-bold text-slate-500 mb-1 block">Senha</label>
+        <div class="access-input-wrap mb-1">
+          <i data-lucide="lock"></i>
+          <input id="authPass" type="password" placeholder="Mín. 6 caracteres" autocomplete="current-password" required minlength="6"
+            class="access-input" style="padding-right:2.5rem">
+          <button type="button" onclick="toggleAuthPassVisibility()" aria-label="Mostrar ou ocultar senha"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+            <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="text-right mb-3">
+          <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="text-[11px] font-semibold hover:underline" style="color:var(--azul)">Esqueci minha senha</button>
+        </div>
+
+        <p id="authError" class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
+        <p id="authSuccess" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
+
+        <button type="submit" id="authSubmitBtn" class="w-full text-white py-3 rounded-xl text-sm font-bold transition hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-60 flex items-center justify-center gap-2" style="background:var(--azul); box-shadow:0 10px 24px -8px rgba(13,46,99,.45)">
+          <i data-lucide="loader-2" id="authSubmitSpinner" class="w-4 h-4 animate-spin hidden"></i>
+          <span id="authSubmitLabel">Entrar</span>
+        </button>
+      </form>
+
+      <div class="flex items-center gap-2 mt-4">
+        <div class="flex-1 h-px" style="background:var(--line)"></div>
+        <span class="text-[10px] text-slate-300 font-semibold">ou</span>
+        <div class="flex-1 h-px" style="background:var(--line)"></div>
+      </div>
+      <button onclick="closeAuthModal()" class="w-full text-center text-xs text-slate-400 mt-3 hover:text-slate-600 flex items-center justify-center gap-1.5 py-1">
+        <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Continuar sem sincronizar (só neste aparelho)
+      </button>
+    </div>
   </div>
 </div>
 
@@ -505,8 +619,8 @@
     document.getElementById('authSuccess').classList.add('hidden');
     const tabLogin = document.getElementById('authTabLogin');
     const tabSignup = document.getElementById('authTabSignup');
-    const activeCls = 'py-1.5 rounded-lg transition bg-white shadow text-slate-900';
-    const inactiveCls = 'py-1.5 rounded-lg transition text-slate-400';
+    const activeCls = 'access-tab active';
+    const inactiveCls = 'access-tab';
     if (mode === 'login') {
       tabLogin.className = activeCls;
       tabSignup.className = inactiveCls;
@@ -2693,6 +2807,15 @@ if ('serviceWorker' in navigator) {
     const lockForm = document.getElementById('lockForm');
     const lockPass = document.getElementById('lockPass');
     const lockError = document.getElementById('lockError');
+    const lockCard = document.getElementById('lockCard');
+
+    window.toggleLockPassVisibility = function () {
+      const showing = lockPass.type === 'text';
+      lockPass.type = showing ? 'password' : 'text';
+      const icon = document.getElementById('lockPassEyeIcon');
+      if (icon) icon.setAttribute('data-lucide', showing ? 'eye' : 'eye-off');
+      if (window.lucide) lucide.createIcons();
+    };
 
     function liberarApp() {
       lockScreen.style.display = 'none';
@@ -2725,6 +2848,9 @@ if ('serviceWorker' in navigator) {
         lockError.classList.remove('hidden');
         lockPass.value = '';
         lockPass.focus();
+        lockCard.classList.remove('shake');
+        void lockCard.offsetWidth; // reinicia a animação se o erro repetir
+        lockCard.classList.add('shake');
       }
     });
   })();
