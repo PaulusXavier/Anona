@@ -95,6 +95,11 @@
   /* ---------- calendário ---------- */
   .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--line-soft); border:1px solid var(--line-soft); }
   .day-cell{ min-height:92px; background:#fff; cursor:pointer; position:relative; padding:.4rem; display:flex; flex-direction:column; transition:background .15s; }
+  /* células maiores em telas médias/grandes, para o calendário ficar mais
+     confortável de ler e clicar (no celular mantém o tamanho compacto) */
+  @media (min-width:640px){
+    .day-cell{ min-height:132px; padding:.6rem; }
+  }
   .day-cell:hover{ background:#F7F9FC; }
   .day-cell.selected{ outline:2px solid var(--azul); outline-offset:-2px; background:#EEF3FB; z-index:1; }
   .day-cell.empty{ background:#FAFBFC; cursor:default; }
@@ -105,6 +110,9 @@
     background:radial-gradient(circle at 32% 28%, var(--amarelo-soft), var(--amarelo) 62%, #A9781F 100%);
     box-shadow:0 0 0 2px rgba(216,155,50,.28);
     pointer-events:none;
+  }
+  @media (min-width:640px){
+    .day-cell.payday::before{ top:8px; right:8px; width:19px; height:19px; }
   }
   .badge{ font-size:9.5px; font-weight:700; letter-spacing:.02em; padding:2px 7px; border-radius:99px; }
   .scrollhide::-webkit-scrollbar{ display:none; }
@@ -457,7 +465,7 @@
           <i data-lucide="chevron-right" class="w-6 h-6 text-slate-600"></i>
         </button>
       </div>
-      <div class="grid grid-cols-7 text-center text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase py-2" style="background:var(--line-soft)">
+      <div class="grid grid-cols-7 text-center text-[10px] sm:text-[12px] font-bold text-slate-400 uppercase py-2 sm:py-3" style="background:var(--line-soft)">
         <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
       </div>
       <div id="calendarGrid" class="calendar-grid"></div>
@@ -2501,21 +2509,21 @@ function render(){
 
     let bottomContent = '';
     if (hasNote) {
-      bottomContent = `<div class="text-[7px] leading-tight truncate rounded px-1 ${noteObj.emphasis ? 'font-black' : ''}" style="${noteObj.emphasis ? 'background:var(--amarelo); color:var(--amarelo-text)' : 'color:var(--azul)'}">${escapeHtml(noteObj.text).slice(0,22)}</div>`;
+      bottomContent = `<div class="text-[7px] sm:text-[9px] leading-tight truncate rounded px-1 ${noteObj.emphasis ? 'font-black' : ''}" style="${noteObj.emphasis ? 'background:var(--amarelo); color:var(--amarelo-text)' : 'color:var(--azul)'}">${escapeHtml(noteObj.text).slice(0,22)}</div>`;
     } else if (isPayday) {
-      bottomContent = `<div class="text-[7px] font-bold uppercase truncate" style="color:var(--amarelo-text)">Pagamento</div>`;
+      bottomContent = `<div class="text-[7px] sm:text-[9px] font-bold uppercase truncate" style="color:var(--amarelo-text)">Pagamento</div>`;
     } else if (events.length) {
-      bottomContent = `<div class="text-[7px] font-bold uppercase truncate ${eventStyles[events[0].type].text}">${(events[0].title.split(':')[1]||events[0].title)}</div>`;
+      bottomContent = `<div class="text-[7px] sm:text-[9px] font-bold uppercase truncate ${eventStyles[events[0].type].text}">${(events[0].title.split(':')[1]||events[0].title)}</div>`;
     }
 
     cell.innerHTML = `
       <div class="flex justify-between items-start relative z-10">
-        <span class="text-xs font-black ${isSelected?'':'text-slate-400'}" style="${isSelected?'color:var(--azul)':''}">${day}</span>
-        ${hasNote ? `<i data-lucide="${noteObj.emphasis?'star':'pin'}" class="w-2.5 h-2.5" style="color:${noteObj.emphasis?'var(--amarelo-text)':'var(--azul)'}"></i>` : ''}
+        <span class="text-xs sm:text-base font-black ${isSelected?'':'text-slate-400'}" style="${isSelected?'color:var(--azul)':''}">${day}</span>
+        ${hasNote ? `<i data-lucide="${noteObj.emphasis?'star':'pin'}" class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" style="color:${noteObj.emphasis?'var(--amarelo-text)':'var(--azul)'}"></i>` : ''}
       </div>
       <div class="mt-2 flex flex-wrap gap-1 relative z-10">
-        ${isPayday?'<div class="w-1.5 h-1.5 rounded-full" style="background:var(--amarelo)"></div>':''}
-        ${events.map(e=>`<div class="w-1.5 h-1.5 rounded-full ${eventStyles[e.type].dot}"></div>`).join('')}
+        ${isPayday?'<div class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full" style="background:var(--amarelo)"></div>':''}
+        ${events.map(e=>`<div class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${eventStyles[e.type].dot}"></div>`).join('')}
       </div>
       <div class="mt-auto relative z-10">${bottomContent}</div>`;
     grid.appendChild(cell);
