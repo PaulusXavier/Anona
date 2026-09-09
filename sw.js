@@ -17,15 +17,27 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v6";
+const CACHE_NAME = "pbf-app-shell-v7";
 
-// Arquivos do próprio site.
+// Arquivos do próprio site que são ESSENCIAIS: sem eles o app não tem como
+// funcionar offline, então se algum faltar o install falha mesmo (são
+// poucos e sempre devem existir).
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./manifest.json",
+  "./manifest.json"
+];
+
+// Imagens do próprio site: importantes para a aparência do app (ícone da
+// tela inicial, logo nas telas de senha/login), mas NÃO essenciais para o
+// funcionamento — por isso são "melhor esforço" (ver mais abaixo), igual
+// às bibliotecas externas. Assim, se um ícone estiver com o nome errado ou
+// faltando no repositório, isso não derruba o app offline inteiro; só essa
+// imagem específica não aparece.
+const SHELL_IMAGES = [
   "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icons/icon-512.png",
+  "./icons/logo-bolsa-familia.png"
 ];
 
 // Bibliotecas externas usadas pelo app — sem elas o app perde estilo,
@@ -52,13 +64,19 @@ const RUNTIME_CACHEABLE_HOSTS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // Arquivos do próprio site: se algum falhar, o install falha (ok,
-      // são poucos e sempre devem existir).
+      // Arquivos essenciais do próprio site: se algum falhar, o install
+      // falha (ok, são poucos e sempre devem existir).
       await cache.addAll(SHELL_FILES);
 
-      // Bibliotecas externas: baixa em modo "no-cors" (funciona mesmo sem
-      // cabeçalhos CORS) e ignora silenciosamente qualquer uma que falhar,
-      // para não travar a instalação do app por causa de um CDN fora do ar.
+      // Imagens do site e bibliotecas externas: baixa cada uma por conta
+      // própria e ignora silenciosamente qualquer uma que falhar (ícone
+      // com nome errado, CDN fora do ar etc.), para não travar a
+      // instalação do app inteiro por causa de UM arquivo que faltou.
+      await Promise.allSettled(
+        SHELL_IMAGES.map((url) =>
+          fetch(url).then((res) => cache.put(url, res))
+        )
+      );
       await Promise.allSettled(
         EXTERNAL_FILES.map((url) =>
           fetch(url, { mode: "no-cors" }).then((res) => cache.put(url, res))
