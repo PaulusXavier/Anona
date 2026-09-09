@@ -12,13 +12,16 @@ Não precisa de servidor: você hospeda no próprio GitHub (GitHub Pages) e o Fi
 ## 1. Estrutura dos arquivos
 
 ```
-index.html          -> o app inteiro (calendário + notas + login)
-manifest.json        -> permite "instalar" o app no celular/computador
-sw.js                 -> deixa o app funcionando offline (guarda o "esqueleto" do app)
-icons/icon-192.png    -> ícone do app
-icons/icon-512.png    -> ícone do app (versão maior)
-firestore.rules       -> regras de segurança (cole no console do Firebase)
+index.html                    -> o app inteiro (calendário + notas + login)
+manifest.json                  -> permite "instalar" o app no celular/computador
+sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
+icons/icon-192.png              -> ícone do app
+icons/icon-512.png              -> ícone do app (versão maior)
+icons/logo-bolsa-familia.png    -> logo exibido nas telas de senha/login
+firestore.rules                 -> regras de segurança (cole no console do Firebase)
 ```
+
+**Importante:** os três arquivos dentro da pasta `icons/` têm que ficar exatamente com esses nomes e dentro de uma pasta chamada `icons` (não solto na raiz do repositório) — é assim que o `index.html`, o `manifest.json` e o `sw.js` procuram por eles. Se algum desses arquivos não for enviado ou for renomeado, a imagem correspondente simplesmente não aparece (o app continua funcionando normalmente, o `sw.js` já foi ajustado para não travar a instalação por causa disso).
 
 Suba todos esses arquivos para a raiz do seu repositório no GitHub (ou para uma subpasta, tanto faz, desde que fiquem todos juntos).
 
