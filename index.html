@@ -114,7 +114,7 @@
 
   /* ---------- calendário ---------- */
   .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:var(--line-soft); border:1px solid var(--line-soft); }
-  .day-cell{ min-height:110px; background:#fff; cursor:pointer; position:relative; padding:.5rem; display:flex; flex-direction:column; transition:background .15s; }
+  .day-cell{ min-height:110px; min-width:0; overflow:hidden; background:#fff; cursor:pointer; position:relative; padding:.5rem; display:flex; flex-direction:column; transition:background .15s; }
   /* células maiores em telas médias/grandes, para o calendário ficar mais
      confortável de ler e clicar (no celular mantém o tamanho um pouco maior
      que antes, e cresce bastante em telas maiores para mostrar todos os
