@@ -160,7 +160,10 @@
      pontilhado e o selo da família em relevo, para as duas telas de entrada
      do app parecerem a capa de um mesmo documento, e não uma tela genérica. */
   .access-bg{
-    background:linear-gradient(165deg,var(--azul-deep),var(--azul) 60%,var(--azul-deep));
+    background:
+      radial-gradient(120% 60% at 12% -5%, rgba(20,107,71,.38), transparent 55%),
+      radial-gradient(110% 60% at 100% 100%, rgba(216,155,50,.30), transparent 55%),
+      linear-gradient(165deg,var(--azul-deep),var(--azul) 60%,var(--azul-deep));
     position:relative; overflow:hidden;
   }
   .access-bg::before{
@@ -174,6 +177,15 @@
     content:""; position:absolute; inset:0; pointer-events:none;
     background:radial-gradient(60% 50% at 50% -10%, rgba(255,255,255,.14), transparent 70%);
   }
+  /* Anéis "abertos" (mesmo traço do selo psi da tela de senha) soltos ao
+     fundo, bem discretos — repete a mesma linguagem visual do círculo
+     incompleto pra dar profundidade sem competir com o cartão branco. */
+  .ring-seal{
+    position:absolute; aspect-ratio:1/1; border-radius:50%;
+    border:5px solid rgba(255,255,255,.12);
+    border-bottom-color:transparent;
+    pointer-events:none;
+  }
   .access-card{
     background:var(--card);
     border-radius:1.6rem;
@@ -185,6 +197,20 @@
     display:flex; align-items:center; justify-content:center;
     background:radial-gradient(circle at 32% 26%, var(--amarelo-soft), var(--amarelo) 68%, #A9781F 100%);
     box-shadow:0 0 0 5px rgba(216,155,50,.16), 0 6px 16px -4px rgba(216,155,50,.55);
+  }
+  /* Selo da tela de senha: em vez da bolinha amarela cheia, um círculo
+     "aberto" (não fechado por completo, como um traço de caderno) com o
+     símbolo psi (Ψ) da Psicologia no meio — reforça a identidade
+     profissional de quem usa o app. */
+  .psi-badge{
+    width:3.1rem; height:3.1rem; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    filter:drop-shadow(0 6px 14px rgba(13,46,99,.28));
+  }
+  .psi-badge svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+  .psi-badge span{
+    position:relative; font-family:Georgia,'Times New Roman',serif; font-weight:700;
+    font-size:1.6rem; line-height:1; color:var(--azul-deep); transform:translateY(-1px);
   }
   /* ---------- divisória "canhoto de bilhete" ----------
      Uma linha tracejada com dois recortes circulares nas bordas, como a
@@ -227,12 +253,19 @@
 <div id="lockScreen" class="access-bg fixed inset-0 z-[9999] flex items-center justify-center px-4 py-8">
   <div class="brand-seal" aria-hidden="true" style="left:50%; top:8%; transform:translateX(-50%); opacity:.07; background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBkPSJNMjAwIDEzOCBDIDE5MCAxMjAsIDE2MSAxMjYsIDE2MSAxNTAgQyAxNjEgMTc0LCAyMDAgMjAyLCAyMDAgMjAyIEMgMjAwIDIwMiwgMjM5IDE3NCwgMjM5IDE1MCBDIDIzOSAxMjYsIDIxMCAxMjAsIDIwMCAxMzggWiIgZmlsbD0iI0ZGQ0MyOSIgc3Ryb2tlPSJub25lIi8+CiAgPGcgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZmlsbD0ibm9uZSI+CiAgICA8cGF0aCBkPSJNMTEyIDM3MiBRMTU4IDQwMCAyMDAgMzgyIFEyNDIgNDAwIDI4OCAzNzIiLz4KICAgIDxjaXJjbGUgY3g9IjExMiIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik05NSAzNjYgQzkzIDM4NCA5MSA0MDIgOTEgNDEwIEwxMzMgNDEwIEMxMzMgNDAyIDEzMSAzODQgMTI5IDM2NiIvPgogICAgPGNpcmNsZSBjeD0iMjAwIiBjeT0iMzU4IiByPSIxMyIvPgogICAgPHBhdGggZD0iTTE4NiAzNzQgQzE4NSAzODggMTg0IDQwNCAxODQgNDEwIEwyMTYgNDEwIEMyMTYgNDA0IDIxNSAzODggMjE0IDM3NCIvPgogICAgPGNpcmNsZSBjeD0iMjg4IiBjeT0iMzQ2IiByPSIxNyIvPgogICAgPHBhdGggZD0iTTI3MSAzNjYgQzI2OSAzODQgMjY3IDQwMiAyNjcgNDEwIEwzMDkgNDEwIEMzMDkgNDAyIDMwNyAzODggMzA1IDM2NiIvPgogIDwvZz4KPC9zdmc+Cg==');"></div>
 
+  <div class="ring-seal" aria-hidden="true" style="width:min(50vw,220px); right:-8%; top:-6%; transform:rotate(-20deg);"></div>
+  <div class="ring-seal" aria-hidden="true" style="width:min(38vw,170px); left:-6%; bottom:-4%; transform:rotate(155deg);"></div>
+
   <div class="access-card fade-in w-full max-w-sm" id="lockCard">
     <div class="flag-ribbon"></div>
     <div class="px-7 pt-7 pb-5 text-center">
       <img src="icons/logo-bolsa-familia.png" alt="Programa Bolsa Família" class="mx-auto mb-3" style="height:52px; width:auto;">
-      <div class="access-icon mx-auto mb-4">
-        <i data-lucide="lock" class="w-5 h-5" style="color:var(--azul-deep)"></i>
+      <div class="psi-badge mx-auto mb-4" aria-hidden="true">
+        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="25" cy="25" r="21" fill="none" stroke="var(--azul)" stroke-width="3"
+            stroke-linecap="round" stroke-dasharray="99 33" transform="rotate(128 25 25)" />
+        </svg>
+        <span>Ψ</span>
       </div>
       <h1 class="display font-bold text-2xl mb-1" style="color:var(--azul-deep)">Anona</h1>
       <p id="lockYearSubtitle" class="text-[11px] font-bold tracking-wide uppercase mb-1" style="color:var(--amarelo-text)">Bolsa Família 2026</p>
@@ -2820,6 +2853,13 @@ if ('serviceWorker' in navigator) {
   // link abra o app sem saber a senha. Não é uma segurança "de verdade"
   // (a senha fica escondida no código do site) — é só uma trava simples
   // de acesso pessoal.
+  //
+  // Guardado em sessionStorage (não localStorage) de propósito: o
+  // sessionStorage some sozinho quando o navegador/app é fechado de vez,
+  // então a senha é pedida de novo a cada nova abertura — mesmo sem
+  // ninguém apertar o cadeado. Enquanto a aba/app continuar aberto
+  // (trocar de aplicativo, o auto-atualizador recarregar a página
+  // sozinho etc.), o desbloqueio continua valendo normalmente.
   (function () {
     const SENHA_CORRETA = "Paulus";
     const CHAVE_LOCAL = "pbf_desbloqueado";
@@ -2831,7 +2871,7 @@ if ('serviceWorker' in navigator) {
     // Botão de cadeado no cabeçalho chama esta função: trava o app de novo,
     // exigindo a senha na próxima vez (e também agora, na hora).
     window.sairDoApp = function () {
-      localStorage.removeItem(CHAVE_LOCAL);
+      sessionStorage.removeItem(CHAVE_LOCAL);
       window.location.reload();
     };
 
@@ -2864,8 +2904,10 @@ if ('serviceWorker' in navigator) {
       if (window.lucide) lucide.createIcons();
     }
 
-    // Se já desbloqueou antes neste aparelho, não pede a senha de novo.
-    if (localStorage.getItem(CHAVE_LOCAL) === 'sim') {
+    // Se já desbloqueou antes NESTA mesma sessão (aba/app ainda aberto),
+    // não pede a senha de novo. Fechou de vez? O sessionStorage já era, e
+    // a linha abaixo não vai encontrar nada.
+    if (sessionStorage.getItem(CHAVE_LOCAL) === 'sim') {
       liberarApp();
     } else {
       if (window.lucide) lucide.createIcons();
@@ -2875,7 +2917,7 @@ if ('serviceWorker' in navigator) {
     lockForm.addEventListener('submit', function (e) {
       e.preventDefault();
       if (lockPass.value === SENHA_CORRETA) {
-        localStorage.setItem(CHAVE_LOCAL, 'sim');
+        sessionStorage.setItem(CHAVE_LOCAL, 'sim');
         liberarApp();
       } else {
         lockError.classList.remove('hidden');
