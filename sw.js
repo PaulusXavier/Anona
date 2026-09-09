@@ -17,7 +17,7 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v7";
+const CACHE_NAME = "pbf-app-shell-v8";
 
 // Arquivos do próprio site que são ESSENCIAIS: sem eles o app não tem como
 // funcionar offline, então se algum faltar o install falha mesmo (são
@@ -35,9 +35,9 @@ const SHELL_FILES = [
 // faltando no repositório, isso não derruba o app offline inteiro; só essa
 // imagem específica não aparece.
 const SHELL_IMAGES = [
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/logo-bolsa-familia.png"
+  "./icon-192.png",
+  "./icon-512.png",
+  "./logo-bolsa-familia.png"
 ];
 
 // Bibliotecas externas usadas pelo app — sem elas o app perde estilo,
