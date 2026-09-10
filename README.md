@@ -80,9 +80,9 @@ Pronto — o Firebase está configurado. Isso é 100% grátis para uso pessoal (
 ## 4. Usando o app
 
 - Abra o link em qualquer navegador (celular ou computador).
-- No topo, clique em **Sincronizar notas** para criar uma conta (e-mail + senha) ou entrar.
+- Na tela inicial, **crie uma conta com e-mail e senha** (aba "Criar conta") ou entre com uma conta que já existe (aba "Entrar"). Esse login é obrigatório — é ele que protege o app, e é validado pelo próprio Firebase (Google), não por uma senha escrita no código do site.
 - Depois de logado, toda anotação feita em um dia fica salva na nuvem — abra o mesmo site em outro celular, entre com o mesmo e-mail/senha, e as notas aparecem automaticamente.
-- Sem login, as notas ficam salvas só naquele aparelho (modo local).
+- Esqueceu a senha? Use o link **"Esqueci minha senha"** na tela de login para receber um e-mail de redefinição.
 - Digite o **final do seu NIS** na barra lateral para o calendário destacar automaticamente o seu dia de pagamento em cada mês.
 - No celular, o navegador costuma oferecer **"Adicionar à tela inicial" / "Instalar app"** — isso instala o site como um app de verdade, com ícone próprio.
 
@@ -200,20 +200,24 @@ O app foi organizado para essa atualização ser rápida. Tudo o que muda de ano
 
 O app foi revisado e alguns pontos foram corrigidos diretamente no código. Resumo:
 
+### Login forte (mudança principal desta revisão)
+- **A senha fixa do app ("Paulus"), que ficava escrita no código-fonte, foi removida.** Ela nunca poderia ser realmente escondida num site estático (qualquer pessoa com "Ver código-fonte" a encontrava), então em vez de tentar escondê-la melhor, ela foi eliminada.
+- **A tela inicial agora é o próprio login por e-mail/senha do Firebase** — o mesmo que antes só existia para sincronizar notas. Não existe mais um jeito de abrir o app sem uma conta real: é preciso **Entrar** ou **Criar conta** logo na primeira tela.
+- Essa senha é conferida pelo Firebase (servidor do Google), não por uma comparação de texto escondida no HTML — por isso ninguém consegue "ler o código" e descobrir ou contornar a senha de alguém.
+- Consequência: o app deixou de ter o modo "usar só neste aparelho, sem conta". Toda pessoa que for usar o Anona agora precisa de uma conta (grátis) de e-mail/senha.
+
 ### Corrigido no código
-- **Vazamento por trás da tela de senha (corrigido):** antes, a tela de senha só *escondia visualmente* o app (`display:none`) — mas os dados (notas, planilhas) já eram carregados e escritos no HTML da página em segundo plano, então dava pra ver tudo sem digitar a senha, só abrindo o **Inspecionar elemento** do navegador. Agora o carregamento e a exibição desses dados só acontecem depois que a senha certa é digitada.
-- **Nomes de arquivo sem escape (corrigido):** a lista de planilhas de Repercussão agora trata o nome do arquivo com segurança antes de exibir, evitando que um nome de arquivo malicioso injete código na página.
+- **Vazamento por trás da tela de acesso (corrigido):** os dados (notas, planilhas) só são carregados e exibidos depois que o Firebase confirma um login válido — nada é escrito no HTML da página antes disso.
+- **Nomes de arquivo sem escape (corrigido):** a lista de planilhas de Repercussão trata o nome do arquivo com segurança antes de exibir, evitando que um nome de arquivo malicioso injete código na página.
 - **Biblioteca de ícones sem versão fixa (corrigido):** o `lucide@latest` foi trocado por uma versão fixa (`lucide@0.469.0`), pra evitar que uma atualização não testada da biblioteca quebre o app de uma hora pra outra.
-- **Botões "Sair" ambíguos (corrigido):** agora o cadeado no cabeçalho diz "Travar o app", e o botão ao lado do e-mail sincronizado diz "Sair da conta" — antes os dois se chamavam só "Sair" e podiam confundir.
+- **Botão de sair claro:** com o login único na entrada, o antigo botão de "Travar o app" (que só escondia a tela, sem sair da conta) foi removido — agora só existe "Sair da conta", que desconecta de verdade e volta para a tela de login.
 
 ### Já estava OK
 - **Regras do Firestore** (`firestore.rules`): cada pessoa só lê/escreve os próprios dados (`request.auth.uid == userId`). Isso já garante que ninguém acessa notas ou planilhas de outra conta pelo banco de dados.
 - O texto das notas já era exibido com escape (protegido contra injeção de código).
 
 ### Limitações que continuam existindo (importante saber)
-- **A senha do app ("Paulus") não é uma segurança real, é só uma trava simples.** Ela fica escrita no código-fonte do site — qualquer pessoa com conhecimento técnico básico (abrir o "Ver código-fonte" ou o Console do navegador) consegue lê-la ou contornar a tela. Ela serve para afastar acesso casual (alguém que ache o link por acaso), não para proteger contra alguém com esse tipo de conhecimento.
-- **O botão de cadeado ("Travar app") não desconecta da conta na nuvem.** Ele só volta a pedir a senha do app; se alguém contornar a tela de senha num aparelho onde você já sincronizou notas, ainda seria possível ver os dados da conta que já estava logada ali. Se for usar o app num aparelho compartilhado, use também "Sair da conta" (perto do e-mail, no cabeçalho) além de travar.
 - **A `apiKey` do Firebase aparece no código do site.** Isso é normal e esperado para apps desse tipo (não é uma senha secreta) — a proteção de verdade é feita pelas regras do Firestore e pela autenticação, que já estão corretas. Mesmo assim, para reforçar, você pode:
   1. No **Google Cloud Console** (console.cloud.google.com) → **APIs e Serviços > Credenciais**, abrir essa chave de API e restringir "Restrições de aplicativo" para aceitar apenas o domínio do seu GitHub Pages (`https://SEU-USUARIO.github.io/*`). Isso impede que alguém copie sua chave e a use em outro site.
-  2. Ativar **2 fatores (2FA)** na conta Google usada no Firebase — essa conta é o verdadeiro "cofre" de tudo: quem tiver acesso a ela, acessa o console e os dados de todo mundo que sincronizou.
-- **Como as notas podem conter dados sensíveis de famílias atendidas**, vale reforçar: não compartilhe a senha do app nem as credenciais da sua conta de sincronização com ninguém, e sempre use "Sair da conta" ao terminar de usar num computador que não é só seu (biblioteca, órgão público etc.).
+  2. Ativar **2 fatores (2FA)** na conta Google usada no Firebase — essa conta é o verdadeiro "cofre" de tudo: quem tiver acesso a ela, acessa o console e os dados de todo mundo que criou conta.
+- **Como as notas podem conter dados sensíveis de famílias atendidas**, vale reforçar: use uma senha forte e exclusiva na sua conta de login, não compartilhe suas credenciais com ninguém, e sempre use "Sair da conta" ao terminar de usar num computador que não é só seu (biblioteca, órgão público etc.).
