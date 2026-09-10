@@ -88,8 +88,8 @@
      .panel-tool = os "formulários" da lateral (upload de planilha, NIS,
      exportação): fundo levemente amarelado como papel, cantos mais retos,
      sem sombra — para parecerem utilitários, não o conteúdo principal. */
-  .panel{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius-focus); box-shadow:0 1px 2px rgba(13,46,99,.05); }
-  .panel-tool{ background:linear-gradient(180deg,var(--card),#FAF6EC); border:1px solid var(--line); border-radius:var(--radius-doc); }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius-focus); box-shadow:0 1px 3px rgba(13,46,99,.06), 0 14px 34px -22px rgba(13,46,99,.35); }
+  .panel-tool{ background:linear-gradient(180deg,var(--card),#FAF6EC); border:1px solid var(--line); border-radius:var(--radius-doc); box-shadow:0 1px 2px rgba(13,46,99,.04), 0 10px 24px -18px rgba(13,46,99,.3); }
   .eyebrow{ font-family:'Fraunces',serif; font-weight:600; font-size:.95rem; color:var(--ink); display:flex; align-items:center; gap:.55rem; }
   .eyebrow .chip{ width:1.9rem; height:1.9rem; border-radius:.55rem; display:flex; align-items:center; justify-content:center; background:var(--verde-soft); flex-shrink:0; }
 
@@ -114,7 +114,13 @@
 
   /* ---------- calendário ---------- */
   .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:var(--line-soft); border:1px solid var(--line-soft); }
-  .day-cell{ min-height:110px; min-width:0; overflow:hidden; background:#fff; cursor:pointer; position:relative; padding:.5rem; display:flex; flex-direction:column; transition:background .15s; }
+  .day-cell{ min-height:110px; min-width:0; overflow:hidden; background:#fff; cursor:pointer; position:relative; padding:.5rem; display:flex; flex-direction:column; transition:background .15s, transform .15s, box-shadow .15s; }
+  /* fins de semana recebem um fundo levemente diferente — ajuda a "ler" de
+     relance a regra dos últimos 10 dias ÚTEIS sem precisar contar no dedo.
+     Vale para o cabeçalho (Dom/Sáb) e para as células vazias/dias do mês. */
+  .weekday-head > div:first-child, .weekday-head > div:last-child{ background:rgba(13,46,99,.05); }
+  .day-cell:nth-child(7n+1), .day-cell:nth-child(7n){ background:#FBFBFC; }
+  .day-cell:nth-child(7n+1):hover, .day-cell:nth-child(7n):hover{ background:#F4F6FA; }
   /* células maiores em telas médias/grandes, para o calendário ficar mais
      confortável de ler e clicar (no celular mantém o tamanho um pouco maior
      que antes, e cresce bastante em telas maiores para mostrar todos os
@@ -129,8 +135,22 @@
     .day-cell{ min-height:190px; padding:1rem; }
   }
   .day-cell:hover{ background:#F7F9FC; }
+  /* em telas com mouse (não touch), a célula "levanta" de leve ao passar o
+     cursor — reforça que é clicável sem criar movimento em toques no celular */
+  @media (hover:hover){
+    .day-cell:not(.empty):hover{ transform:translateY(-1px); box-shadow:0 6px 14px -8px rgba(13,46,99,.28); z-index:2; }
+  }
   .day-cell.selected{ outline:2px solid var(--azul); outline-offset:-2px; background:#EEF3FB; z-index:1; }
   .day-cell.empty{ background:#FAFBFC; cursor:default; }
+  /* dia de HOJE: um sublinhado curto sob o número, na cor verde da bandeira
+     — discreto o bastante para não competir com o dia selecionado (azul,
+     outline) nem com o selo de pagamento (canto superior), mas visível o
+     bastante para achar "onde estou" no mês de relance. */
+  .day-cell.today .day-num{ position:relative; }
+  .day-cell.today .day-num::after{
+    content:""; position:absolute; left:0; right:0; bottom:-3px; height:2.5px;
+    border-radius:99px; background:var(--verde);
+  }
   /* dia de pagamento: um selo circular no canto, como um carimbo de recebido */
   .day-cell.payday::before{
     content:"";
@@ -395,6 +415,18 @@
     </div>
 
     <div class="panel-tool p-5">
+      <h2 class="eyebrow mb-3">
+        <span class="chip"><i data-lucide="clipboard-check" class="w-4 h-4" style="color:var(--azul)"></i></span> Consulta ao SICON
+      </h2>
+      <p class="text-xs text-slate-500 mb-3">Acesse o <strong>Sistema de Condicionalidades (Sicon)</strong> para consultar pesquisa de família, descumprimentos, recursos e acompanhamento familiar. É preciso login e senha do <strong>SIGPBF</strong> (ou entrar com o <strong>gov.br</strong>), com perfil de técnico habilitado pelo gestor municipal.</p>
+      <a href="https://www.mds.gov.br/mds-sigpbf-web/carregarTelaLogin.jsf" target="_blank" rel="noopener"
+        class="w-full text-white px-4 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
+        <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Entrar no SIGPBF / Sicon
+      </a>
+      <p class="text-[10px] text-slate-400 mt-3 italic">Fonte: MDS/SENARC.</p>
+    </div>
+
+    <div class="panel-tool p-5">
       <h2 class="eyebrow mb-1">
         <span class="chip"><i data-lucide="folder-kanban" class="w-4 h-4" style="color:var(--verde)"></i></span> Planilhas do Território Volante
       </h2>
@@ -471,7 +503,7 @@
   <!-- COLUNA CENTRAL -->
   <section class="lg:col-span-3 space-y-6 order-1 lg:order-2">
 
-    <div class="panel shadow-sm overflow-hidden">
+    <div class="panel overflow-hidden">
       <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--line)">
         <button onclick="changeMonth(-1)" id="btnPrev" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
           <i data-lucide="chevron-left" class="w-6 h-6 text-slate-600"></i>
@@ -481,7 +513,7 @@
           <i data-lucide="chevron-right" class="w-6 h-6 text-slate-600"></i>
         </button>
       </div>
-      <div class="grid grid-cols-7 text-center text-[10px] sm:text-[12px] font-bold text-slate-400 uppercase py-2 sm:py-3" style="background:var(--line-soft)">
+      <div class="grid grid-cols-7 text-center text-[10px] sm:text-[12px] font-bold text-slate-400 uppercase py-2 sm:py-3 weekday-head" style="background:var(--line-soft)">
         <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
       </div>
       <div id="calendarGrid" class="calendar-grid"></div>
@@ -502,7 +534,7 @@
       </div>
     </div>
 
-    <div class="panel p-6 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="panel p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
       <div class="space-y-4">
         <div class="flex items-center gap-4">
           <div id="selectedDayBox" class="display text-white w-14 h-14 flex items-center justify-center rounded-2xl font-semibold text-2xl shadow-lg" style="background:var(--azul)">01</div>
@@ -674,6 +706,57 @@
   </div>
 </section>
 
+<!-- CADASTRO ÚNICO — o que é, quem pode se cadastrar, documentos, atualização e consulta -->
+<section class="max-w-7xl mx-auto px-4 pb-2">
+  <div class="panel-tool p-5">
+    <h2 class="eyebrow mb-3">
+      <span class="chip"><i data-lucide="id-card" class="w-4 h-4" style="color:var(--azul)"></i></span> Cadastro Único para Programas Sociais
+    </h2>
+    <p class="text-xs text-slate-500 mb-4">O <strong>Cadastro Único (CadÚnico)</strong> identifica e caracteriza as famílias de baixa renda de todo o país, registrando endereço, composição familiar, escolaridade, trabalho, renda e deficiência. É a <strong>porta de entrada</strong> para mais de 40 programas sociais federais, estaduais e municipais — entre eles o <strong>Bolsa Família</strong>, o <strong>BPC</strong>, o <strong>Pé-de-Meia</strong>, a <strong>Tarifa Social de Energia Elétrica</strong>, o <strong>Gás do Povo</strong> e o <strong>Minha Casa Minha Vida</strong>.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="users" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Quem pode se cadastrar</p>
+        <ul class="text-xs text-slate-600 space-y-1 list-disc pl-4">
+          <li>Famílias com renda mensal de até <strong>meio salário mínimo por pessoa</strong>.</li>
+          <li>Famílias com renda maior também podem se cadastrar, quando o CadÚnico for exigido para acessar algum programa ou serviço específico.</li>
+          <li>Pessoas que moram sozinhas podem se cadastrar como <strong>família unipessoal</strong> (para benefícios federais como Bolsa Família e BPC, o cadastro/atualização costuma exigir entrevista no domicílio).</li>
+          <li>Procedimentos diferenciados para povos indígenas, quilombolas, ribeirinhos, pescadores artesanais e pessoas em situação de rua.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="file-text" class="w-3.5 h-3.5" style="color:var(--amarelo)"></i> Como se cadastrar</p>
+        <ul class="text-xs text-slate-600 space-y-1 list-disc pl-4">
+          <li>Cadastro <strong>gratuito e presencial</strong>, no CRAS ou posto de cadastramento do município.</li>
+          <li>O responsável familiar deve levar: <strong>CPF de todas as pessoas da família</strong> (obrigatório), documento de identificação e, se houver, comprovante de residência (de preferência conta de luz).</li>
+          <li>Cada pessoa só pode estar cadastrada em uma família.</li>
+          <li>O CPF é a chave de identificação; sem ele, o cadastro fica "aguardando CPF" e pode ser excluído se não for regularizado no prazo.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5" style="color:var(--azul)"></i> Atualização cadastral</p>
+        <ul class="text-xs text-slate-600 space-y-1 list-disc pl-4">
+          <li>Obrigatória a cada <strong>24 meses</strong>, mesmo sem mudanças, e sempre que houver alteração de endereço, renda/trabalho, composição familiar, escola das crianças ou saúde.</li>
+          <li>A família pode ser convocada para atualizar a partir de <strong>18 meses</strong> da última atualização.</li>
+          <li>Cadastro desatualizado pode levar a bloqueio, suspensão ou cancelamento de benefícios.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="search" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Onde consultar seus dados</p>
+        <ul class="text-xs text-slate-600 space-y-1 list-disc pl-4">
+          <li>Pelo site <a href="https://cadunico.dataprev.gov.br" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--azul)">cadunico.dataprev.gov.br</a> ou pelo aplicativo <strong>Cadastro Único</strong>.</li>
+          <li>Pelo CRAS ou posto de atendimento do seu município.</li>
+          <li>Avisos de atualização também podem chegar pelo app do Bolsa Família ou do Caixa Tem.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="text-[10px] text-slate-400 mt-3 italic">Fonte: MDS — <a href="https://www.gov.br/mds/pt-br/acoes-e-programas/cadastro-unico" target="_blank" rel="noopener" class="underline">gov.br/mds — Cadastro Único</a>.</p>
+  </div>
+</section>
+
 <!-- CRONOGRAMA DE REPERCUSSÃO 2026 — datas de referência e prazo de recurso por mês de repercussão -->
 <section class="max-w-7xl mx-auto px-4 pb-2">
   <div class="panel-tool p-5">
@@ -827,7 +910,7 @@
 
 <!-- FIREBASE -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import {
     getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
     signInWithEmailAndPassword, signOut, sendPasswordResetEmail
@@ -2353,7 +2436,7 @@
     const file = input.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert('Esse arquivo está grande demais (acima de 5 MB) para guardar na nuvem.');
+      alert('Esse arquivo está grande demais (acima de 5 MB) para guardar neste navegador.');
       input.value = '';
       return;
     }
@@ -2588,7 +2671,7 @@
   });
 
   window.__getNotes = () => notes;
-</script>
+  </script>
 
 <!-- APP -->
 <script>
@@ -2781,9 +2864,10 @@ function render(){
     const noteObj = getNoteObj(notes, dateKey);
     const hasNote = !!(noteObj && noteObj.text);
     const isPayday = payday === day;
+    const isToday = formatDate(new Date()) === dateKey;
 
     const cell = document.createElement('div');
-    cell.className = `day-cell ${isSelected?'selected':''} ${isPayday?'payday':''}`;
+    cell.className = `day-cell ${isSelected?'selected':''} ${isPayday?'payday':''} ${isToday?'today':''}`;
     cell.onclick = () => { selectedDay = date; render(); };
 
     let bottomContent = '';
@@ -2797,7 +2881,7 @@ function render(){
 
     cell.innerHTML = `
       <div class="flex justify-between items-start relative z-10">
-        <span class="text-sm sm:text-lg lg:text-xl font-black ${isSelected?'':'text-slate-400'}" style="${isSelected?'color:var(--azul)':''}">${day}</span>
+        <span class="text-sm sm:text-lg lg:text-xl font-black day-num ${isSelected?'':'text-slate-400'}" style="${isSelected?'color:var(--azul)':''}">${day}</span>
         ${hasNote ? `<i data-lucide="${noteObj.emphasis?'star':'pin'}" class="w-3 h-3 sm:w-4 sm:h-4" style="color:${noteObj.emphasis?'var(--amarelo-text)':'var(--azul)'}"></i>` : ''}
       </div>
       <div class="mt-2 flex flex-wrap gap-1 relative z-10">
