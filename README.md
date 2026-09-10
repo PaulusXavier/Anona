@@ -15,15 +15,15 @@ Não precisa de servidor: você hospeda no próprio GitHub (GitHub Pages) e o Fi
 index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
-icons/icon-192.png              -> ícone do app
-icons/icon-512.png              -> ícone do app (versão maior)
-icons/logo-bolsa-familia.png    -> logo exibido nas telas de senha/login
+icon-192.png                    -> ícone do app
+icon-512.png                    -> ícone do app (versão maior)
+logo-bolsa-familia.png          -> logo exibido nas telas de senha/login
 firestore.rules                 -> regras de segurança (cole no console do Firebase)
 ```
 
-**Importante:** os três arquivos dentro da pasta `icons/` têm que ficar exatamente com esses nomes e dentro de uma pasta chamada `icons` (não solto na raiz do repositório) — é assim que o `index.html`, o `manifest.json` e o `sw.js` procuram por eles. Se algum desses arquivos não for enviado ou for renomeado, a imagem correspondente simplesmente não aparece (o app continua funcionando normalmente, o `sw.js` já foi ajustado para não travar a instalação por causa disso).
+**Importante:** os arquivos `icon-192.png`, `icon-512.png` e `logo-bolsa-familia.png` têm que ficar **soltos na raiz do repositório, com esses nomes exatos** (não dentro de uma pasta `icons/` nem renomeados) — é assim que o `index.html`, o `manifest.json` e o `sw.js` procuram por eles. Se algum desses arquivos não for enviado ou for renomeado, a imagem correspondente simplesmente não aparece (o app continua funcionando normalmente, o `sw.js` já foi ajustado para não travar a instalação por causa disso).
 
-Suba todos esses arquivos para a raiz do seu repositório no GitHub (ou para uma subpasta, tanto faz, desde que fiquem todos juntos).
+Suba todos esses arquivos para a raiz do seu repositório no GitHub.
 
 ---
 
@@ -66,7 +66,7 @@ Pronto — o Firebase está configurado. Isso é 100% grátis para uso pessoal (
 
 ## 3. Publicar no GitHub Pages
 
-1. Crie um repositório no GitHub (pode ser público ou privado) e suba todos os arquivos deste projeto (`index.html`, `manifest.json`, `sw.js`, pasta `icons/`, `firestore.rules`).
+1. Crie um repositório no GitHub (pode ser público ou privado) e suba todos os arquivos deste projeto (`index.html`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`, `logo-bolsa-familia.png`, `firestore.rules`) soltos na raiz do repositório.
 2. No repositório, vá em **Settings > Pages**.
 3. Em "Source", escolha a branch `main` (ou `master`) e a pasta `/ (root)`.
 4. Salve. Depois de 1–2 minutos, o GitHub mostra o link do seu site, algo como:
