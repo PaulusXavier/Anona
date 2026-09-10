@@ -1,4 +1,6 @@
-# Anona — Sistema de acompanhamento de condicionalidades do Bolsa Família
+# Anona — Acompanhamento de Condicionalidades
+
+> Ferramenta independente (não oficial), sem vínculo, afiliação ou endosso do Governo Federal, do Ministério do Desenvolvimento e Assistência Social (MDS) ou da Caixa Econômica Federal. "Bolsa Família" é usado aqui apenas para descrever o programa social cujas condicionalidades o app ajuda a acompanhar.
 
 App simples (site estático) com:
 - Calendário oficial de pagamentos do Bolsa Família 2026 por final do NIS;
@@ -15,15 +17,16 @@ Não precisa de servidor: você hospeda no próprio GitHub (GitHub Pages) e o Fi
 index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
-icon-192.png                    -> ícone do app
+icon-192.png                    -> ícone do app (ilustração própria, sem uso de marca de terceiros)
 icon-512.png                    -> ícone do app (versão maior)
-logo-bolsa-familia.png          -> logo exibido nas telas de senha/login
 firestore.rules                 -> regras de segurança (cole no console do Firebase)
 ```
 
-**Importante:** os arquivos `icon-192.png`, `icon-512.png` e `logo-bolsa-familia.png` têm que ficar **soltos na raiz do repositório, com esses nomes exatos** (não dentro de uma pasta `icons/` nem renomeados) — é assim que o `index.html`, o `manifest.json` e o `sw.js` procuram por eles. Se algum desses arquivos não for enviado ou for renomeado, a imagem correspondente simplesmente não aparece (o app continua funcionando normalmente, o `sw.js` já foi ajustado para não travar a instalação por causa disso).
+**Importante:** os arquivos `icon-192.png` e `icon-512.png` têm que ficar **soltos na raiz do repositório, com esses nomes exatos** (não dentro de uma pasta `icons/` nem renomeados) — é assim que o `index.html`, o `manifest.json` e o `sw.js` procuram por eles. Se algum desses arquivos não for enviado ou for renomeado, a imagem correspondente simplesmente não aparece (o app continua funcionando normalmente, o `sw.js` já foi ajustado para não travar a instalação por causa disso).
 
 Suba todos esses arquivos para a raiz do seu repositório no GitHub.
+
+**Nota sobre a marca "Bolsa Família":** este projeto não usa mais o logotipo oficial do Programa Bolsa Família (arquivo `logo-bolsa-familia.png`, removido). O app usa apenas seu próprio ícone e cita o nome "Bolsa Família" de forma descritiva, para identificar o programa social acompanhado — sem qualquer logotipo, identidade visual oficial ou alegação de vínculo com o governo. Se você renomear também o repositório no GitHub (removendo "Bolsa Família" do nome/URL), evita ainda mais qualquer impressão de afiliação oficial.
 
 ---
 
