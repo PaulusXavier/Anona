@@ -14,7 +14,7 @@
 <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
 <style>
   :root{
     --azul:#0D2E63;
@@ -38,13 +38,14 @@
     color:var(--ink);
     background-color:var(--paper);
     background-image:
-      radial-gradient(80% 45% at 8% 0%, rgba(20,107,71,.09), transparent 60%),
-      radial-gradient(70% 40% at 100% 0%, rgba(216,155,50,.14), transparent 60%),
-      radial-gradient(60% 35% at 50% 100%, rgba(13,46,99,.06), transparent 65%),
-      radial-gradient(circle at 1px 1px, rgba(13,46,99,.07) 1px, transparent 0);
-    background-repeat:no-repeat, no-repeat, no-repeat, repeat;
-    background-attachment:fixed, fixed, fixed, local;
-    background-size:auto, auto, auto, 22px 22px;
+      radial-gradient(85% 50% at 6% -4%, rgba(20,107,71,.11), transparent 58%),
+      radial-gradient(75% 45% at 102% -6%, rgba(216,155,50,.16), transparent 58%),
+      radial-gradient(65% 40% at 50% 104%, rgba(13,46,99,.07), transparent 62%),
+      linear-gradient(180deg, rgba(255,255,255,.5), transparent 14%),
+      radial-gradient(circle at 1px 1px, rgba(13,46,99,.065) 1px, transparent 0);
+    background-repeat:no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-attachment:fixed, fixed, fixed, fixed, local;
+    background-size:auto, auto, auto, auto, 22px 22px;
     position:relative;
   }
   /* ---------- marca d'água de fundo: selo casa + coração + família ----------
@@ -209,9 +210,10 @@
      do app parecerem a capa de um mesmo documento, e não uma tela genérica. */
   .access-bg{
     background:
-      radial-gradient(120% 60% at 12% -5%, rgba(20,107,71,.38), transparent 55%),
-      radial-gradient(110% 60% at 100% 100%, rgba(216,155,50,.30), transparent 55%),
-      linear-gradient(165deg,var(--azul-deep),var(--azul) 60%,var(--azul-deep));
+      radial-gradient(130% 65% at 10% -8%, rgba(20,107,71,.42), transparent 52%),
+      radial-gradient(120% 65% at 105% 108%, rgba(216,155,50,.32), transparent 52%),
+      radial-gradient(90% 55% at 50% 45%, rgba(20,60,130,.35), transparent 70%),
+      linear-gradient(160deg,var(--azul-deep) 0%,#0D2E63 45%,#0A2757 75%,var(--azul-deep) 100%);
     position:relative; overflow:hidden;
   }
   .access-bg::before{
@@ -219,11 +221,14 @@
     background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.09) 1px, transparent 0);
     background-size:20px 20px;
   }
-  /* brilho suave vindo de cima, para o fundo azul ter mais profundidade
-     em vez de ficar chapado */
+  /* brilho suave vindo de cima + leve vinheta nas bordas, para o fundo azul
+     ter mais profundidade e empurrar o olho para o cartão central em vez
+     de ficar chapado ou competir com ele. */
   .access-bg::after{
     content:""; position:absolute; inset:0; pointer-events:none;
-    background:radial-gradient(60% 50% at 50% -10%, rgba(255,255,255,.14), transparent 70%);
+    background:
+      radial-gradient(65% 55% at 50% -8%, rgba(255,255,255,.16), transparent 70%),
+      radial-gradient(120% 85% at 50% 50%, transparent 55%, rgba(3,12,31,.35) 100%);
   }
   /* Anéis "abertos" (mesmo traço do selo psi da tela de senha) soltos ao
      fundo, bem discretos — repete a mesma linguagem visual do círculo
@@ -234,10 +239,17 @@
     border-bottom-color:transparent;
     pointer-events:none;
   }
+  /* Pontinhos soltos (verde/dourado) espalhados no fundo azul — dão vida
+     à tela de acesso sem virar confete: poucos, pequenos, bem discretos. */
+  .access-dot{
+    position:absolute; border-radius:50%; pointer-events:none;
+    box-shadow:0 0 14px 2px currentColor;
+  }
   .access-card{
     background:var(--card);
-    border-radius:1.6rem;
-    box-shadow:0 30px 70px -18px rgba(4,15,40,.6), 0 2px 8px rgba(4,15,40,.14);
+    border-radius:1.75rem;
+    box-shadow:0 40px 80px -20px rgba(3,12,31,.65), 0 2px 10px rgba(3,12,31,.18),
+      inset 0 1px 0 rgba(255,255,255,.6);
     position:relative; overflow:hidden;
   }
   .access-icon{
@@ -249,17 +261,27 @@
   /* Selo da tela de senha: em vez da bolinha amarela cheia, um círculo
      "aberto" (não fechado por completo, como um traço de caderno) com o
      símbolo psi (Ψ) da Psicologia no meio — reforça a identidade
-     profissional de quem usa o app. */
+     profissional de quem usa o app. Um anel externo suave "respira"
+     bem devagar para dar vida ao selo sem distrair do formulário. */
   .psi-badge{
-    width:3.1rem; height:3.1rem; position:relative;
+    width:3.4rem; height:3.4rem; position:relative;
     display:flex; align-items:center; justify-content:center;
-    filter:drop-shadow(0 6px 14px rgba(13,46,99,.28));
+    filter:drop-shadow(0 8px 16px rgba(13,46,99,.3));
+  }
+  .psi-badge::before{
+    content:""; position:absolute; inset:-7px; border-radius:50%;
+    background:radial-gradient(circle, rgba(216,155,50,.22), transparent 70%);
+    animation:psiBreathe 3.6s ease-in-out infinite;
   }
   .psi-badge svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
   .psi-badge span{
     position:relative; font-family:Georgia,'Times New Roman',serif; font-weight:700;
-    font-size:1.6rem; line-height:1; color:var(--azul-deep); transform:translateY(-1px);
+    font-size:1.7rem; line-height:1; color:var(--azul-deep); transform:translateY(-1px);
   }
+  @keyframes psiBreathe{
+    0%,100%{ transform:scale(1); opacity:.7; } 50%{ transform:scale(1.14); opacity:1; }
+  }
+  @media (prefers-reduced-motion: reduce){ .psi-badge::before{ animation:none; } }
   /* ---------- divisória "canhoto de bilhete" ----------
      Uma linha tracejada com dois recortes circulares nas bordas, como a
      parte destacável de um bilhete/carnê — reforça a linguagem visual de
@@ -273,20 +295,34 @@
   .ticket-notch::before{ left:-.5rem; }
   .ticket-notch::after{ right:-.5rem; }
   .access-input{
-    width:100%; border:1px solid var(--line); border-radius:1rem;
-    padding:.7rem .9rem .7rem 2.5rem; font-size:.875rem;
-    background:#fff; transition:border-color .15s, box-shadow .15s;
+    width:100%; border:1.5px solid var(--line); border-radius:1rem;
+    padding:.85rem .9rem .85rem 2.6rem; font-size:.9rem;
+    background:#FCFBF8; transition:border-color .15s, box-shadow .15s, background .15s;
   }
-  .access-input:focus{ outline:none; border-color:var(--azul); box-shadow:0 0 0 3px rgba(13,46,99,.14); }
+  .access-input:focus{ outline:none; border-color:var(--azul); background:#fff; box-shadow:0 0 0 4px rgba(13,46,99,.13); }
   .access-input-wrap{ position:relative; }
   .access-input-wrap > svg, .access-input-wrap > .lucide{
-    position:absolute; left:.85rem; top:50%; transform:translateY(-50%);
-    width:1rem; height:1rem; color:var(--azul); opacity:.55; pointer-events:none;
+    position:absolute; left:.9rem; top:50%; transform:translateY(-50%);
+    width:1.05rem; height:1.05rem; color:var(--azul); opacity:.55; pointer-events:none;
   }
   .access-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:.25rem; background:var(--azul-soft); border-radius:.9rem; padding:.25rem; }
   .access-tab{ padding:.5rem 0; border-radius:.7rem; font-size:.75rem; font-weight:700; transition:all .15s; color:var(--azul); opacity:.55; display:flex; align-items:center; justify-content:center; gap:.3rem; }
   .access-tab.active{ background:var(--card); opacity:1; box-shadow:0 1px 4px rgba(13,46,99,.18); }
   .access-tab svg{ width:.85rem; height:.85rem; }
+  /* Botão principal das telas de acesso: gradiente sutil + brilho que
+     desliza no hover, em vez de azul chapado, para reforçar que é a ação
+     principal da tela. */
+  .access-btn{
+    background:linear-gradient(135deg,var(--azul) 0%,#123A78 100%);
+    box-shadow:0 14px 28px -10px rgba(13,46,99,.6), inset 0 1px 0 rgba(255,255,255,.16);
+    position:relative; overflow:hidden;
+  }
+  .access-btn::before{
+    content:""; position:absolute; inset:0; border-radius:inherit;
+    background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.22) 45%, transparent 60%);
+    transform:translateX(-100%); transition:transform .5s ease;
+  }
+  .access-btn:hover::before{ transform:translateX(100%); }
   @keyframes shake{
     10%,90%{ transform:translateX(-1px); } 20%,80%{ transform:translateX(2px); }
     30%,50%,70%{ transform:translateX(-4px); } 40%,60%{ transform:translateX(4px); }
@@ -303,10 +339,16 @@
 
   <div class="ring-seal" aria-hidden="true" style="width:min(50vw,220px); right:-8%; top:-6%; transform:rotate(-20deg);"></div>
   <div class="ring-seal" aria-hidden="true" style="width:min(38vw,170px); left:-6%; bottom:-4%; transform:rotate(155deg);"></div>
+  <div class="ring-seal" aria-hidden="true" style="width:min(22vw,110px); right:8%; bottom:10%; transform:rotate(60deg); border-color:rgba(255,255,255,.08);"></div>
+
+  <div class="access-dot" aria-hidden="true" style="width:5px; height:5px; left:14%; top:22%; background:var(--amarelo); color:var(--amarelo); opacity:.55;"></div>
+  <div class="access-dot" aria-hidden="true" style="width:4px; height:4px; right:18%; top:16%; background:var(--verde); color:var(--verde); opacity:.5;"></div>
+  <div class="access-dot" aria-hidden="true" style="width:6px; height:6px; right:12%; bottom:24%; background:var(--amarelo); color:var(--amarelo); opacity:.4;"></div>
+  <div class="access-dot" aria-hidden="true" style="width:4px; height:4px; left:20%; bottom:18%; background:var(--verde); color:var(--verde); opacity:.45;"></div>
 
   <div class="access-card fade-in w-full max-w-sm" id="lockCard">
     <div class="flag-ribbon"></div>
-    <div class="px-7 pt-7 pb-5 text-center">
+    <div class="px-7 pt-7 pb-4 text-center">
       <div class="psi-badge mx-auto mb-4" aria-hidden="true">
         <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
           <circle cx="25" cy="25" r="21" fill="none" stroke="var(--azul)" stroke-width="3"
@@ -322,25 +364,47 @@
 
     <div class="ticket-notch"></div>
 
-    <div class="px-7 pt-6 pb-7">
-      <p class="text-xs text-slate-500 mb-3 text-center">Digite a senha para abrir o app.</p>
-      <form id="lockForm" class="space-y-3 text-left" autocomplete="off">
-        <div class="access-input-wrap">
-          <i data-lucide="key-round"></i>
-          <input id="lockPass" type="password" placeholder="Digite a senha do app" autocomplete="current-password"
-            class="access-input" style="padding-right:2.5rem" />
-          <button type="button" onclick="toggleLockPassVisibility()" aria-label="Mostrar ou ocultar senha"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
-            <i data-lucide="eye" id="lockPassEyeIcon" class="w-4 h-4"></i>
-          </button>
+    <div class="px-7 pt-5 pb-7">
+      <div class="access-tabs mb-4">
+        <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="access-tab"><i data-lucide="log-in"></i> Entrar</button>
+        <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="access-tab"><i data-lucide="user-plus"></i> Criar conta</button>
+      </div>
+      <p id="authModalSubtitle" class="text-xs text-slate-500 mb-3 text-center leading-snug">Entre com e-mail e senha para acessar suas anotações com segurança, em qualquer aparelho.</p>
+
+      <form id="authForm" class="space-y-3 text-left" autocomplete="off" onsubmit="event.preventDefault(); submitAuthForm();">
+        <div>
+          <label for="authEmail" class="text-[11px] font-bold text-slate-500 mb-1 block">E-mail</label>
+          <div class="access-input-wrap">
+            <i data-lucide="mail"></i>
+            <input id="authEmail" type="email" placeholder="seu@email.com" autocomplete="username" required class="access-input">
+          </div>
         </div>
-        <p id="lockError" class="text-xs font-semibold hidden bg-red-50 border border-red-100 rounded-lg px-3 py-2 flex items-center gap-1.5" style="color:#c0392b;">
-          <i data-lucide="alert-circle" class="w-3.5 h-3.5 flex-shrink-0"></i> Senha incorreta. Tente de novo.
-        </p>
-        <button type="submit" class="w-full text-white py-3 rounded-xl text-sm font-bold transition hover:opacity-90 hover:-translate-y-px active:translate-y-0 shadow-lg flex items-center justify-center gap-2" style="background:var(--azul); box-shadow:0 10px 24px -8px rgba(13,46,99,.55)">
-          Entrar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+
+        <div>
+          <label for="authPass" class="text-[11px] font-bold text-slate-500 mb-1 block">Senha</label>
+          <div class="access-input-wrap">
+            <i data-lucide="lock"></i>
+            <input id="authPass" type="password" placeholder="Mín. 6 caracteres" autocomplete="current-password" required minlength="6"
+              class="access-input" style="padding-right:2.5rem">
+            <button type="button" onclick="toggleAuthPassVisibility()" aria-label="Mostrar ou ocultar senha"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+              <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+        <div class="text-right -mt-1">
+          <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="text-[11px] font-semibold hover:underline" style="color:var(--azul)">Esqueci minha senha</button>
+        </div>
+
+        <p id="authError" class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 hidden"></p>
+        <p id="authSuccess" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 hidden"></p>
+
+        <button type="submit" id="authSubmitBtn" class="access-btn w-full text-white py-3.5 rounded-xl text-sm font-bold transition hover:-translate-y-px active:translate-y-0 disabled:opacity-60 flex items-center justify-center gap-2">
+          <i data-lucide="loader-2" id="authSubmitSpinner" class="w-4 h-4 animate-spin hidden"></i>
+          <span id="authSubmitLabel">Entrar</span> <i data-lucide="arrow-right" class="w-4 h-4" id="authSubmitArrow"></i>
         </button>
       </form>
+      <p class="text-[10px] text-slate-400 text-center mt-4 leading-snug">Sua senha é verificada pelo Firebase (Google) — nunca fica salva nem visível no código do app.</p>
     </div>
   </div>
 </div>
@@ -367,10 +431,6 @@
     </div>
     <div class="flex items-center gap-2">
       <div id="authArea" class="text-right text-xs"></div>
-      <button onclick="sairDoApp()" title="Travar o app (pedir a senha de novo)"
-        class="bg-white/10 hover:bg-white/20 p-2 rounded-xl transition">
-        <i data-lucide="lock" class="w-4 h-4"></i>
-      </button>
     </div>
   </div>
   <div class="flag-ribbon"></div>
@@ -846,72 +906,6 @@
   <p class="display font-semibold text-slate-500">Paulo Xavier — CRP-20/09816 — Psicólogo</p>
 </footer>
 
-<!-- MODAL LOGIN -->
-<div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-  <div class="access-card fade-in w-full max-w-sm relative">
-    <!-- faixa "capa da caderneta": mesmo azul do cabeçalho e da tela de senha,
-         para o login por e-mail parecer parte do mesmo documento, não um
-         popup genérico à parte -->
-    <div class="access-bg pt-8 pb-11 px-6 text-center relative">
-      <div class="flag-ribbon absolute top-0 left-0 right-0"></div>
-      <button type="button" onclick="closeAuthModal()" aria-label="Fechar" class="absolute top-3 right-3 text-white/60 hover:text-white transition p-1.5 hover:bg-white/10 rounded-lg">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-      <div class="access-icon mx-auto mb-3">
-        <i data-lucide="cloud" class="w-5 h-5" style="color:var(--azul-deep)"></i>
-      </div>
-      <h3 id="authModalTitle" class="display font-semibold text-lg text-white mb-1">Sincronizar suas notas</h3>
-      <p id="authModalSubtitle" class="text-[11.5px] text-blue-200 leading-snug px-2">Entre com e-mail e senha para acessar suas anotações em qualquer aparelho.</p>
-    </div>
-
-    <div class="px-6 pt-5 pb-6 -mt-5 relative rounded-t-[1.4rem]" style="background:var(--card); box-shadow:0 -6px 16px -8px rgba(4,15,40,.18)">
-      <div class="access-tabs mb-4">
-        <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="access-tab"><i data-lucide="log-in"></i> Entrar</button>
-        <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="access-tab"><i data-lucide="user-plus"></i> Criar conta</button>
-      </div>
-
-      <form id="authForm" autocomplete="off" onsubmit="event.preventDefault(); submitAuthForm();">
-        <label for="authEmail" class="text-[11px] font-bold text-slate-500 mb-1 block">E-mail</label>
-        <div class="access-input-wrap mb-3">
-          <i data-lucide="mail"></i>
-          <input id="authEmail" type="email" placeholder="seu@email.com" autocomplete="username" required class="access-input">
-        </div>
-
-        <label for="authPass" class="text-[11px] font-bold text-slate-500 mb-1 block">Senha</label>
-        <div class="access-input-wrap mb-1">
-          <i data-lucide="lock"></i>
-          <input id="authPass" type="password" placeholder="Mín. 6 caracteres" autocomplete="current-password" required minlength="6"
-            class="access-input" style="padding-right:2.5rem">
-          <button type="button" onclick="toggleAuthPassVisibility()" aria-label="Mostrar ou ocultar senha"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
-            <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
-          </button>
-        </div>
-        <div class="text-right mb-3">
-          <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="text-[11px] font-semibold hover:underline" style="color:var(--azul)">Esqueci minha senha</button>
-        </div>
-
-        <p id="authError" class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
-        <p id="authSuccess" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
-
-        <button type="submit" id="authSubmitBtn" class="w-full text-white py-3 rounded-xl text-sm font-bold transition hover:opacity-90 hover:-translate-y-px active:translate-y-0 disabled:opacity-60 flex items-center justify-center gap-2" style="background:var(--azul); box-shadow:0 10px 24px -8px rgba(13,46,99,.45)">
-          <i data-lucide="loader-2" id="authSubmitSpinner" class="w-4 h-4 animate-spin hidden"></i>
-          <span id="authSubmitLabel">Entrar</span>
-        </button>
-      </form>
-
-      <div class="flex items-center gap-2 mt-4">
-        <div class="flex-1 h-px" style="background:var(--line)"></div>
-        <span class="text-[10px] text-slate-300 font-semibold">ou</span>
-        <div class="flex-1 h-px" style="background:var(--line)"></div>
-      </div>
-      <button onclick="closeAuthModal()" class="w-full text-center text-xs text-slate-400 mt-3 hover:text-slate-600 flex items-center justify-center gap-1.5 py-1">
-        <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Continuar sem sincronizar (só neste aparelho)
-      </button>
-    </div>
-  </div>
-</div>
-
 <!-- FIREBASE -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -962,7 +956,6 @@
   }
 
   const authArea = document.getElementById('authArea');
-  const authModal = document.getElementById('authModal');
   const authError = document.getElementById('authError');
 
   function migrateNotes(raw){
@@ -989,15 +982,13 @@
     if (mode === 'login') {
       tabLogin.className = activeCls;
       tabSignup.className = inactiveCls;
-      document.getElementById('authModalTitle').textContent = 'Sincronizar suas notas';
-      document.getElementById('authModalSubtitle').textContent = 'Entre com e-mail e senha para acessar suas anotações em qualquer aparelho.';
+      document.getElementById('authModalSubtitle').textContent = 'Entre com e-mail e senha para acessar suas anotações com segurança, em qualquer aparelho.';
       document.getElementById('authForgotBtn').classList.remove('hidden');
       document.getElementById('authPass').setAttribute('autocomplete', 'current-password');
     } else {
       tabSignup.className = activeCls;
       tabLogin.className = inactiveCls;
-      document.getElementById('authModalTitle').textContent = 'Criar sua conta';
-      document.getElementById('authModalSubtitle').textContent = 'Crie uma conta gratuita para acessar suas anotações em qualquer aparelho.';
+      document.getElementById('authModalSubtitle').textContent = 'Crie uma conta gratuita para proteger suas anotações e acessá-las em qualquer aparelho.';
       document.getElementById('authForgotBtn').classList.add('hidden');
       document.getElementById('authPass').setAttribute('autocomplete', 'new-password');
     }
@@ -1046,7 +1037,8 @@
       } else {
         await createUserWithEmailAndPassword(auth, email, pass);
       }
-      closeAuthModal();
+      // Não precisa fechar nenhum modal: assim que o Firebase confirmar o
+      // login, o onAuthStateChanged troca a tela de acesso pelo app sozinho.
     } catch (e) {
       showAuthError(e);
     } finally {
@@ -1093,27 +1085,6 @@
     authError.textContent = map[e.code] || 'Não foi possível concluir. Tente novamente.';
     authError.classList.remove('hidden');
   }
-
-  window.openAuthModal = () => {
-    if (!authArea) return;
-    setAuthMode('login');
-    document.getElementById('authEmail').value = '';
-    document.getElementById('authPass').value = '';
-    document.getElementById('authPass').type = 'password';
-    document.getElementById('authPassEyeIcon').setAttribute('data-lucide', 'eye');
-    authError.classList.add('hidden');
-    document.getElementById('authSuccess').classList.add('hidden');
-    authModal.classList.remove('hidden');
-    authModal.classList.add('flex');
-    if (window.lucide) lucide.createIcons();
-    setTimeout(() => document.getElementById('authEmail')?.focus(), 50);
-  };
-  window.closeAuthModal = () => { authModal.classList.add('hidden'); authModal.classList.remove('flex'); };
-
-  authModal.addEventListener('click', (e) => { if (e.target === authModal) closeAuthModal(); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !authModal.classList.contains('hidden')) closeAuthModal();
-  });
 
   async function loadNotesFromCloud() {
     if (!currentUser) return;
@@ -2630,41 +2601,52 @@
     }
   };
 
-  // As funções abaixo só populam a tela com dados reais (notas, nome do
-  // e-mail sincronizado, planilhas de repercussão) DEPOIS que o app estiver
-  // destravado pela tela de senha. Antes disso, o Firebase pode resolver a
-  // sessão em segundo plano, mas guardamos o resultado em "pendência" sem
-  // tocar no HTML — assim, quem inspecionar a página antes de digitar a
-  // senha não encontra nada de verdade escondido no código.
+  // As funções abaixo controlam a troca entre a tela de acesso (login real
+  // por e-mail/senha) e o conteúdo do app: só mostram dados de verdade
+  // (notas, planilhas) depois que o Firebase confirma quem está logado.
+  // Sem login válido, o app simplesmente não é exibido — a proteção é
+  // feita pelo próprio Firebase (servidor), não por um segredo escondido
+  // no código do site.
+  function mostrarTelaDeAcesso() {
+    const lockScreen = document.getElementById('lockScreen');
+    const appContent = document.getElementById('appContent');
+    if (appContent) appContent.style.display = 'none';
+    if (lockScreen) lockScreen.style.display = '';
+    setAuthMode('login');
+    const emailEl = document.getElementById('authEmail');
+    const passEl = document.getElementById('authPass');
+    if (passEl) { passEl.value = ''; passEl.type = 'password'; }
+    const eyeIcon = document.getElementById('authPassEyeIcon');
+    if (eyeIcon) eyeIcon.setAttribute('data-lucide', 'eye');
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => emailEl?.focus(), 50);
+  }
+
   async function runAuthUI(user) {
     currentUser = user;
     if (user) {
+      const lockScreen = document.getElementById('lockScreen');
+      const appContent = document.getElementById('appContent');
+      if (lockScreen) lockScreen.style.display = 'none';
+      if (appContent) appContent.style.display = '';
       authArea.innerHTML = `
         <div class="flex items-center gap-2 justify-end">
           <span class="hidden sm:inline text-blue-100">${escapeHtml(user.email)}</span>
-          <button onclick="doLogout()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-semibold">Sair da conta</button>
+          <button onclick="doLogout()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5"><i data-lucide="log-out" class="w-3.5 h-3.5"></i> Sair da conta</button>
         </div>
         <p class="text-[10px] text-blue-200 mt-1 flex items-center gap-1 justify-end"><span>●</span> sincronizado na nuvem</p>`;
+      if (window.lucide) lucide.createIcons();
       await loadNotesFromCloud();
       await loadReports();
-    } else {
-      notes = migrateNotes(JSON.parse(safeStorageGet('pbf_notes_local', '{}')));
-      authArea.innerHTML = `<button onclick="openAuthModal()" class="bg-white text-blue-900 px-3 py-1.5 rounded-lg font-bold hover:opacity-90">Sincronizar notas</button>`;
       render();
-      await loadReports();
+    } else {
+      notes = {};
+      mostrarTelaDeAcesso();
     }
   }
-  // Exposto para a tela de senha poder chamar isso assim que for destravada.
-  window.__pbfRunAuthUI = runAuthUI;
 
   onAuthStateChanged(auth, async (user) => {
-    if (window.__pbfUnlocked) {
-      await runAuthUI(user);
-    } else {
-      // App ainda travado: guarda o resultado sem exibir nada.
-      window.__pbfPendingAuthUser = user;
-      window.__pbfHasPendingAuth = true;
-    }
+    await runAuthUI(user);
   });
 
   window.__getNotes = () => notes;
@@ -3325,8 +3307,14 @@ if ('serviceWorker' in navigator) {
       const textoSalvo = notaSalva ? (typeof notaSalva === 'string' ? notaSalva : (notaSalva.text || '')) : '';
       if (noteInput.value.trim() !== textoSalvo.trim()) return false; // anotação com edição não salva
     }
-    const authModal = document.getElementById('authModal');
-    if (authModal && !authModal.classList.contains('hidden')) return false; // login/cadastro em andamento
+    // Se a tela de acesso (login/cadastro) ainda está visível e a pessoa já
+    // começou a digitar e-mail ou senha, evita recarregar por cima disso.
+    const lockScreenEl = document.getElementById('lockScreen');
+    const emailEl = document.getElementById('authEmail');
+    const passEl = document.getElementById('authPass');
+    if (lockScreenEl && lockScreenEl.style.display !== 'none' && ((emailEl && emailEl.value) || (passEl && passEl.value))) {
+      return false; // login/cadastro em andamento
+    }
     return true;
   }
 
@@ -3358,108 +3346,5 @@ if ('serviceWorker' in navigator) {
 </script>
 
 </div><!-- fim #appContent -->
-
-<script>
-  // Tela de senha simples: só serve para impedir que alguém que ache o
-  // link abra o app sem saber a senha. Não é uma segurança "de verdade"
-  // (a senha fica escondida no código do site) — é só uma trava simples
-  // de acesso pessoal.
-  //
-  // Guardado em sessionStorage (não localStorage) de propósito: o
-  // sessionStorage some sozinho quando o navegador/app é fechado de vez,
-  // então a senha é pedida de novo a cada nova abertura — mesmo sem
-  // ninguém apertar o cadeado. Enquanto a aba/app continuar aberto
-  // (trocar de aplicativo, o auto-atualizador recarregar a página
-  // sozinho etc.), o desbloqueio continua valendo normalmente.
-  (function () {
-    const SENHA_CORRETA = "Paulus";
-    const CHAVE_LOCAL = "pbf_desbloqueado";
-
-    // Acesso "blindado" ao sessionStorage: em alguns navegadores/modos
-    // (ex.: Safari com "Bloquear todos os cookies", certas janelas
-    // privadas, webviews restritos de outros apps), só de CHAMAR
-    // sessionStorage.getItem/setItem já pode lançar um erro. Sem essa
-    // proteção, essa chamada quebraria o script inteiro ANTES de ele
-    // conseguir registrar o "ouvinte" do formulário de senha — a pessoa
-    // digitaria a senha certa e nada aconteceria, sem nenhuma mensagem de
-    // erro. Com a proteção, o pior caso vira só "pede a senha de novo a
-    // cada visita", em vez do app travar por completo.
-    function safeSessionGet(key) {
-      try { return sessionStorage.getItem(key); }
-      catch (e) { return null; }
-    }
-    function safeSessionSet(key, value) {
-      try { sessionStorage.setItem(key, value); } catch (e) { /* ignora */ }
-    }
-    function safeSessionRemove(key) {
-      try { sessionStorage.removeItem(key); } catch (e) { /* ignora */ }
-    }
-
-    // Sinaliza pro script do Firebase (que carrega depois) se o app já
-    // pode ou não exibir/buscar dados reais (notas, planilhas etc.).
-    window.__pbfUnlocked = false;
-
-    // Botão de cadeado no cabeçalho chama esta função: trava o app de novo,
-    // exigindo a senha na próxima vez (e também agora, na hora).
-    window.sairDoApp = function () {
-      safeSessionRemove(CHAVE_LOCAL);
-      window.location.reload();
-    };
-
-    const lockScreen = document.getElementById('lockScreen');
-    const appContent = document.getElementById('appContent');
-    const lockForm = document.getElementById('lockForm');
-    const lockPass = document.getElementById('lockPass');
-    const lockError = document.getElementById('lockError');
-    const lockCard = document.getElementById('lockCard');
-
-    window.toggleLockPassVisibility = function () {
-      const showing = lockPass.type === 'text';
-      lockPass.type = showing ? 'password' : 'text';
-      const icon = document.getElementById('lockPassEyeIcon');
-      if (icon) icon.setAttribute('data-lucide', showing ? 'eye' : 'eye-off');
-      if (window.lucide) lucide.createIcons();
-    };
-
-    function liberarApp() {
-      lockScreen.style.display = 'none';
-      appContent.style.display = '';
-      window.__pbfUnlocked = true;
-      // Se o Firebase já tinha resolvido a sessão em segundo plano enquanto
-      // a tela de senha estava aberta, só agora mandamos ele exibir e
-      // buscar os dados de verdade.
-      if (window.__pbfHasPendingAuth && window.__pbfRunAuthUI) {
-        window.__pbfHasPendingAuth = false;
-        window.__pbfRunAuthUI(window.__pbfPendingAuthUser);
-      }
-      if (window.lucide) lucide.createIcons();
-    }
-
-    // Se já desbloqueou antes NESTA mesma sessão (aba/app ainda aberto),
-    // não pede a senha de novo. Fechou de vez? O sessionStorage já era, e
-    // a linha abaixo não vai encontrar nada.
-    if (safeSessionGet(CHAVE_LOCAL) === 'sim') {
-      liberarApp();
-    } else {
-      if (window.lucide) lucide.createIcons();
-      lockPass.focus();
-    }
-
-    lockForm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      if (lockPass.value === SENHA_CORRETA) {
-        safeSessionSet(CHAVE_LOCAL, 'sim');
-        liberarApp();
-      } else {
-        lockError.classList.remove('hidden');
-        lockPass.value = '';
-        lockPass.focus();
-        lockCard.classList.remove('shake');
-        void lockCard.offsetWidth; // reinicia a animação se o erro repetir
-        lockCard.classList.add('shake');
-      }
-    });
-  })();
-</script>
 </body>
 </html>
