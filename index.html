@@ -573,6 +573,31 @@
   </div>
 </section>
 
+<!-- RECURSO ON-LINE E LEGENDA DE MOTIVOS — apoio para ler os relatórios de condicionalidades -->
+<section class="max-w-7xl mx-auto px-4 pb-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="panel-tool p-5">
+    <h2 class="eyebrow mb-3">
+      <span class="chip"><i data-lucide="scale" class="w-4 h-4" style="color:var(--azul)"></i></span> O que é o Recurso on-line
+    </h2>
+    <p class="text-xs text-slate-500 mb-3">É o direito da família de contestar, no Sicon, um efeito recebido por descumprimento de condicionalidades (Art. 10 da Portaria MDS nº 251/2012) — usado, por exemplo, quando houve erro no registro ou quando o descumprimento decorreu de uma situação de vulnerabilidade que dificultou o acesso da família à escola ou à saúde.</p>
+    <ul class="text-xs text-slate-600 space-y-2 list-disc pl-4">
+      <li>Cadastrado com o NIS/nome do responsável, uma <strong>justificativa da família</strong> (até 400 caracteres) e a documentação anexada.</li>
+      <li><strong>Documentação aceita:</strong> declaração/comprovante da escola, declaração/comprovante da Unidade de Saúde, declaração da própria família, declaração/comprovante do CRAS, laudo da Assistência Social ou relatório técnico, ou outros documentos.</li>
+      <li>Os documentos originais devem ficar arquivados no município para fins de auditoria.</li>
+      <li>Depois de avaliado (deferido ou indeferido), o resultado passa a constar no histórico de condicionalidades da família no Sicon.</li>
+    </ul>
+  </div>
+
+  <div class="panel-tool p-5">
+    <h2 class="eyebrow mb-3">
+      <span class="chip"><i data-lucide="book-open-text" class="w-4 h-4" style="color:var(--verde)"></i></span> Legenda de Motivos (frequência escolar)
+    </h2>
+    <p class="text-xs text-slate-500 mb-3">Consulta rápida dos códigos de motivo (ex.: <strong>20a</strong>) usados nos relatórios de condicionalidades e no recurso on-line. Clique num grupo para expandir.</p>
+    <input id="motivoSearch" type="text" oninput="renderMotivos()" placeholder="Buscar por código ou palavra (ex: 20a, greve, gravidez)..." class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold mb-3 focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+    <div id="motivosList" class="space-y-1 max-h-80 overflow-y-auto pr-1"></div>
+  </div>
+</section>
+
 <footer class="max-w-7xl mx-auto px-4 pb-10 text-center text-[11px] text-slate-400 space-y-1.5">
   <div class="w-10 h-px mx-auto mb-3" style="background:var(--line)"></div>
   <p id="footerYearText">Datas conforme calendário oficial MDS/Caixa 2026. Este app é uma ferramenta independente de organização pessoal — não é canal oficial do governo.</p>
@@ -2799,8 +2824,177 @@ window.changeMonth = changeMonth;
 window.saveNote = saveNote;
 window.exportNotesPDF = exportNotesPDF;
 
+// LEGENDA DE MOTIVOS (frequência escolar) — Sistema Presença/MDS, usada nos
+// relatórios de condicionalidades e no recurso on-line (ex.: motivo "20a").
+const MOTIVOS_FREQUENCIA = [
+  {cat:"Tratamento de doença e de atenção à saúde do estudante", items:[
+    ["1a","Doença/problemas físicos"],
+    ["1b","Problemas/transtornos psicológicos ou mentais"],
+    ["1c","Pós-parto/pré-natal/TPM"],
+    ["1d","Consultas de rotina/tratamento odontológico"],
+  ]},
+  {cat:"Doença/óbito na família", items:[
+    ["2a","Doença de pessoa da família prejudicando a frequência do estudante"],
+    ["2b","Óbito de pessoa da família prejudicando a frequência do estudante"],
+  ]},
+  {cat:"Fatos que impedem o deslocamento/acesso à escola", items:[
+    ["3a","Enchente"],
+    ["3b","Falta de transporte"],
+    ["3c","Estradas intransitáveis"],
+    ["3d","Violência na área onde mora ou no trajeto para a escola"],
+    ["3e","Inexistência de pessoa para levar à escola"],
+    ["3f","Grande distância entre a residência e a escola"],
+    ["3g","Outro"],
+  ]},
+  {cat:"Suspensão escolar", items:[
+    ["4a","Com tarefas domiciliares"],
+    ["4b","Sem tarefas domiciliares"],
+  ]},
+  {cat:"Atividade extraclasse/híbrida (semipresencial)", items:[
+    ["5a","Considerada atividade escolar"],
+    ["5b","Não é considerada atividade escolar"],
+  ]},
+  {cat:"Preconceito/discriminação/bullying no ambiente escolar", items:[
+    ["6a","Preconceito, discriminação ou bullying no ambiente escolar"],
+  ]},
+  {cat:"Ausência por questões sociais, culturais, étnicas ou religiosas", items:[
+    ["7a","Indígenas"],
+    ["7b","Quilombolas"],
+    ["7c","Circenses"],
+    ["7d","Ciganos"],
+    ["7e","Questões religiosas"],
+    ["7f","Outra"],
+  ]},
+  {cat:"Gravidez", items:[
+    ["8a","Gravidez de risco"],
+    ["8b","Não é gravidez de risco"],
+  ]},
+  {cat:"Situação de rua", items:[
+    ["9a","Situação de rua"],
+  ]},
+  {cat:"Trabalho infantil", items:[
+    ["10a","A escola sabe que o estudante conta com atenção da rede de proteção local"],
+    ["10b","A escola não sabe se o estudante conta com atenção da rede de proteção local"],
+  ]},
+  {cat:"Violência no ambiente escolar", items:[
+    ["11a","Violência no ambiente escolar"],
+  ]},
+  {cat:"Trabalho do adolescente", items:[
+    ["12a","Emprego formal (a partir de 16 anos)"],
+    ["12b","Estagiário"],
+    ["12c","Trabalho informal"],
+    ["12d","Menor aprendiz"],
+  ]},
+  {cat:"Exploração/abuso sexual", items:[
+    ["13a","Exploração/abuso sexual"],
+  ]},
+  {cat:"Desinteresse/desmotivação pelos estudos", items:[
+    ["14a","Desinteresse/desmotivação pelos estudos"],
+  ]},
+  {cat:"Abandono escolar/desistência", items:[
+    ["15a","Abandono escolar/desistência"],
+  ]},
+  {cat:"Questões socioeconômicas, educacionais e/ou familiares", items:[
+    ["16a","Separação dos pais"],
+    ["16b","Necessidade de cuidar de familiares (idoso, criança, pessoa com deficiência)"],
+    ["16c","Viagem com a família (trabalho sazonal, agricultura temporária, colheita etc.)"],
+    ["16d","Casamento do(a) estudante"],
+    ["16e","Falta de uniforme, calçado ou roupa adequada"],
+    ["16f","Pais sem domínio dos filhos/relação familiar precária"],
+    ["16g","Família desconhece as faltas do estudante às aulas"],
+    ["16h","Negligência dos pais ou responsáveis"],
+    ["16i","Estudante com deficiência sem apoio/estimulação para permanecer na escola"],
+    ["16j","Escola sem tradutor e intérprete de Libras para estudantes surdos"],
+  ]},
+  {cat:"Envolvimento com drogas", items:[
+    ["17a","Envolvimento com drogas"],
+  ]},
+  {cat:"Envolvimento em atos infracionais", items:[
+    ["18a","Envolvimento em atos infracionais"],
+  ]},
+  {cat:"Violência intrafamiliar", items:[
+    ["19a","Violência intrafamiliar"],
+  ]},
+  {cat:"Situação coletiva que impede de receber o estudante", items:[
+    ["20a","Greve"],
+    ["20b","Calamidade pública que atingiu a escola ou exigiu o uso do espaço como abrigamento"],
+    ["20c","Escola sem professor"],
+    ["20d","Reforma geral da escola"],
+    ["20e","Escola fechada por situação de violência"],
+    ["20f","Falta de merenda escolar"],
+    ["20g","Outra"],
+  ]},
+  {cat:"Outras situações específicas (com vínculo escolar)", items:[
+    ["21a","Estudante concluiu o Ensino Médio"],
+  ]},
+  {cat:"Óbito do estudante", items:[
+    ["22a","Óbito do estudante"],
+  ]},
+  {cat:"EJA semipresencial", items:[
+    ["23a","Com acompanhamento regular"],
+    ["23b","Sem acompanhamento regular"],
+  ]},
+  {cat:"Outros", items:[
+    ["24a","A escola não sabe ou não informou o motivo"],
+    ["24b","Não foi identificado motivo adequado nesta lista"],
+  ]},
+  {cat:"Sem vínculo escolar — problemas na oferta de serviços educacionais", items:[
+    ["25a","Inexistência de educação infantil no território em que mora"],
+    ["25b","Inexistência de ensino fundamental no território em que mora"],
+    ["25c","Inexistência de ensino médio no território onde mora"],
+    ["25d","Inexistência de serviços educacionais para acampados/ciganos/circenses/itinerantes"],
+    ["25e","Inexistência de serviços educacionais em situação de internação/privação de liberdade"],
+    ["25f","Inexistência de escola indígena no território onde mora"],
+    ["25g","Falta de vaga na escola para a etapa de ensino do estudante"],
+    ["25h","Concluiu a etapa e ainda não há oferta imediata da etapa seguinte"],
+  ]},
+  {cat:"Educação bilíngue de surdos e educação especial", items:[
+    ["26a","Inexistência de educação especial para estudante com deficiência"],
+    ["26b","Inexistência de transporte/gratuidade/acessibilidade à escola para beneficiário com deficiência"],
+    ["26c","Não frequenta a escola por resistência injustificada da família"],
+    ["26d","Inexistência de acessibilidade física/sensorial/metodológica no ambiente escolar"],
+    ["26e","Escola alega não possuir vaga para estudante com deficiência"],
+    ["26f","Inexistência de escola (ou vaga) com tradutor e intérprete de Libras"],
+    ["26g","Impedimento de longo prazo que não permite a frequência escolar"],
+  ]},
+  {cat:"Outras situações específicas (sem vínculo escolar)", items:[
+    ["27a","Beneficiário sem vínculo/matrícula foi encontrado, mas não quer mais estudar"],
+    ["27b","Estudante concluiu o Ensino Médio"],
+    ["27c","Óbito do estudante"],
+    ["27d","Transferência em andamento/pendente"],
+    ["27e","Beneficiário com dados errados impedindo identificação pela escola"],
+  ]},
+];
+
+function __normalizeBusca(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+}
+
+function renderMotivos(){
+  const box = document.getElementById('motivosList');
+  const input = document.getElementById('motivoSearch');
+  if (!box || !input) return;
+  const q = __normalizeBusca(input.value);
+  let html = '';
+  MOTIVOS_FREQUENCIA.forEach(grupo => {
+    const itens = grupo.items.filter(([cod,desc]) =>
+      !q || __normalizeBusca(cod).includes(q) || __normalizeBusca(desc).includes(q) || __normalizeBusca(grupo.cat).includes(q)
+    );
+    if (!itens.length) return;
+    html += `<details class="rounded-lg border border-slate-200 mb-1"${q ? ' open' : ''}>
+      <summary class="text-[11px] font-bold text-slate-600 px-2 py-1.5 cursor-pointer select-none hover:bg-slate-50 rounded-lg">${escapeHtml(grupo.cat)}</summary>
+      <div class="px-2 pb-2 space-y-1">
+        ${itens.map(([cod,desc]) => `<div class="text-[11px] text-slate-600 flex gap-2"><span class="font-bold shrink-0" style="color:var(--verde)">${escapeHtml(cod)}</span><span>${escapeHtml(desc)}</span></div>`).join('')}
+      </div>
+    </details>`;
+  });
+  box.innerHTML = html || '<p class="text-[11px] text-slate-400 px-1">Nenhum motivo encontrado para essa busca.</p>';
+}
+window.renderMotivos = renderMotivos;
+
 if (window.lucide) lucide.createIcons();
 render();
+renderMotivos();
 
 // PWA — registro do service worker + atualização automática do app
 if ('serviceWorker' in navigator) {
