@@ -1,7 +1,7 @@
 {
-  "name": "Anona — Bolsa Família",
+  "name": "Anona — Acompanhamento de Condicionalidades",
   "short_name": "Anona",
-  "description": "Anona - Sistema de acompanhamento de condicionalidades do Bolsa Família",
+  "description": "Anona - ferramenta independente (não oficial) de apoio ao acompanhamento de condicionalidades de programas sociais, usada por profissionais do CRAS. Não possui vínculo, afiliação ou endosso do Governo Federal, do MDS ou da Caixa.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
