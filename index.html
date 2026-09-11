@@ -258,30 +258,25 @@
     background:radial-gradient(circle at 32% 26%, var(--amarelo-soft), var(--amarelo) 68%, #A9781F 100%);
     box-shadow:0 0 0 5px rgba(216,155,50,.16), 0 6px 16px -4px rgba(216,155,50,.55);
   }
-  /* Selo da tela de senha: em vez da bolinha amarela cheia, um círculo
-     "aberto" (não fechado por completo, como um traço de caderno) com o
-     símbolo psi (Ψ) da Psicologia no meio — reforça a identidade
-     profissional de quem usa o app. Um anel externo suave "respira"
-     bem devagar para dar vida ao selo sem distrair do formulário. */
-  .psi-badge{
-    width:3.4rem; height:3.4rem; position:relative;
-    display:flex; align-items:center; justify-content:center;
-    filter:drop-shadow(0 8px 16px rgba(13,46,99,.3));
+
+  /* ---------- logotipo Anona (monograma "A") ----------
+     Marca única usada no cabeçalho, na tela de login e nos PDFs: um selo
+     verde com um losango amarelo e um círculo azul no centro (mesma
+     composição da bandeira do Brasil), com o "A" em creme por cima — cores
+     vivas e opacas, por isso funciona igual em fundo claro (cartão de
+     login) ou escuro (cabeçalho/PDF), sem precisar de variante separada. */
+  .logo-mark{ display:inline-flex; flex-shrink:0; border-radius:22%; overflow:hidden; box-shadow:0 1px 3px rgba(13,46,99,.22); }
+  .logo-mark svg{ display:block; width:100%; height:100%; }
+
+  /* selinho Ψ (psicologia): mantido na tela de login, agora pequeno e ao
+     lado do nome/CRP — a marca do app (acima) é quem assume o papel de
+     logotipo principal; este é só um toque da identidade profissional. */
+  .psi-mini{
+    width:1.3rem; height:1.3rem; border-radius:50%; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1.4px solid var(--azul); color:var(--azul);
+    font-family:'Georgia','Times New Roman',serif; font-weight:700; font-size:.82rem; line-height:1;
   }
-  .psi-badge::before{
-    content:""; position:absolute; inset:-7px; border-radius:50%;
-    background:radial-gradient(circle, rgba(216,155,50,.22), transparent 70%);
-    animation:psiBreathe 3.6s ease-in-out infinite;
-  }
-  .psi-badge svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
-  .psi-badge span{
-    position:relative; font-family:Georgia,'Times New Roman',serif; font-weight:700;
-    font-size:1.7rem; line-height:1; color:var(--azul-deep); transform:translateY(-1px);
-  }
-  @keyframes psiBreathe{
-    0%,100%{ transform:scale(1); opacity:.7; } 50%{ transform:scale(1.14); opacity:1; }
-  }
-  @media (prefers-reduced-motion: reduce){ .psi-badge::before{ animation:none; } }
   /* ---------- divisória "canhoto de bilhete" ----------
      Uma linha tracejada com dois recortes circulares nas bordas, como a
      parte destacável de um bilhete/carnê — reforça a linguagem visual de
@@ -329,6 +324,75 @@
   }
   .shake{ animation:shake .4s both; }
   @media (prefers-reduced-motion: reduce){ .shake{ animation:none; } }
+
+  /* =====================================================================
+     REPAGINADA VISUAL GERAL — refinamento de formatação sobre a base que
+     já existia (cores, cartões, calendário mantidos). O objetivo aqui é
+     costurar tudo num conjunto mais coeso: cabeçalhos de seção com mais
+     presença, os ~15 cartões-ferramenta ganham uma "lombada" com as cores
+     da bandeira (o mesmo tema do .flag-ribbon do topo, só que discreto),
+     botões sólidos com profundidade e leve resposta ao toque/mouse em vez
+     de opacidade chapada, a única tabela do app ganha cabeçalho e hover
+     de linha, e o foco de teclado fica padronizado em todo o app.
+     Nenhum id/classe usada pelo JavaScript foi alterado — só aparência. */
+
+  /* cabeçalho de cada seção (.eyebrow, ~20 cartões): mais peso e uma
+     linha fina separando do conteúdo, para o olho encontrar rápido do
+     que se trata cada bloco ao rolar a página */
+  .eyebrow{ font-size:1.03rem; padding-bottom:.6rem; margin-bottom:.85rem !important; border-bottom:1px solid var(--line-soft); }
+  .eyebrow .chip{ box-shadow:0 1px 2px rgba(13,46,99,.08), inset 0 0 0 1px rgba(13,46,99,.05); }
+
+  /* lombada com as cores da bandeira no topo dos cartões-ferramenta —
+     repete a identidade visual do cabeçalho em todo cartão informativo,
+     sem competir com o conteúdo (fica inset, não toca as bordas arredondadas) */
+  .panel-tool{ position:relative; }
+  .panel-tool::before{
+    content:""; position:absolute; top:0; left:1.25rem; right:1.25rem; height:2px;
+    background:linear-gradient(90deg, var(--verde), var(--amarelo), var(--azul));
+    opacity:.5; border-radius:0 0 3px 3px; pointer-events:none;
+  }
+  .id-card{ box-shadow:0 1px 3px rgba(13,46,99,.06), 0 14px 30px -22px rgba(13,46,99,.32); }
+  .passbook{ box-shadow:0 1px 3px rgba(3,12,31,.2), 0 18px 40px -24px rgba(3,12,31,.55); }
+
+  /* botões sólidos principais (Baixar PDF, Salvar nota, planilha
+     filtrada, SIGPBF/Sicon): sombra com profundidade e leve "levante" ao
+     passar o mouse/tocar, no lugar do hover:opacity-90 chapado */
+  button[style="background:var(--azul)"], a[style="background:var(--azul)"],
+  button[style="background:var(--verde)"], a[style="background:var(--verde)"]{
+    box-shadow:0 10px 22px -12px rgba(13,46,99,.55);
+    transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  @media (hover:hover){
+    button[style="background:var(--azul)"]:hover, a[style="background:var(--azul)"]:hover,
+    button[style="background:var(--verde)"]:hover, a[style="background:var(--verde)"]:hover{
+      transform:translateY(-1.5px); filter:brightness(1.06);
+      box-shadow:0 14px 26px -12px rgba(13,46,99,.6);
+    }
+  }
+  button[style="background:var(--azul)"]:active, a[style="background:var(--azul)"]:active,
+  button[style="background:var(--verde)"]:active, a[style="background:var(--verde)"]:active{
+    transform:translateY(0); filter:brightness(.97);
+  }
+
+  /* botões de upload (tracejados): o fundo acompanha a cor do passo ao
+     passar o mouse, em vez do cinza genérico — reforça que "aceita soltar" */
+  label.border-dashed{ transition:background .15s ease, border-color .15s ease; }
+  @media (hover:hover){ label.border-dashed:hover{ background:var(--verde-soft) !important; } }
+
+  /* tabela do Cronograma de Repercussão (única tabela do app): cabeçalho
+     com fundo e linha em destaque ao passar o mouse */
+  table thead tr{ background:var(--azul-soft); }
+  table thead th:first-child{ border-radius:.5rem 0 0 .5rem; }
+  table thead th:last-child{ border-radius:0 .5rem .5rem 0; }
+  table thead th{ padding-left:.6rem; }
+  table tbody tr{ transition:background .15s ease; }
+  @media (hover:hover){ table tbody tr:hover{ background:var(--line-soft); } }
+
+  /* foco de teclado (Tab) padronizado em todo o app — complementa, sem
+     substituir, os anéis de foco específicos que os campos já tinham */
+  a:focus-visible, button:focus-visible, summary:focus-visible{
+    outline:2px solid var(--azul); outline-offset:2px; border-radius:.4rem;
+  }
 </style>
 </head>
 <body>
@@ -349,16 +413,19 @@
   <div class="access-card fade-in w-full max-w-sm" id="lockCard">
     <div class="flag-ribbon"></div>
     <div class="px-7 pt-7 pb-4 text-center">
-      <div class="psi-badge mx-auto mb-4" aria-hidden="true">
-        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="25" cy="25" r="21" fill="none" stroke="var(--azul)" stroke-width="3"
-            stroke-linecap="round" stroke-dasharray="99 33" transform="rotate(128 25 25)" />
+      <div class="logo-mark mx-auto mb-4" aria-hidden="true" style="width:4.4rem; height:4.4rem;">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#009C3B"/>
+          <polygon points="32,8 58,32 32,56 6,32" fill="#FFDF00"/>
+          <circle cx="32" cy="32" r="15" fill="#002776"/>
+          <text x="32" y="39" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="19" fill="#FFFDF8">A</text>
         </svg>
-        <span>Ψ</span>
       </div>
       <h1 class="display font-bold text-2xl mb-1" style="color:var(--azul-deep)">Anona</h1>
       <p id="lockYearSubtitle" class="text-[11px] font-bold tracking-wide uppercase mb-1" style="color:var(--amarelo-text)">Acompanhamento de condicionalidades · 2026</p>
-      <p class="text-xs text-slate-400">Paulo Xavier · CRP-20/09816 · Psicólogo</p>
+      <p class="text-xs text-slate-400 flex items-center justify-center gap-1.5">
+        <span class="psi-mini" aria-hidden="true">Ψ</span> Paulo Xavier · CRP-20/09816 · Psicólogo
+      </p>
       <p class="text-[10px] text-slate-400 mt-2 leading-snug">Ferramenta independente, sem vínculo, afiliação ou endosso do Governo Federal, do MDS ou da Caixa.</p>
     </div>
 
@@ -418,9 +485,12 @@
   <div class="brand-seal pointer-events-none" aria-hidden="true" style="right:-40px; top:-60px; opacity:.09; background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNjcgMTU4IEgyMzMgVjIwMiBIMTY3IFogTTE2NyAxNzggSDIzMyBWMTgyIEgxNjcgWiBNMTg2IDEzOCBIMjE0IFYxNTggSDE4NiBaIE0xOTEgMTQyIEgyMDkgVjE1OCBIMTkxIFoiIGZpbGw9IiNGRkNDMjkiIHN0cm9rZT0ibm9uZSIvPgogIDxnIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTExMiAzNzIgUTE1OCA0MDAgMjAwIDM4MiBRMjQyIDQwMCAyODggMzcyIi8+CiAgICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSIzNDYiIHI9IjE3Ii8+CiAgICA8cGF0aCBkPSJNOTUgMzY2IEM5MyAzODQgOTEgNDAyIDkxIDQxMCBMMTMzIDQxMCBDMTMzIDQwMiAxMzEgMzg0IDEyOSAzNjYiLz4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjM1OCIgcj0iMTMiLz4KICAgIDxwYXRoIGQ9Ik0xODYgMzc0IEMxODUgMzg4IDE4NCA0MDQgMTg0IDQxMCBMMjE2IDQxMCBDMjE2IDQwNCAyMTUgMzg4IDIxNCAzNzQiLz4KICAgIDxjaXJjbGUgY3g9IjI4OCIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik0yNzEgMzY2IEMyNjkgMzg0IDI2NyA0MDIgMjY3IDQxMCBMMzA5IDQxMCBDMzA5IDQwMiAzMDcgMzg4IDMwNSAzNjYiLz4KICA8L2c+Cjwvc3ZnPgo=');"></div>
   <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-3 relative">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-xl shadow-sm flex-shrink-0 overflow-hidden" style="background:var(--azul-deep)">
-        <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <text x="16" y="23" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="18" fill="#FFFDF8">A</text>
+      <div class="logo-mark w-9 h-9" aria-hidden="true">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" fill="#009C3B"/>
+          <polygon points="32,8 58,32 32,56 6,32" fill="#FFDF00"/>
+          <circle cx="32" cy="32" r="15" fill="#002776"/>
+          <text x="32" y="39" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="19" fill="#FFFDF8">A</text>
         </svg>
       </div>
       <div>
@@ -632,7 +702,7 @@
 </main>
 
 <!-- REFERÊNCIA RÁPIDA — valores, regras e atendimento, lado a lado embaixo para equilibrar a página -->
-<section class="max-w-7xl mx-auto px-4 pb-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+<section class="max-w-7xl mx-auto px-4 pb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
   <div class="passbook">
     <div class="passbook-section">
       <h3 class="passbook-label">Valores em vigor</h3>
@@ -676,7 +746,7 @@
 </section>
 
 <!-- COMO SACAR O BENEFÍCIO — canais de pagamento, contas e cartão (fonte: MDS/Caixa) -->
-<section class="max-w-7xl mx-auto px-4 pb-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+<section class="max-w-7xl mx-auto px-4 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div class="panel-tool p-5">
     <h2 class="eyebrow mb-3">
       <span class="chip"><i data-lucide="wallet" class="w-4 h-4" style="color:var(--verde)"></i></span> Como sacar o benefício
@@ -711,7 +781,7 @@
 </section>
 
 <!-- COMO PARTICIPAR E CONDICIONALIDADES — resumo oficial (Cadastro Único, renda, frequência e saúde) -->
-<section class="max-w-7xl mx-auto px-4 pb-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+<section class="max-w-7xl mx-auto px-4 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div class="panel-tool p-5">
     <h2 class="eyebrow mb-3">
       <span class="chip"><i data-lucide="clipboard-list" class="w-4 h-4" style="color:var(--azul)"></i></span> Como participar do programa
@@ -771,7 +841,7 @@
 </section>
 
 <!-- CADASTRO ÚNICO — o que é, quem pode se cadastrar, documentos, atualização e consulta -->
-<section class="max-w-7xl mx-auto px-4 pb-2">
+<section class="max-w-7xl mx-auto px-4 pb-8">
   <div class="panel-tool p-5">
     <h2 class="eyebrow mb-3">
       <span class="chip"><i data-lucide="id-card" class="w-4 h-4" style="color:var(--azul)"></i></span> Cadastro Único para Programas Sociais
@@ -822,7 +892,7 @@
 </section>
 
 <!-- CRONOGRAMA DE REPERCUSSÃO 2026 — datas de referência e prazo de recurso por mês de repercussão -->
-<section class="max-w-7xl mx-auto px-4 pb-2">
+<section class="max-w-7xl mx-auto px-4 pb-8">
   <div class="panel-tool p-5">
     <h2 class="eyebrow mb-3">
       <span class="chip"><i data-lucide="calendar-clock" class="w-4 h-4" style="color:var(--azul)"></i></span> Cronograma de Repercussão 2026
@@ -876,7 +946,7 @@
 </section>
 
 <!-- RECURSO ON-LINE E LEGENDA DE MOTIVOS — apoio para ler os relatórios de condicionalidades -->
-<section class="max-w-7xl mx-auto px-4 pb-2 grid grid-cols-1 lg:grid-cols-2 gap-6">
+<section class="max-w-7xl mx-auto px-4 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div class="panel-tool p-5">
     <h2 class="eyebrow mb-3">
       <span class="chip"><i data-lucide="scale" class="w-4 h-4" style="color:var(--azul)"></i></span> O que é o Recurso on-line
@@ -1819,7 +1889,6 @@
     'Referência do endereço',
     'NIS do Integrante(2)',
     'Nome do Integrante',
-    'Tipo de não cumprimento',
     'Motivo 1 (3)',
     'Motivo 2 (3)',
     'Efeito'
@@ -1923,7 +1992,44 @@
       ? (dataRows.map(r => String(r[idxMesCompleto] || '').trim()).find(Boolean) || '—')
       : '—';
 
-    return { headers: headersFinais, rows: dataRowsFinais, mesTexto };
+    // Coluna "Família", na primeira posição: numera 1, 2, 3... na ordem em
+    // que cada família aparece; linhas (integrantes) da MESMA família
+    // recebem o mesmo número. Identifica a família pelo NIS do responsável
+    // familiar (mais confiável); se faltar, cai para o CPF do responsável
+    // e, por último, para o nome do responsável.
+    const numerosFamilia = relatorioIndividualNumerarFamilias(headersFinais, dataRowsFinais);
+    const headersComFamilia = ['Família', ...headersFinais];
+    const dataRowsComFamilia = dataRowsFinais.map((r, i) => [numerosFamilia[i], ...r]);
+
+    return { headers: headersComFamilia, rows: dataRowsComFamilia, mesTexto };
+  }
+
+  // Identifica a "chave" da família de uma linha (integrante), para saber
+  // quais linhas pertencem à mesma família e devem ganhar o mesmo número.
+  function relatorioIndividualChaveFamilia(row, idxNis, idxCpf, idxNome) {
+    if (idxNis >= 0 && String(row[idxNis] || '').trim()) return 'nis:' + normalizeText(row[idxNis]);
+    if (idxCpf >= 0 && String(row[idxCpf] || '').trim()) return 'cpf:' + normalizeText(row[idxCpf]);
+    if (idxNome >= 0 && String(row[idxNome] || '').trim()) return 'nome:' + normalizeText(row[idxNome]);
+    return null;
+  }
+
+  // Numera as famílias 1, 2, 3... na ordem em que aparecem nos dados. Duas
+  // linhas só recebem o mesmo número quando identificadas como a mesma
+  // família (mesmo NIS/CPF/nome do responsável familiar); sem nenhum desses
+  // dados na planilha, cada linha vira uma família própria (nunca deixa uma
+  // linha sem número).
+  function relatorioIndividualNumerarFamilias(headers, dataRows) {
+    const idxNis = headers.findIndex(h => normalizeText(h).includes('nis') && normalizeText(h).includes('responsavel'));
+    const idxCpf = headers.findIndex(h => normalizeText(h).includes('cpf'));
+    const idxNome = headers.findIndex(h => normalizeText(h).includes('nome') && normalizeText(h).includes('responsavel'));
+    const numeroPorChave = new Map();
+    let proximo = 1;
+    return dataRows.map(row => {
+      const chave = relatorioIndividualChaveFamilia(row, idxNis, idxCpf, idxNome);
+      if (chave == null) return proximo++;
+      if (!numeroPorChave.has(chave)) numeroPorChave.set(chave, proximo++);
+      return numeroPorChave.get(chave);
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -2010,6 +2116,7 @@
     const { jsPDF } = window.jspdf;
     const idxEfeito = headers.findIndex(h => normalizeText(h) === 'efeito');
     const idxNome = headers.findIndex(h => normalizeText(h).includes('nome') && normalizeText(h).includes('responsavel'));
+    const idxFamilia = headers.findIndex(h => normalizeText(h) === 'familia');
 
     const contagem = {};
     dataRows.forEach(r => {
@@ -2048,12 +2155,27 @@
     };
     const chaveEfeito = label => normalizeText(label).replace(/[^a-z]/g,'');
 
+    function drawLogoBadge(x, y, size) {
+      const cx = x+size/2, cy = y+size/2, r = size*0.42;
+      docPdf.setFillColor(0,156,59);
+      docPdf.roundedRect(x, y, size, size, size*0.2, size*0.2, 'F');
+      docPdf.setFillColor(255,223,0);
+      docPdf.triangle(cx-r, cy, cx, cy-r, cx+r, cy, 'F');
+      docPdf.triangle(cx-r, cy, cx, cy+r, cx+r, cy, 'F');
+      docPdf.setFillColor(0,39,118);
+      docPdf.circle(cx, cy, size*0.24, 'F');
+      docPdf.setFont('times','bold'); docPdf.setFontSize(size*0.34);
+      docPdf.setTextColor(255,253,248);
+      docPdf.text('A', cx, cy+size*0.12, {align:'center'});
+    }
+
     function drawTopBar() {
       docPdf.setFillColor(...azulDeep);
       docPdf.rect(0,0,pageW,52,'F');
       docPdf.setFillColor(...amarelo);
       docPdf.rect(0,52,pageW,3,'F');
-      const textX = margin;
+      drawLogoBadge(margin, 9, 34);
+      const textX = margin + 44;
       docPdf.setTextColor(255,255,255);
       docPdf.setFont('helvetica','bold'); docPdf.setFontSize(14);
       docPdf.text('Anona · Relatório de Repercussão Individual', textX, 24);
@@ -2293,7 +2415,7 @@
       const efeitoVal = idxEfeito >= 0 ? String(row[idxEfeito] || '').trim() : '';
       const badge = badgeCores[chaveEfeito(efeitoVal)];
       const linesPerCol = headers.map((h,i) => {
-        const bold = i === idxNome;
+        const bold = i === idxNome || i === idxFamilia;
         docPdf.setFont('helvetica', bold ? 'bold' : 'normal');
         const larguraTexto = colWidths[i]-cellPad*2-gutter;
         return docPdf.splitTextToSize(String(row[i] ?? ''), larguraTexto).map(l => truncarLinha(l, larguraTexto));
@@ -2341,12 +2463,16 @@
       docPdf.rect(margin, ty, usableWidth, rowH, 'S');
 
       linesPerCol.forEach((lines,i) => {
-        const bold = i === idxNome;
+        const bold = i === idxNome || i === idxFamilia;
         docPdf.setFont('helvetica', bold ? 'bold' : 'normal');
         if (i === idxEfeito && badge) docPdf.setTextColor(...badge.fg);
         else if (bold) docPdf.setTextColor(...azul);
         else docPdf.setTextColor(31,41,55);
-        lines.forEach((line,li) => docPdf.text(line, colX[i]+cellPad, ty+cellPad+lineH*(li+0.72)));
+        if (i === idxFamilia) {
+          lines.forEach((line,li) => docPdf.text(line, colX[i]+colWidths[i]/2, ty+cellPad+lineH*(li+0.72), {align:'center'}));
+        } else {
+          lines.forEach((line,li) => docPdf.text(line, colX[i]+cellPad, ty+cellPad+lineH*(li+0.72)));
+        }
       });
       ty += rowH;
     });
@@ -2971,12 +3097,27 @@ async function exportNotesPDF(){
   const amareloText = [107,78,0];
   const slate = [71,85,105];
 
+  function drawLogoBadge(x, y, size){
+    const cx = x+size/2, cy = y+size/2, r = size*0.42;
+    docPdf.setFillColor(0,156,59);
+    docPdf.roundedRect(x, y, size, size, size*0.2, size*0.2, 'F');
+    docPdf.setFillColor(255,223,0);
+    docPdf.triangle(cx-r, cy, cx, cy-r, cx+r, cy, 'F');
+    docPdf.triangle(cx-r, cy, cx, cy+r, cx+r, cy, 'F');
+    docPdf.setFillColor(0,39,118);
+    docPdf.circle(cx, cy, size*0.24, 'F');
+    docPdf.setFont('times','bold'); docPdf.setFontSize(size*0.34);
+    docPdf.setTextColor(255,253,248);
+    docPdf.text('A', cx, cy+size*0.12, {align:'center'});
+  }
+
   function drawHeader(){
     docPdf.setFillColor(...azulDeep);
     docPdf.rect(0,0,pageW,90,'F');
     docPdf.setFillColor(...amarelo);
     docPdf.rect(0,90,pageW,4,'F');
-    const textX = margin;
+    drawLogoBadge(margin, 22, 46);
+    const textX = margin + 58;
     docPdf.setTextColor(255,255,255);
     docPdf.setFont('helvetica','bold');
     docPdf.setFontSize(18);
