@@ -12,6 +12,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@0.469.0"></script>
 <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
@@ -506,7 +507,7 @@
   <div class="flag-ribbon"></div>
 </header>
 
-<main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+<main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
 
   <!-- COLUNA ESQUERDA -->
   <aside class="lg:col-span-1 space-y-4 order-2 lg:order-1">
@@ -558,71 +559,6 @@
         <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Entrar no SIGPBF / Sicon
       </a>
       <p class="text-[10px] text-slate-400 mt-3 italic">Fonte: MDS/SENARC.</p>
-    </div>
-
-    <div class="panel-tool p-5">
-      <h2 class="eyebrow mb-1">
-        <span class="chip"><i data-lucide="folder-kanban" class="w-4 h-4" style="color:var(--verde)"></i></span> Planilhas do Território Volante
-      </h2>
-      <p class="text-xs text-slate-500 mb-1">O fluxo mensal, do recebimento da planilha do MDS ao relatório final — na ordem em que você normalmente usa.</p>
-
-      <div class="tool-step" data-step="1">
-        <h3><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Repercussão de Condicionalidades</h3>
-        <p class="text-xs text-slate-500 mb-3">Guarde aqui a planilha que o MDS manda todo mês ímpar. Fica sincronizada na nuvem (se você estiver logado) e você baixa de novo quando precisar.</p>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-3" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> Enviar planilha (.xlsx)
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleReportUpload(this)">
-        </label>
-        <select id="reportAnoFilter" onchange="renderReports()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold mb-3 focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
-          <option value="all">Todos os anos</option>
-        </select>
-        <div class="border-t border-slate-100 pt-3 mt-1 space-y-2">
-          <label class="text-[11px] font-semibold text-slate-500">Filtrar planilha por bairro</label>
-          <select id="reportFileFilter" onchange="loadReportFilterOptions()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
-            <option value="">Escolha uma planilha</option>
-          </select>
-          <select id="reportBairroFilter" multiple size="5" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)" disabled></select>
-          <p class="text-[10px] text-slate-400">Use Ctrl (Windows) ou Command (Mac) para selecionar vários bairros. Sem seleção, baixa todos.</p>
-          <button onclick="downloadFilteredReport()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--verde)">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar planilha filtrada
-          </button>
-        </div>
-        <div id="reportsList" class="space-y-2"></div>
-      </div>
-
-      <div class="tool-step" data-step="2">
-        <h3><i data-lucide="users" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Divisão por técnico</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie aqui a tabela de condicionalidades só do Território Volante. O app ordena as famílias de A a Z e divide em três partes iguais: a primeira parte para o <strong>Paulo Xavier</strong>, a segunda para o <strong>Danilo Braga</strong> e a terceira para a <strong>Keomara Teles</strong>.</p>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
-        </label>
-        <p class="text-[10px] text-slate-400 mt-2">Gera e baixa na hora uma planilha com 3 abas: <strong>Paulo Xavier</strong> (Psicólogo), <strong>Danilo Braga</strong> (Psicólogo) e <strong>Keomara Teles</strong> (Assistente Social) — nada é guardado na nuvem, o arquivo original não é alterado.</p>
-      </div>
-
-      <div class="tool-step" data-step="3">
-        <h3><i data-lucide="repeat" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Famílias Recorrentes</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado — e com <strong>uma aba por técnico</strong> (só quem ficou com o mesmo técnico nos dois meses) e uma aba separada <strong>"Mudaram de técnico"</strong> para quem trocou de mão na divisão.</p>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2 text-center" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
-        </label>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 text-center" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAtualLabel">Planilha do mês atual</span>
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'atual')">
-        </label>
-        <p class="text-[10px] text-slate-400 mt-2">Assim que os dois arquivos forem enviados, a comparação é gerada e baixada automaticamente. Nada é guardado — os arquivos originais não são alterados.</p>
-      </div>
-
-      <div class="tool-step" data-step="4">
-        <h3><i data-lucide="file-text" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatório Individual</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros e um gráfico da quantidade de efeitos.</p>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
-        </label>
-        <p class="text-[10px] text-slate-400 mt-2">Todas as colunas ficam numa página só (na horizontal); as linhas continuam nas páginas seguintes. Nada é guardado — o arquivo original não é alterado.</p>
-      </div>
     </div>
 
     <div class="panel-tool p-5">
@@ -2509,6 +2445,198 @@
       console.error(e);
       alert('Não consegui gerar o relatório. Confirme se a planilha tem uma coluna "Efeito" e a primeira linha (ou uma das primeiras) com os títulos das colunas.');
       input.value = '';
+    }
+  };
+
+  // =====================================================================
+  // UNIFICAR FOLHAS DE FAMÍLIA — junta em um único PDF as folhas resumo
+  // (uma por família) das visitas do dia, na ordem da melhor rota: primeiro
+  // todo o Bloco 1 (um bairro), depois todo o Bloco 2 (outro bairro). Só
+  // reordena/junta os PDFs enviados — nada é guardado nem enviado para a
+  // internet, e o conteúdo de cada folha original não é alterado.
+  // Para trocar o endereço de partida ou os bairros de cada bloco, edite
+  // UNIFICAR_PARTIDA e UNIFICAR_BLOCOS abaixo.
+  // =====================================================================
+  const UNIFICAR_PARTIDA = 'Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR';
+  const UNIFICAR_BLOCOS = [
+    { label: 'Bloco 1 · Bairro Professora Araceli Souto Maior' },
+    { label: 'Bloco 2 · Bairro 13 de Setembro' }
+  ];
+  // Limites de envio: no máximo 30 folhas (PDF) e 50 MB somando os dois
+  // blocos — para não travar o navegador (celulares mais fracos, em
+  // especial) ao unificar tudo em memória.
+  const UNIFICAR_MAX_ARQUIVOS = 30;
+  const UNIFICAR_MAX_BYTES = 50 * 1024 * 1024;
+  // Uma lista de arquivos (na ordem de visita) para cada bloco acima.
+  const unificarListas = UNIFICAR_BLOCOS.map(() => []);
+  let unificarProximoId = 1;
+
+  function unificarTotais() {
+    let arquivos = 0, bytes = 0;
+    unificarListas.forEach(lista => {
+      arquivos += lista.length;
+      lista.forEach(item => { bytes += item.file.size; });
+    });
+    return { arquivos, bytes };
+  }
+
+  function unificarFormatarMB(bytes) {
+    return (bytes / (1024 * 1024)).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+
+  function renderUnificarStatusGeral() {
+    const el = document.getElementById('unificarStatusGeral');
+    if (!el) return;
+    const { arquivos, bytes } = unificarTotais();
+    const noLimite = arquivos >= UNIFICAR_MAX_ARQUIVOS || bytes >= UNIFICAR_MAX_BYTES;
+    el.textContent = `${arquivos}/${UNIFICAR_MAX_ARQUIVOS} arquivos · ${unificarFormatarMB(bytes)} MB de 50 MB`;
+    el.style.color = noLimite ? '#DC2626' : '';
+  }
+
+  function renderUnificarLista(bloco) {
+    const ol = document.getElementById(`unificarLista${bloco}`);
+    const vazio = document.getElementById(`unificarVazio${bloco}`);
+    const lista = unificarListas[bloco];
+    if (!ol) return;
+    vazio.style.display = lista.length ? 'none' : '';
+    ol.innerHTML = lista.map((item, i) => `
+      <li class="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1.5">
+        <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
+        <span class="flex-1 truncate" title="${item.file.name.replace(/"/g,'&quot;')}">${item.file.name}</span>
+        <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
+        <button type="button" onclick="unificarMover(${bloco},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+        <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+        <button type="button" onclick="unificarRemover(${bloco},${i})" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
+      </li>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+    renderUnificarStatusGeral();
+  }
+
+  window.__handleUnificarUpload = (input, bloco) => {
+    const files = Array.from(input.files || []);
+    input.value = '';
+    if (!files.length) return;
+    const rejeitados = [];
+    let { arquivos: totalArquivos, bytes: totalBytes } = unificarTotais();
+    files.forEach(file => {
+      if (file.type && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+        rejeitados.push(`${file.name} (não é PDF)`);
+        return;
+      }
+      if (totalArquivos + 1 > UNIFICAR_MAX_ARQUIVOS) {
+        rejeitados.push(`${file.name} (limite de ${UNIFICAR_MAX_ARQUIVOS} arquivos atingido)`);
+        return;
+      }
+      if (totalBytes + file.size > UNIFICAR_MAX_BYTES) {
+        rejeitados.push(`${file.name} (passaria do limite de 50 MB)`);
+        return;
+      }
+      unificarListas[bloco].push({ id: unificarProximoId++, file });
+      totalArquivos += 1;
+      totalBytes += file.size;
+    });
+    renderUnificarLista(bloco);
+    if (rejeitados.length) alert(`Estes arquivos não foram adicionados:\n${rejeitados.join('\n')}`);
+  };
+
+  window.unificarMover = (bloco, i, direcao) => {
+    const lista = unificarListas[bloco];
+    const j = i + direcao;
+    if (j < 0 || j >= lista.length) return;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    renderUnificarLista(bloco);
+  };
+
+  window.unificarRemover = (bloco, i) => {
+    unificarListas[bloco].splice(i, 1);
+    renderUnificarLista(bloco);
+  };
+
+  // Desenha uma página de capa/divisória simples no PDF unificado, usando
+  // as mesmas cores da marca (azul/amarelo), com pdf-lib (sem depender do
+  // jsPDF, que não sabe combinar PDFs já existentes).
+  function unificarDesenharPagina(pdfDoc, fontBold, fontRegular, linhas) {
+    const azul = window.PDFLib.rgb(0x0B/255, 0x2F/255, 0x7A/255);
+    const amarelo = window.PDFLib.rgb(1, 223/255, 0);
+    const slate = window.PDFLib.rgb(0x33/255, 0x41/255, 0x55/255);
+    const page = pdfDoc.addPage([842, 595]); // A4 paisagem, em pontos
+    const { width, height } = page.getSize();
+    page.drawRectangle({ x: 0, y: height - 52, width, height: 52, color: azul });
+    page.drawRectangle({ x: 0, y: height - 55, width, height: 3, color: amarelo });
+    page.drawText('Anona · Visitas Domiciliares', { x: 32, y: height - 34, size: 14, font: fontBold, color: window.PDFLib.rgb(1,1,1) });
+    page.drawText('CRAS Cristiana Vicente Nunes · SEMADS · Paulo Xavier, Psicólogo, CRP-20/09816', { x: 32, y: height - 47, size: 8.5, font: fontRegular, color: window.PDFLib.rgb(0.78,0.84,1) });
+    let y = height - 100;
+    linhas.forEach(linha => {
+      const font = linha.bold ? fontBold : fontRegular;
+      page.drawText(linha.texto, { x: 32, y, size: linha.tamanho || 11, font, color: linha.cor || slate });
+      y -= (linha.tamanho || 11) + 12;
+    });
+    page.drawText(`Gerado em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}`, { x: 32, y: 24, size: 8, font: fontRegular, color: slate });
+  }
+
+  window.unificarGerarPDF = async () => {
+    const totalArquivos = unificarListas.reduce((soma, l) => soma + l.length, 0);
+    if (!totalArquivos) {
+      alert('Adicione pelo menos uma folha resumo (PDF) em algum dos blocos antes de gerar o PDF unificado.');
+      return;
+    }
+    if (!window.PDFLib) {
+      alert('A biblioteca de PDF ainda não carregou. Verifique sua internet e tente novamente.');
+      return;
+    }
+    try {
+      const { PDFDocument, StandardFonts } = window.PDFLib;
+      const outDoc = await PDFDocument.create();
+      const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
+      const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
+
+      // Página de capa: partida + quantidade de famílias por bloco.
+      const capaLinhas = [
+        { texto: 'Folhas de família unificadas — rota de visita', tamanho: 16, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) }
+      ];
+      capaLinhas.push({ texto: `Partida: ${UNIFICAR_PARTIDA}`, tamanho: 10.5 });
+      UNIFICAR_BLOCOS.forEach((b, i) => {
+        capaLinhas.push({ texto: `${b.label} — ${unificarListas[i].length} família${unificarListas[i].length === 1 ? '' : 's'}`, tamanho: 10.5, bold: true });
+      });
+      unificarDesenharPagina(outDoc, fontBold, fontRegular, capaLinhas);
+
+      for (let bloco = 0; bloco < UNIFICAR_BLOCOS.length; bloco++) {
+        const lista = unificarListas[bloco];
+        if (!lista.length) continue;
+        unificarDesenharPagina(outDoc, fontBold, fontRegular, [
+          { texto: UNIFICAR_BLOCOS[bloco].label, tamanho: 15, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
+          { texto: `${lista.length} família${lista.length === 1 ? '' : 's'}, na ordem de visita`, tamanho: 10.5 }
+        ]);
+        for (const item of lista) {
+          let bytes, srcDoc;
+          try {
+            bytes = await item.file.arrayBuffer();
+            srcDoc = await PDFDocument.load(bytes);
+          } catch (e) {
+            throw new Error(`Não consegui abrir o arquivo "${item.file.name}". Confirme se é um PDF válido e tente enviá-lo de novo.`);
+          }
+          const paginas = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+          paginas.forEach(p => outDoc.addPage(p));
+        }
+      }
+
+      const bytesFinais = await outDoc.save();
+      const blob = new Blob([bytesFinais], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Visitas - Folhas de Familia Unificadas - ${dataArquivo}.pdf`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+      unificarListas.forEach((_, i) => { unificarListas[i] = []; });
+      UNIFICAR_BLOCOS.forEach((_, i) => renderUnificarLista(i));
+      alert('PDF unificado gerado e baixado com sucesso!');
+    } catch (e) {
+      console.error(e);
+      alert(e && e.message ? e.message : 'Não consegui unificar as folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
     }
   };
 
