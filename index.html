@@ -424,10 +424,29 @@
     <div class="px-7 pt-7 pb-4 text-center">
       <div class="logo-mark mx-auto mb-4" aria-hidden="true" style="width:4.4rem; height:4.4rem;">
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-          <rect width="64" height="64" fill="#009C3B"/>
-          <polygon points="32,8 58,32 32,56 6,32" fill="#FFDF00"/>
-          <circle cx="32" cy="32" r="15" fill="#002776"/>
-          <text x="32" y="39" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="19" fill="#FFFDF8">A</text>
+          <defs>
+            <linearGradient id="aMarkBgLogin" x1="2" y1="0" x2="62" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#1B8259"/>
+              <stop offset=".55" stop-color="#0D2E63"/>
+              <stop offset="1" stop-color="#071A3D"/>
+            </linearGradient>
+            <radialGradient id="aMarkGoldLogin" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#D89B32" stop-opacity=".9"/>
+              <stop offset="1" stop-color="#D89B32" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="aMarkShadeLogin" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#030F26" stop-opacity=".5"/>
+              <stop offset="1" stop-color="#030F26" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="64" height="64" fill="url(#aMarkBgLogin)"/>
+          <circle cx="50" cy="12" r="26" fill="url(#aMarkGoldLogin)"/>
+          <circle cx="9" cy="55" r="24" fill="url(#aMarkShadeLogin)"/>
+          <path d="M-4 18 L70 -8 L70 3 L-4 27 Z" fill="#FFFFFF" opacity=".06"/>
+          <text x="24.6" y="46" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#071A3D" opacity=".3">A</text>
+          <text x="24" y="45" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#FFFDF8">A</text>
+          <circle cx="46.6" cy="44.6" r="3.6" fill="#030F26" opacity=".25"/>
+          <circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
         </svg>
       </div>
       <h1 class="display font-bold text-2xl mb-1" style="color:var(--azul-deep)">Anona</h1>
@@ -496,10 +515,29 @@
     <div class="flex items-center gap-3">
       <div class="logo-mark w-9 h-9" aria-hidden="true">
         <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-          <rect width="64" height="64" fill="#009C3B"/>
-          <polygon points="32,8 58,32 32,56 6,32" fill="#FFDF00"/>
-          <circle cx="32" cy="32" r="15" fill="#002776"/>
-          <text x="32" y="39" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="19" fill="#FFFDF8">A</text>
+          <defs>
+            <linearGradient id="aMarkBgHeader" x1="2" y1="0" x2="62" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#1B8259"/>
+              <stop offset=".55" stop-color="#0D2E63"/>
+              <stop offset="1" stop-color="#071A3D"/>
+            </linearGradient>
+            <radialGradient id="aMarkGoldHeader" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#D89B32" stop-opacity=".9"/>
+              <stop offset="1" stop-color="#D89B32" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="aMarkShadeHeader" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#030F26" stop-opacity=".5"/>
+              <stop offset="1" stop-color="#030F26" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="64" height="64" fill="url(#aMarkBgHeader)"/>
+          <circle cx="50" cy="12" r="26" fill="url(#aMarkGoldHeader)"/>
+          <circle cx="9" cy="55" r="24" fill="url(#aMarkShadeHeader)"/>
+          <path d="M-4 18 L70 -8 L70 3 L-4 27 Z" fill="#FFFFFF" opacity=".06"/>
+          <text x="24.6" y="46" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#071A3D" opacity=".3">A</text>
+          <text x="24" y="45" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#FFFDF8">A</text>
+          <circle cx="46.6" cy="44.6" r="3.6" fill="#030F26" opacity=".25"/>
+          <circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
         </svg>
       </div>
       <div>
@@ -515,12 +553,72 @@
   <div class="flag-ribbon"></div>
 </header>
 
-<main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+<main class="max-w-7xl mx-auto px-4 py-6">
 
-  <!-- COLUNA ESQUERDA -->
-  <aside class="lg:col-span-1 space-y-4 order-2 lg:order-1">
+  <!-- CALENDÁRIO — o "documento principal", em destaque na largura toda -->
+    <div class="panel overflow-hidden mb-6">
+      <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--line)">
+        <button onclick="changeMonth(-1)" id="btnPrev" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
+          <i data-lucide="chevron-left" class="w-6 h-6 text-slate-600"></i>
+        </button>
+        <h3 id="currentMonthLabel" class="display text-2xl sm:text-3xl font-semibold text-slate-800 capitalize"></h3>
+        <button onclick="changeMonth(1)" id="btnNext" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
+          <i data-lucide="chevron-right" class="w-6 h-6 text-slate-600"></i>
+        </button>
+      </div>
+      <div class="grid grid-cols-7 text-center text-[10px] sm:text-[12px] font-bold text-slate-400 uppercase py-2 sm:py-3 weekday-head" style="background:var(--line-soft)">
+        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+      </div>
+      <div id="calendarGrid" class="calendar-grid"></div>
+    </div>
 
-    <div class="panel-tool p-5">
+  <!-- CARDS — em colunas equilibradas tipo mosaico (cada card entra na coluna
+       mais vazia no momento), para não sobrar um vão enorme de um lado só. -->
+  <div class="columns-1 md:columns-2 xl:columns-3 gap-6">
+
+    <div class="panel p-6 mb-6 break-inside-avoid">
+      <div class="flex items-center gap-4 mb-4">
+        <div id="selectedDayBox" class="display text-white w-14 h-14 flex items-center justify-center rounded-2xl font-semibold text-2xl shadow-lg" style="background:var(--azul)">01</div>
+        <div>
+          <h2 id="selectedFullDate" class="text-lg font-bold text-slate-800 leading-tight"></h2>
+          <p id="selectedDayName" class="text-sm text-slate-500 font-medium capitalize"></p>
+        </div>
+      </div>
+      <div id="eventList" class="space-y-3 mb-4"></div>
+      <div class="rounded-2xl p-4 border flex flex-col" style="background:var(--paper); border-color:var(--line)">
+        <label class="text-[11px] font-semibold text-slate-500 mb-2 flex items-center gap-2">
+          <i data-lucide="sticky-note" class="w-3.5 h-3.5"></i> Sua anotação do dia
+        </label>
+        <textarea id="noteInput" rows="5" class="w-full bg-white rounded-xl border border-slate-200 p-3 text-sm resize-none focus:outline-none focus:ring-2" style="--tw-ring-color:var(--azul)" placeholder="Ex: liguei para a CRAS, atualizei o cadastro..."></textarea>
+        <div class="mt-3 flex items-center gap-2">
+          <input type="checkbox" id="noteEmphasis" class="w-4 h-4 rounded" style="accent-color:var(--azul)">
+          <label for="noteEmphasis" class="text-[11px] font-bold text-slate-600 flex items-center gap-1 cursor-pointer">
+            <i data-lucide="star" class="w-3.5 h-3.5" style="color:var(--amarelo-text)"></i> Marcar como importante (ênfase)
+          </label>
+        </div>
+        <div class="mt-2 flex items-center justify-between">
+          <span id="noteStatus" class="text-[10px] text-slate-400"></span>
+          <button onclick="saveNote()" class="text-white px-4 py-2 rounded-xl text-xs font-bold transition hover:opacity-90" style="background:var(--azul)">Salvar nota</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-tool p-4 sm:p-5 mb-6 break-inside-avoid">
+      <h2 class="eyebrow mb-3">
+        <span class="chip"><i data-lucide="palette" class="w-4 h-4" style="color:var(--azul)"></i></span> Legenda
+      </h2>
+      <div class="flex flex-wrap gap-x-5 gap-y-2 text-[11.5px] sm:text-xs font-medium text-slate-600">
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:var(--amarelo)"></span>Dia de pagamento (seu NIS)</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>Saúde</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>Educação</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>Sicon/Recursos</div>
+        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>Interrupção</div>
+        <div class="flex items-center gap-2"><i data-lucide="pin" class="w-3 h-3" style="color:var(--azul)"></i>Nota normal</div>
+        <div class="flex items-center gap-2"><i data-lucide="star" class="w-3 h-3" style="color:var(--amarelo-text)"></i>Nota com ênfase</div>
+      </div>
+    </div>
+
+    <div class="panel-tool p-5 mb-6 break-inside-avoid">
       <h2 class="eyebrow mb-3">
         <span class="chip"><i data-lucide="file-down" class="w-4 h-4" style="color:var(--azul)"></i></span> Exportar
       </h2>
@@ -545,7 +643,7 @@
       </button>
     </div>
 
-    <div class="id-card bg-white">
+    <div class="id-card bg-white mb-6 break-inside-avoid">
       <div class="id-card-strip"></div>
       <div class="p-5">
         <h2 class="eyebrow mb-3">
@@ -557,7 +655,7 @@
       </div>
     </div>
 
-    <div class="panel-tool p-5">
+    <div class="panel-tool p-5 mb-6 break-inside-avoid">
       <h2 class="eyebrow mb-3">
         <span class="chip"><i data-lucide="clipboard-check" class="w-4 h-4" style="color:var(--azul)"></i></span> Consulta ao SICON
       </h2>
@@ -569,7 +667,7 @@
       <p class="text-[10px] text-slate-400 mt-3 italic">Fonte: MDS/SENARC.</p>
     </div>
 
-    <div class="panel-tool p-5">
+    <div class="panel-tool p-5 mb-6 break-inside-avoid">
       <h2 class="eyebrow mb-1">
         <span class="chip"><i data-lucide="folder-kanban" class="w-4 h-4" style="color:var(--verde)"></i></span> Planilhas do Território Volante
       </h2>
@@ -669,7 +767,7 @@
 
       <div class="tool-step" data-step="6">
         <h3><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Unificar Folhas de Família — Abrigos (Operação Acolhida)</h3>
-        <p class="text-xs text-slate-500 mb-2">Envie aqui as folhas resumo (PDF) das famílias de cada abrigo, já separadas por efeito. O app junta tudo em um único PDF, abrigo por abrigo, e dentro de cada abrigo por efeito (Alerta → Bloqueio → Suspensão).</p>
+        <p class="text-xs text-slate-500 mb-2">Envie aqui as folhas resumo (PDF) das famílias de cada abrigo, já separadas por efeito. O app gera um PDF independente para cada abrigo, com as folhas organizadas por efeito (Alerta → Bloqueio → Suspensão).</p>
         <p id="abrigoStatusGeral" class="text-[11px] font-semibold text-slate-500 mb-3">0/60 arquivos · 0,0 MB de 80 MB</p>
 
         <div class="space-y-3 mb-3">
@@ -824,88 +922,23 @@
 
         </div>
 
-        <p class="text-[10px] text-slate-400 mb-2">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
+        <p class="text-[10px] text-slate-400 mb-2">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados. Cada abrigo com pelo menos uma folha gera o seu próprio arquivo PDF, baixado separadamente.</p>
         <button onclick="abrigoUnificarGerarPDF()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
-          <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF unificado dos abrigos
+          <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF independente por abrigo
         </button>
       </div>
     </div>
 
-    <div class="panel-tool p-5">
+    <div class="panel-tool p-5 mb-6 break-inside-avoid">
       <h2 class="eyebrow mb-4">
         <span class="chip"><i data-lucide="info" class="w-4 h-4" style="color:var(--azul)"></i></span> Destaques do mês
       </h2>
       <div id="monthSummary" class="space-y-3"></div>
     </div>
 
-  </aside>
-
-  <!-- COLUNA CENTRAL -->
-  <section class="lg:col-span-3 space-y-4 order-1 lg:order-2">
-
-    <div class="panel overflow-hidden">
-      <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--line)">
-        <button onclick="changeMonth(-1)" id="btnPrev" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
-          <i data-lucide="chevron-left" class="w-6 h-6 text-slate-600"></i>
-        </button>
-        <h3 id="currentMonthLabel" class="display text-2xl sm:text-3xl font-semibold text-slate-800 capitalize"></h3>
-        <button onclick="changeMonth(1)" id="btnNext" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
-          <i data-lucide="chevron-right" class="w-6 h-6 text-slate-600"></i>
-        </button>
-      </div>
-      <div class="grid grid-cols-7 text-center text-[10px] sm:text-[12px] font-bold text-slate-400 uppercase py-2 sm:py-3 weekday-head" style="background:var(--line-soft)">
-        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
-      </div>
-      <div id="calendarGrid" class="calendar-grid"></div>
-    </div>
-
-    <div class="panel-tool p-4 sm:p-5">
-      <h2 class="eyebrow mb-3">
-        <span class="chip"><i data-lucide="palette" class="w-4 h-4" style="color:var(--azul)"></i></span> Legenda
-      </h2>
-      <div class="flex flex-wrap gap-x-5 gap-y-2 text-[11.5px] sm:text-xs font-medium text-slate-600">
-        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full" style="background:var(--amarelo)"></span>Dia de pagamento (seu NIS)</div>
-        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>Saúde</div>
-        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>Educação</div>
-        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>Sicon/Recursos</div>
-        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-purple-400"></span>Interrupção</div>
-        <div class="flex items-center gap-2"><i data-lucide="pin" class="w-3 h-3" style="color:var(--azul)"></i>Nota normal</div>
-        <div class="flex items-center gap-2"><i data-lucide="star" class="w-3 h-3" style="color:var(--amarelo-text)"></i>Nota com ênfase</div>
-      </div>
-    </div>
-
-    <div class="panel p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="space-y-4">
-        <div class="flex items-center gap-4">
-          <div id="selectedDayBox" class="display text-white w-14 h-14 flex items-center justify-center rounded-2xl font-semibold text-2xl shadow-lg" style="background:var(--azul)">01</div>
-          <div>
-            <h2 id="selectedFullDate" class="text-lg font-bold text-slate-800 leading-tight"></h2>
-            <p id="selectedDayName" class="text-sm text-slate-500 font-medium capitalize"></p>
-          </div>
-        </div>
-        <div id="eventList" class="space-y-3"></div>
-      </div>
-
-      <div class="rounded-2xl p-4 border h-full flex flex-col" style="background:var(--paper); border-color:var(--line)">
-        <label class="text-[11px] font-semibold text-slate-500 mb-2 flex items-center gap-2">
-          <i data-lucide="sticky-note" class="w-3.5 h-3.5"></i> Sua anotação do dia
-        </label>
-        <textarea id="noteInput" rows="5" class="flex-1 w-full bg-white rounded-xl border border-slate-200 p-3 text-sm resize-none focus:outline-none focus:ring-2" style="--tw-ring-color:var(--azul)" placeholder="Ex: liguei para a CRAS, atualizei o cadastro..."></textarea>
-        <div class="mt-3 flex items-center gap-2">
-          <input type="checkbox" id="noteEmphasis" class="w-4 h-4 rounded" style="accent-color:var(--azul)">
-          <label for="noteEmphasis" class="text-[11px] font-bold text-slate-600 flex items-center gap-1 cursor-pointer">
-            <i data-lucide="star" class="w-3.5 h-3.5" style="color:var(--amarelo-text)"></i> Marcar como importante (ênfase)
-          </label>
-        </div>
-        <div class="mt-2 flex items-center justify-between">
-          <span id="noteStatus" class="text-[10px] text-slate-400"></span>
-          <button onclick="saveNote()" class="text-white px-4 py-2 rounded-xl text-xs font-bold transition hover:opacity-90" style="background:var(--azul)">Salvar nota</button>
-        </div>
-      </div>
-    </div>
-
-  </section>
+  </div>
 </main>
+
 
 <!-- REFERÊNCIA RÁPIDA — valores, regras e atendimento, lado a lado embaixo para equilibrar a página -->
 <section class="max-w-7xl mx-auto px-4 pb-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -3017,10 +3050,16 @@
     renderAbrigoLista(grupo);
   };
 
+  // Gera um PDF INDEPENDENTE para cada abrigo (em vez de um único PDF
+  // juntando todos os abrigos). Cada abrigo com pelo menos uma folha
+  // enviada vira um arquivo próprio, com capa do abrigo + folhas
+  // organizadas por efeito (Alerta → Bloqueio → Suspensão), baixado
+  // separadamente. Abrigos sem nenhuma folha enviada são simplesmente
+  // ignorados (não geram arquivo vazio).
   window.abrigoUnificarGerarPDF = async () => {
     const totalArquivos = abrigoUnificarListas.reduce((soma, l) => soma + l.length, 0);
     if (!totalArquivos) {
-      alert('Adicione pelo menos uma folha resumo (PDF) em algum abrigo/efeito antes de gerar o PDF unificado.');
+      alert('Adicione pelo menos uma folha resumo (PDF) em algum abrigo/efeito antes de gerar os PDFs.');
       return;
     }
     if (!window.PDFLib) {
@@ -3029,35 +3068,23 @@
     }
     try {
       const { PDFDocument, StandardFonts } = window.PDFLib;
-      const outDoc = await PDFDocument.create();
-      const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
-      const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
-
-      // Página de capa: total geral + quantidade de famílias por abrigo,
-      // já detalhando os três efeitos dentro de cada abrigo.
-      const capaLinhas = [
-        { texto: 'Folhas de família unificadas — Abrigos (Operação Acolhida)', tamanho: 16, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) }
-      ];
-      ABRIGO_UNIFICAR_ABRIGOS.forEach((abrigo, abrigoIdx) => {
-        const inicio = abrigoIdx * ABRIGO_UNIFICAR_EFEITOS.length;
-        const totalAbrigo = ABRIGO_UNIFICAR_EFEITOS.reduce((soma, _, efeitoIdx) => soma + abrigoUnificarListas[inicio + efeitoIdx].length, 0);
-        capaLinhas.push({ texto: `${abrigo} — ${totalAbrigo} família${totalAbrigo === 1 ? '' : 's'}`, tamanho: 11.5, bold: true });
-        ABRIGO_UNIFICAR_EFEITOS.forEach((efeito, efeitoIdx) => {
-          const qtd = abrigoUnificarListas[inicio + efeitoIdx].length;
-          capaLinhas.push({ texto: `    ${efeito}: ${qtd}`, tamanho: 10 });
-        });
-      });
-      unificarDesenharPagina(outDoc, fontBold, fontRegular, capaLinhas);
+      const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+      let gerados = 0;
 
       for (let abrigoIdx = 0; abrigoIdx < ABRIGO_UNIFICAR_ABRIGOS.length; abrigoIdx++) {
         const abrigo = ABRIGO_UNIFICAR_ABRIGOS[abrigoIdx];
         const inicio = abrigoIdx * ABRIGO_UNIFICAR_EFEITOS.length;
         const totalAbrigo = ABRIGO_UNIFICAR_EFEITOS.reduce((soma, _, efeitoIdx) => soma + abrigoUnificarListas[inicio + efeitoIdx].length, 0);
-        if (!totalAbrigo) continue;
+        if (!totalAbrigo) continue; // abrigo sem nenhuma folha enviada: pula, sem gerar arquivo
 
-        // Divisória do abrigo, listando quantas famílias em cada efeito.
+        // Cada abrigo tem seu próprio documento PDF, independente dos demais.
+        const outDoc = await PDFDocument.create();
+        const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
+        const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
+
+        // Capa do abrigo, listando quantas famílias em cada efeito.
         unificarDesenharPagina(outDoc, fontBold, fontRegular, [
-          { texto: abrigo, tamanho: 15, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
+          { texto: `Folhas de família unificadas — ${abrigo}`, tamanho: 16, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
           { texto: `${totalAbrigo} família${totalAbrigo === 1 ? '' : 's'}, por efeito`, tamanho: 10.5 },
           ...ABRIGO_UNIFICAR_EFEITOS.map((efeito, efeitoIdx) => ({ texto: `${efeito}: ${abrigoUnificarListas[inicio + efeitoIdx].length}`, tamanho: 10.5, bold: true }))
         ]);
@@ -3086,24 +3113,28 @@
             paginas.forEach(p => outDoc.addPage(p));
           }
         }
-      }
 
-      const bytesFinais = await outDoc.save();
-      const blob = new Blob([bytesFinais], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Abrigos - Folhas de Familia Unificadas - ${dataArquivo}.pdf`;
-      document.body.appendChild(link); link.click(); link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
+        const bytesFinais = await outDoc.save();
+        const blob = new Blob([bytesFinais], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Abrigo ${abrigo} - Folhas de Familia - ${dataArquivo}.pdf`;
+        document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        gerados++;
+
+        // Pequena pausa entre downloads: navegadores costumam bloquear
+        // vários downloads automáticos disparados ao mesmo tempo.
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
 
       abrigoUnificarListas.forEach((_, i) => { abrigoUnificarListas[i] = []; });
       ABRIGO_UNIFICAR_GRUPOS.forEach((_, i) => renderAbrigoLista(i));
-      alert('PDF unificado dos abrigos gerado e baixado com sucesso!');
+      alert(`${gerados} PDF${gerados === 1 ? '' : 's'} gerado${gerados === 1 ? '' : 's'} — um arquivo independente por abrigo. Se o navegador bloquear algum dos downloads, permita "downloads múltiplos" para este site e tente novamente.`);
     } catch (e) {
       console.error(e);
-      alert(e && e.message ? e.message : 'Não consegui unificar as folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
+      alert(e && e.message ? e.message : 'Não consegui gerar os PDFs das folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
     }
   };
 
