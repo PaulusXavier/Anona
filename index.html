@@ -42,11 +42,13 @@
       radial-gradient(85% 50% at 6% -4%, rgba(20,107,71,.11), transparent 58%),
       radial-gradient(75% 45% at 102% -6%, rgba(216,155,50,.16), transparent 58%),
       radial-gradient(65% 40% at 50% 104%, rgba(13,46,99,.07), transparent 62%),
-      linear-gradient(180deg, rgba(255,255,255,.5), transparent 14%),
-      radial-gradient(circle at 1px 1px, rgba(13,46,99,.065) 1px, transparent 0);
-    background-repeat:no-repeat, no-repeat, no-repeat, no-repeat, repeat;
-    background-attachment:fixed, fixed, fixed, fixed, local;
-    background-size:auto, auto, auto, auto, 22px 22px;
+      radial-gradient(120% 85% at 50% 6%, transparent 52%, rgba(7,26,61,.075) 100%),
+      linear-gradient(180deg, rgba(255,255,255,.55), transparent 16%),
+      url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNzAnIGhlaWdodD0nMTcwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjc1JyBudW1PY3RhdmVzPScyJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdzYXR1cmF0ZScgdmFsdWVzPScwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJyBvcGFjaXR5PScwLjYyJy8+Cjwvc3ZnPg==");
+    background-repeat:no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-attachment:fixed, fixed, fixed, fixed, fixed, local;
+    background-size:auto, auto, auto, auto, auto, 170px 170px;
+    background-blend-mode:normal, normal, normal, normal, normal, multiply;
     position:relative;
   }
   /* ---------- marca d'água de fundo: selo casa + coração + família ----------
@@ -219,15 +221,21 @@
   }
   .access-bg::before{
     content:""; position:absolute; inset:0; pointer-events:none;
-    background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.09) 1px, transparent 0);
-    background-size:20px 20px;
+    background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNzAnIGhlaWdodD0nMTcwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjc1JyBudW1PY3RhdmVzPScyJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdzYXR1cmF0ZScgdmFsdWVzPScwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJyBvcGFjaXR5PScwLjU1Jy8+Cjwvc3ZnPg==");
+    background-repeat:repeat;
+    background-size:170px 170px;
+    mix-blend-mode:soft-light;
+    opacity:1;
   }
   /* brilho suave vindo de cima + leve vinheta nas bordas, para o fundo azul
      ter mais profundidade e empurrar o olho para o cartão central em vez
-     de ficar chapado ou competir com ele. */
+     de ficar chapado ou competir com ele. Um filete de luz na diagonal
+     (bem discreto) dá o acabamento "capa encadernada" — como o reflexo
+     que um material encerado pega sob luz de estúdio. */
   .access-bg::after{
     content:""; position:absolute; inset:0; pointer-events:none;
     background:
+      linear-gradient(120deg, transparent 42%, rgba(255,255,255,.05) 50%, transparent 58%),
       radial-gradient(65% 55% at 50% -8%, rgba(255,255,255,.16), transparent 70%),
       radial-gradient(120% 85% at 50% 50%, transparent 55%, rgba(3,12,31,.35) 100%);
   }
@@ -658,6 +666,169 @@
           <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF unificado da rota
         </button>
       </div>
+
+      <div class="tool-step" data-step="6">
+        <h3><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Unificar Folhas de Família — Abrigos (Operação Acolhida)</h3>
+        <p class="text-xs text-slate-500 mb-2">Envie aqui as folhas resumo (PDF) das famílias de cada abrigo, já separadas por efeito. O app junta tudo em um único PDF, abrigo por abrigo, e dentro de cada abrigo por efeito (Alerta → Bloqueio → Suspensão).</p>
+        <p id="abrigoStatusGeral" class="text-[11px] font-semibold text-slate-500 mb-3">0/60 arquivos · 0,0 MB de 80 MB</p>
+
+        <div class="space-y-3 mb-3">
+
+          <div class="border rounded-xl p-3" style="border-color:var(--line)">
+            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 1</p>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,0)">
+                </label>
+              </div>
+              <ol id="abrigoLista0" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio0" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,1)">
+                </label>
+              </div>
+              <ol id="abrigoLista1" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio1" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,2)">
+                </label>
+              </div>
+              <ol id="abrigoLista2" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio2" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+          </div>
+
+          <div class="border rounded-xl p-3" style="border-color:var(--line)">
+            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 5</p>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,3)">
+                </label>
+              </div>
+              <ol id="abrigoLista3" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio3" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,4)">
+                </label>
+              </div>
+              <ol id="abrigoLista4" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio4" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,5)">
+                </label>
+              </div>
+              <ol id="abrigoLista5" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio5" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+          </div>
+
+          <div class="border rounded-xl p-3" style="border-color:var(--line)">
+            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> PRA</p>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,6)">
+                </label>
+              </div>
+              <ol id="abrigoLista6" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio6" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,7)">
+                </label>
+              </div>
+              <ol id="abrigoLista7" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio7" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,8)">
+                </label>
+              </div>
+              <ol id="abrigoLista8" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio8" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+          </div>
+
+          <div class="border rounded-xl p-3" style="border-color:var(--line)">
+            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Tuaronoko</p>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,9)">
+                </label>
+              </div>
+              <ol id="abrigoLista9" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio9" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div class="mb-2">
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,10)">
+                </label>
+              </div>
+              <ol id="abrigoLista10" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio10" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
+                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
+                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,11)">
+                </label>
+              </div>
+              <ol id="abrigoLista11" class="space-y-1 text-[11px]"></ol>
+              <p id="abrigoVazio11" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <p class="text-[10px] text-slate-400 mb-2">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
+        <button onclick="abrigoUnificarGerarPDF()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
+          <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF unificado dos abrigos
+        </button>
+      </div>
     </div>
 
     <div class="panel-tool p-5">
@@ -670,7 +841,7 @@
   </aside>
 
   <!-- COLUNA CENTRAL -->
-  <section class="lg:col-span-3 space-y-6 order-1 lg:order-2">
+  <section class="lg:col-span-3 space-y-4 order-1 lg:order-2">
 
     <div class="panel overflow-hidden">
       <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--line)">
@@ -2733,6 +2904,203 @@
       unificarListas.forEach((_, i) => { unificarListas[i] = []; });
       UNIFICAR_BLOCOS.forEach((_, i) => renderUnificarLista(i));
       alert('PDF unificado gerado e baixado com sucesso!');
+    } catch (e) {
+      console.error(e);
+      alert(e && e.message ? e.message : 'Não consegui unificar as folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
+    }
+  };
+
+  // =====================================================================
+  // UNIFICAR FOLHAS DE FAMÍLIA — ABRIGOS (OPERAÇÃO ACOLHIDA) — junta em um
+  // único PDF as folhas resumo (uma por família) enviadas aos abrigos,
+  // organizadas primeiro por abrigo e, dentro de cada abrigo, por efeito
+  // (Alerta → Bloqueio → Suspensão). Mesma lógica da seção "Rota de
+  // Visita" acima, só que com um nível a mais de agrupamento.
+  // Para trocar os abrigos ou os efeitos, edite ABRIGO_UNIFICAR_ABRIGOS e
+  // ABRIGO_UNIFICAR_EFEITOS abaixo (e ajuste os blocos no HTML, que usam
+  // um índice fixo = abrigo x 3 + efeito).
+  // =====================================================================
+  const ABRIGO_UNIFICAR_ABRIGOS = ['Rondon 1', 'Rondon 5', 'PRA', 'Tuaronoko'];
+  const ABRIGO_UNIFICAR_EFEITOS = ['Famílias em Alerta', 'Famílias em Bloqueio', 'Famílias Suspensas'];
+  // Lista "achatada" com um item por combinação abrigo+efeito, na ordem em
+  // que aparecem no HTML (índice = abrigoIndex * 3 + efeitoIndex).
+  const ABRIGO_UNIFICAR_GRUPOS = [];
+  ABRIGO_UNIFICAR_ABRIGOS.forEach(abrigo => {
+    ABRIGO_UNIFICAR_EFEITOS.forEach(efeito => {
+      ABRIGO_UNIFICAR_GRUPOS.push({ abrigo, efeito, label: `${abrigo} · ${efeito}` });
+    });
+  });
+  // Limites de envio: no máximo 60 folhas (PDF) e 80 MB somando todos os
+  // abrigos/efeitos — para não travar o navegador ao unificar tudo em
+  // memória (são mais blocos do que na Rota de Visita, então o limite é
+  // maior). Ajuste aqui se precisar.
+  const ABRIGO_UNIFICAR_MAX_ARQUIVOS = 60;
+  const ABRIGO_UNIFICAR_MAX_BYTES = 80 * 1024 * 1024;
+  const abrigoUnificarListas = ABRIGO_UNIFICAR_GRUPOS.map(() => []);
+  let abrigoUnificarProximoId = 1;
+
+  function abrigoUnificarTotais() {
+    let arquivos = 0, bytes = 0;
+    abrigoUnificarListas.forEach(lista => {
+      arquivos += lista.length;
+      lista.forEach(item => { bytes += item.file.size; });
+    });
+    return { arquivos, bytes };
+  }
+
+  function renderAbrigoStatusGeral() {
+    const el = document.getElementById('abrigoStatusGeral');
+    if (!el) return;
+    const { arquivos, bytes } = abrigoUnificarTotais();
+    const noLimite = arquivos >= ABRIGO_UNIFICAR_MAX_ARQUIVOS || bytes >= ABRIGO_UNIFICAR_MAX_BYTES;
+    el.textContent = `${arquivos}/${ABRIGO_UNIFICAR_MAX_ARQUIVOS} arquivos · ${unificarFormatarMB(bytes)} MB de ${ABRIGO_UNIFICAR_MAX_BYTES / (1024*1024)} MB`;
+    el.style.color = noLimite ? '#DC2626' : '';
+  }
+
+  function renderAbrigoLista(grupo) {
+    const ol = document.getElementById(`abrigoLista${grupo}`);
+    const vazio = document.getElementById(`abrigoVazio${grupo}`);
+    const lista = abrigoUnificarListas[grupo];
+    if (!ol) return;
+    vazio.style.display = lista.length ? 'none' : '';
+    ol.innerHTML = lista.map((item, i) => `
+      <li class="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1">
+        <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
+        <span class="flex-1 truncate" title="${item.file.name.replace(/"/g,'&quot;')}">${item.file.name}</span>
+        <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
+        <button type="button" onclick="abrigoUnificarMover(${grupo},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+        <button type="button" onclick="abrigoUnificarMover(${grupo},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+        <button type="button" onclick="abrigoUnificarRemover(${grupo},${i})" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
+      </li>
+    `).join('');
+    if (window.lucide) lucide.createIcons();
+    renderAbrigoStatusGeral();
+  }
+
+  window.__handleAbrigoUpload = (input, grupo) => {
+    const files = Array.from(input.files || []);
+    input.value = '';
+    if (!files.length) return;
+    const rejeitados = [];
+    let { arquivos: totalArquivos, bytes: totalBytes } = abrigoUnificarTotais();
+    files.forEach(file => {
+      if (file.type && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+        rejeitados.push(`${file.name} (não é PDF)`);
+        return;
+      }
+      if (totalArquivos + 1 > ABRIGO_UNIFICAR_MAX_ARQUIVOS) {
+        rejeitados.push(`${file.name} (limite de ${ABRIGO_UNIFICAR_MAX_ARQUIVOS} arquivos atingido)`);
+        return;
+      }
+      if (totalBytes + file.size > ABRIGO_UNIFICAR_MAX_BYTES) {
+        rejeitados.push(`${file.name} (passaria do limite de ${ABRIGO_UNIFICAR_MAX_BYTES / (1024*1024)} MB)`);
+        return;
+      }
+      abrigoUnificarListas[grupo].push({ id: abrigoUnificarProximoId++, file });
+      totalArquivos += 1;
+      totalBytes += file.size;
+    });
+    renderAbrigoLista(grupo);
+    if (rejeitados.length) alert(`Estes arquivos não foram adicionados:\n${rejeitados.join('\n')}`);
+  };
+
+  window.abrigoUnificarMover = (grupo, i, direcao) => {
+    const lista = abrigoUnificarListas[grupo];
+    const j = i + direcao;
+    if (j < 0 || j >= lista.length) return;
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+    renderAbrigoLista(grupo);
+  };
+
+  window.abrigoUnificarRemover = (grupo, i) => {
+    abrigoUnificarListas[grupo].splice(i, 1);
+    renderAbrigoLista(grupo);
+  };
+
+  window.abrigoUnificarGerarPDF = async () => {
+    const totalArquivos = abrigoUnificarListas.reduce((soma, l) => soma + l.length, 0);
+    if (!totalArquivos) {
+      alert('Adicione pelo menos uma folha resumo (PDF) em algum abrigo/efeito antes de gerar o PDF unificado.');
+      return;
+    }
+    if (!window.PDFLib) {
+      alert('A biblioteca de PDF ainda não carregou. Verifique sua internet e tente novamente.');
+      return;
+    }
+    try {
+      const { PDFDocument, StandardFonts } = window.PDFLib;
+      const outDoc = await PDFDocument.create();
+      const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
+      const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
+
+      // Página de capa: total geral + quantidade de famílias por abrigo,
+      // já detalhando os três efeitos dentro de cada abrigo.
+      const capaLinhas = [
+        { texto: 'Folhas de família unificadas — Abrigos (Operação Acolhida)', tamanho: 16, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) }
+      ];
+      ABRIGO_UNIFICAR_ABRIGOS.forEach((abrigo, abrigoIdx) => {
+        const inicio = abrigoIdx * ABRIGO_UNIFICAR_EFEITOS.length;
+        const totalAbrigo = ABRIGO_UNIFICAR_EFEITOS.reduce((soma, _, efeitoIdx) => soma + abrigoUnificarListas[inicio + efeitoIdx].length, 0);
+        capaLinhas.push({ texto: `${abrigo} — ${totalAbrigo} família${totalAbrigo === 1 ? '' : 's'}`, tamanho: 11.5, bold: true });
+        ABRIGO_UNIFICAR_EFEITOS.forEach((efeito, efeitoIdx) => {
+          const qtd = abrigoUnificarListas[inicio + efeitoIdx].length;
+          capaLinhas.push({ texto: `    ${efeito}: ${qtd}`, tamanho: 10 });
+        });
+      });
+      unificarDesenharPagina(outDoc, fontBold, fontRegular, capaLinhas);
+
+      for (let abrigoIdx = 0; abrigoIdx < ABRIGO_UNIFICAR_ABRIGOS.length; abrigoIdx++) {
+        const abrigo = ABRIGO_UNIFICAR_ABRIGOS[abrigoIdx];
+        const inicio = abrigoIdx * ABRIGO_UNIFICAR_EFEITOS.length;
+        const totalAbrigo = ABRIGO_UNIFICAR_EFEITOS.reduce((soma, _, efeitoIdx) => soma + abrigoUnificarListas[inicio + efeitoIdx].length, 0);
+        if (!totalAbrigo) continue;
+
+        // Divisória do abrigo, listando quantas famílias em cada efeito.
+        unificarDesenharPagina(outDoc, fontBold, fontRegular, [
+          { texto: abrigo, tamanho: 15, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
+          { texto: `${totalAbrigo} família${totalAbrigo === 1 ? '' : 's'}, por efeito`, tamanho: 10.5 },
+          ...ABRIGO_UNIFICAR_EFEITOS.map((efeito, efeitoIdx) => ({ texto: `${efeito}: ${abrigoUnificarListas[inicio + efeitoIdx].length}`, tamanho: 10.5, bold: true }))
+        ]);
+
+        for (let efeitoIdx = 0; efeitoIdx < ABRIGO_UNIFICAR_EFEITOS.length; efeitoIdx++) {
+          const grupo = inicio + efeitoIdx;
+          const lista = abrigoUnificarListas[grupo];
+          if (!lista.length) continue;
+          const efeito = ABRIGO_UNIFICAR_EFEITOS[efeitoIdx];
+
+          // Divisória do efeito dentro do abrigo.
+          unificarDesenharPagina(outDoc, fontBold, fontRegular, [
+            { texto: `${abrigo} · ${efeito}`, tamanho: 14, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
+            { texto: `${lista.length} família${lista.length === 1 ? '' : 's'}`, tamanho: 10.5 }
+          ]);
+
+          for (const item of lista) {
+            let bytes, srcDoc;
+            try {
+              bytes = await item.file.arrayBuffer();
+              srcDoc = await PDFDocument.load(bytes);
+            } catch (e) {
+              throw new Error(`Não consegui abrir o arquivo "${item.file.name}" (${abrigo} · ${efeito}). Confirme se é um PDF válido e tente enviá-lo de novo.`);
+            }
+            const paginas = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+            paginas.forEach(p => outDoc.addPage(p));
+          }
+        }
+      }
+
+      const bytesFinais = await outDoc.save();
+      const blob = new Blob([bytesFinais], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Abrigos - Folhas de Familia Unificadas - ${dataArquivo}.pdf`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+      abrigoUnificarListas.forEach((_, i) => { abrigoUnificarListas[i] = []; });
+      ABRIGO_UNIFICAR_GRUPOS.forEach((_, i) => renderAbrigoLista(i));
+      alert('PDF unificado dos abrigos gerado e baixado com sucesso!');
     } catch (e) {
       console.error(e);
       alert(e && e.message ? e.message : 'Não consegui unificar as folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
