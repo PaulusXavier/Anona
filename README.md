@@ -174,6 +174,16 @@ Na barra lateral, bloco **"Unificar Folhas de Família — Rota de Visita"**:
 - Endereço de partida e nome/ordem dos blocos ficam nas constantes `UNIFICAR_PARTIDA` e `UNIFICAR_BLOCOS` no `index.html`, caso precise trocar de bairro ou de ponto de partida em outro dia.
 - Nada é enviado à internet — a junção dos PDFs acontece no próprio aparelho, e os arquivos originais enviados não são alterados nem guardados.
 
+## 8.4 Unificar Folhas de Família — Abrigos (Operação Acolhida)
+
+Na barra lateral, bloco **"Unificar Folhas de Família — Abrigos (Operação Acolhida)"**:
+
+- Envie as folhas resumo (**PDF**, uma por família) separadas por **abrigo** (Rondon 1, Rondon 5, PRA, Tuaronoko) e, dentro de cada abrigo, por **efeito**: Famílias em Alerta, Famílias em Bloqueio e Famílias Suspensas. Limite: até **60 arquivos** e **80 MB** no total, somando todos os abrigos e efeitos (o contador no topo do bloco mostra quanto já foi usado).
+- Use as setinhas ▲▼ ao lado de cada arquivo para reordenar as famílias dentro de cada efeito.
+- Clique em **"Gerar PDF unificado dos abrigos"**: o app junta tudo em um único PDF — capa com a quantidade de famílias por abrigo (já detalhada por efeito), seguida de cada abrigo (na ordem Rondon 1 → Rondon 5 → PRA → Tuaronoko) e, dentro de cada um, os três efeitos na ordem Alerta → Bloqueio → Suspensão.
+- Nomes dos abrigos e dos efeitos ficam nas constantes `ABRIGO_UNIFICAR_ABRIGOS` e `ABRIGO_UNIFICAR_EFEITOS` no `index.html`, caso precise trocar algum nome (se adicionar ou remover abrigos/efeitos, é preciso também ajustar os blocos correspondentes no HTML, que usam um índice fixo = abrigo × 3 + efeito).
+- Nada é enviado à internet — a junção dos PDFs acontece no próprio aparelho, e os arquivos originais enviados não são alterados nem guardados.
+
 ## 9. Personalizando
 
 - Cores, textos e ícones: tudo está em `index.html` (é um arquivo único, fácil de editar).
