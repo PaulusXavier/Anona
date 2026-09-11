@@ -164,6 +164,16 @@ Na barra lateral, bloco **"Relatório de Repercussão Individual"**:
 - Colunas totalmente vazias na planilha original são descartadas automaticamente, para não ocupar espaço à toa.
 - Nada é guardado na nuvem nem no aparelho — é só enviar e baixar. O arquivo original enviado não é alterado.
 
+## 8.3 Unificar Folhas de Família — Rota de Visita
+
+Na barra lateral, bloco **"Unificar Folhas de Família — Rota de Visita"**:
+
+- Envie as folhas resumo (**PDF**, uma por família) no **Bloco 1** (bairro Professora Araceli Souto Maior) e no **Bloco 2** (bairro 13 de Setembro). Limite: até **30 arquivos** e **50 MB** no total, somando os dois blocos (o contador no topo do bloco mostra quanto já foi usado).
+- Use as setinhas ▲▼ ao lado de cada arquivo para colocá-lo na ordem em que você vai visitar aquela família dentro do bairro.
+- Clique em **"Gerar PDF unificado da rota"**: o app junta tudo em um único PDF — capa com o endereço de partida e a quantidade de famílias por bloco, seguida do Bloco 1 completo (na ordem definida) e depois do Bloco 2 completo.
+- Endereço de partida e nome/ordem dos blocos ficam nas constantes `UNIFICAR_PARTIDA` e `UNIFICAR_BLOCOS` no `index.html`, caso precise trocar de bairro ou de ponto de partida em outro dia.
+- Nada é enviado à internet — a junção dos PDFs acontece no próprio aparelho, e os arquivos originais enviados não são alterados nem guardados.
+
 ## 9. Personalizando
 
 - Cores, textos e ícones: tudo está em `index.html` (é um arquivo único, fácil de editar).
