@@ -422,6 +422,40 @@
 </head>
 <body>
 
+<!-- AVISO GLOBAL DE ERRO — captura falhas inesperadas de JavaScript (um bug
+     em algum lugar do código, uma biblioteca que não carregou etc.) e avisa
+     quem está usando o app, em vez de deixar a tela travada/quebrada sem
+     nenhuma explicação. Não conserta o problema sozinho, mas garante que a
+     pessoa saiba o que aconteceu e possa recarregar a página. -->
+<div id="globalErrorBanner" style="position:fixed; left:0; right:0; top:0; z-index:99999; background:#B3261E; color:#fff; font:600 12px/1.4 Inter, system-ui, sans-serif; padding:10px 14px; display:none; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(0,0,0,.25);">
+  <span style="flex:1;">⚠️ Algo deu errado no app. Tente recarregar a página; se continuar acontecendo, avise quem cuida do Anona.</span>
+  <button onclick="location.reload()" style="background:#fff; color:#B3261E; border:none; border-radius:8px; padding:5px 10px; font-weight:800; cursor:pointer;">Recarregar</button>
+  <button onclick="document.getElementById('globalErrorBanner').style.display='none'" style="background:transparent; color:#fff; border:1px solid rgba(255,255,255,.6); border-radius:8px; padding:5px 10px; font-weight:800; cursor:pointer;">Fechar</button>
+</div>
+<script>
+(function () {
+  var jaMostrou = false;
+  function mostrarAvisoErro(origem, err) {
+    console.error('[Anona] Erro inesperado (' + origem + '):', err);
+    if (jaMostrou) return; // evita empilhar vários avisos por causa do mesmo problema
+    var banner = document.getElementById('globalErrorBanner');
+    if (!banner) return;
+    banner.style.display = 'flex';
+    jaMostrou = true;
+  }
+  window.addEventListener('error', function (e) {
+    // Ignora erros genéricos "Script error." sem nenhum detalhe (comuns em
+    // scripts de terceiros/CDN bloqueados por extensão do navegador ou por
+    // causa de CORS) — eles não indicam um bug real do Anona.
+    if (!e || (e.message === 'Script error.' && !e.filename)) return;
+    mostrarAvisoErro('script', e.error || e.message);
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    mostrarAvisoErro('promise', e && e.reason);
+  });
+})();
+</script>
+
 <!-- TELA DE SENHA (bloqueia o app até digitar a senha correta) -->
 <div id="lockScreen" class="access-bg fixed inset-0 z-[9999] flex items-center justify-center px-4 py-8">
   <div class="brand-seal" aria-hidden="true" style="left:50%; top:8%; transform:translateX(-50%); opacity:.07; background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNjcgMTU4IEgyMzMgVjIwMiBIMTY3IFogTTE2NyAxNzggSDIzMyBWMTgyIEgxNjcgWiBNMTg2IDEzOCBIMjE0IFYxNTggSDE4NiBaIE0xOTEgMTQyIEgyMDkgVjE1OCBIMTkxIFoiIGZpbGw9IiNGRkNDMjkiIHN0cm9rZT0ibm9uZSIvPgogIDxnIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTExMiAzNzIgUTE1OCA0MDAgMjAwIDM4MiBRMjQyIDQwMCAyODggMzcyIi8+CiAgICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSIzNDYiIHI9IjE3Ii8+CiAgICA8cGF0aCBkPSJNOTUgMzY2IEM5MyAzODQgOTEgNDAyIDkxIDQxMCBMMTMzIDQxMCBDMTMzIDQwMiAxMzEgMzg0IDEyOSAzNjYiLz4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjM1OCIgcj0iMTMiLz4KICAgIDxwYXRoIGQ9Ik0xODYgMzc0IEMxODUgMzg4IDE4NCA0MDQgMTg0IDQxMCBMMjE2IDQxMCBDMjE2IDQwNCAyMTUgMzg4IDIxNCAzNzQiLz4KICAgIDxjaXJjbGUgY3g9IjI4OCIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik0yNzEgMzY2IEMyNjkgMzg0IDI2NyA0MDIgMjY3IDQxMCBMMzA5IDQxMCBDMzA5IDQwMiAzMDcgMzg4IDMwNSAzNjYiLz4KICA8L2c+Cjwvc3ZnPgo=');"></div>
@@ -756,10 +790,11 @@
           </div>
         </div>
 
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
+        <label id="relatorioIndividualLabel" class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
+          <i data-lucide="upload" class="w-4 h-4"></i> <span id="relatorioIndividualLabelTexto">Enviar tabela (.xlsx)</span>
+          <input type="file" id="relatorioIndividualInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
         </label>
+        <p id="relatorioIndividualStatus" class="text-[10px] font-semibold mt-2 hidden" style="color:var(--verde)"></p>
         <p class="text-[10px] text-slate-400 mt-2">Todas as colunas ficam numa página só (na horizontal); as linhas continuam nas páginas seguintes. Nada é guardado — o arquivo original não é alterado.</p>
       </div>
 
@@ -2403,18 +2438,30 @@
 
     let resp;
     try {
-      resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modeloUsar)}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: { type: 'ARRAY', items: { type: 'INTEGER' } }
-          }
-        })
-      });
+      // Timeout de 20s: sem isso, se o Gemini ficar sem responder, o
+      // relatório inteiro travaria esperando indefinidamente. Passado
+      // esse tempo, a chamada é abortada e o bloco cai para a ordenação
+      // normal por proximidade (ver relatorioIndividualCalcularRota).
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      try {
+        resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modeloUsar)}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: { type: 'ARRAY', items: { type: 'INTEGER' } }
+            }
+          })
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (e) {
+      if (e && e.name === 'AbortError') throw new Error('O Gemini demorou demais para responder (mais de 20s). Tente de novo.');
       throw new Error('Falha de conexão ao consultar o Gemini. Confira sua internet.');
     }
     if (!resp.ok) {
@@ -2423,7 +2470,13 @@
         const errJson = await resp.json();
         if (errJson && errJson.error && errJson.error.message) msg = `Gemini: ${errJson.error.message}`;
       } catch (e) { /* mantém a mensagem genérica acima */ }
-      throw new Error(msg);
+      const erro = new Error(msg);
+      // Marca erros de chave/autenticação (400/401/403) para quem chamar
+      // poder desistir de tentar a IA nos próximos bairros também, em vez
+      // de repetir a mesma chamada fadada a falhar (e fazer a pessoa
+      // esperar à toa) em cada bloco do relatório.
+      if (resp.status === 400 || resp.status === 401 || resp.status === 403) erro.chaveInvalida = true;
+      throw erro;
     }
     const data = await resp.json();
     const texto = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [])
@@ -2443,6 +2496,27 @@
     }
     return ordem;
   }
+
+  // Liga a caixinha "Otimizar a rota com IA (Gemini)": mostra/esconde o
+  // campo da chave de API e lembra (só neste navegador, via localStorage)
+  // se a pessoa deixou a opção marcada e qual chave já usou antes, para
+  // não precisar colar de novo toda vez.
+  (function initGeminiRotaUI() {
+    const toggle = document.getElementById('geminiRotaToggle');
+    const configWrap = document.getElementById('geminiConfigWrap');
+    const apiKeyInput = document.getElementById('geminiApiKeyInput');
+    if (!toggle || !configWrap || !apiKeyInput) return;
+    const chaveSalva = safeStorageGet('anonaGeminiApiKey', '');
+    if (chaveSalva) apiKeyInput.value = chaveSalva;
+    const ativoSalvo = safeStorageGet('anonaGeminiRotaAtiva', '') === '1';
+    toggle.checked = ativoSalvo;
+    configWrap.classList.toggle('hidden', !ativoSalvo);
+    toggle.addEventListener('change', () => {
+      configWrap.classList.toggle('hidden', !toggle.checked);
+      safeStorageSet('anonaGeminiRotaAtiva', toggle.checked ? '1' : '0');
+    });
+    apiKeyInput.addEventListener('change', () => safeStorageSet('anonaGeminiApiKey', apiKeyInput.value.trim()));
+  })();
 
   // Reordena as linhas por melhor rota de visita: bloco de bairro a bloco
   // de bairro (na ordem definida em ROTA_BLOCOS_DEF, com "outros bairros"
@@ -2473,6 +2547,7 @@
     const blocoLabels = ROTA_BLOCOS_DEF.map(b => b.label).concat([ROTA_OUTROS_LABEL]);
     const avisos = [];
     let usouIA = false;
+    let chaveInvalida = false; // some vira true se o Gemini recusar a chave; evita repetir a mesma falha em cada bairro
     const linhasRota = [];
 
     for (let bi = 0; bi < blocoLabels.length; bi++) {
@@ -2489,7 +2564,7 @@
 
       let ordemFinalBloco = heuristica;
 
-      if (usarIA && apiKey) {
+      if (usarIA && apiKey && !chaveInvalida) {
         // Agrupa por família (várias linhas/integrantes podem compartilhar
         // o mesmo endereço) — a IA só precisa ver um endereço por família.
         const familiasOrdem = [];
@@ -2504,6 +2579,7 @@
           ordemFinalBloco = ordemIndices.flatMap(idx => porFamilia.get(familiasOrdem[idx]));
           usouIA = true;
         } catch (e) {
+          if (e && e.chaveInvalida) chaveInvalida = true;
           console.warn(`Não consegui usar a IA para o ${blocoLabels[bi]}, usando ordenação por proximidade:`, e);
           avisos.push(`${blocoLabels[bi]}: ${e && e.message ? e.message : 'falha ao consultar a IA'}`);
         }
@@ -2516,7 +2592,7 @@
   }
 
 
-  function relatorioIndividualGerarPDF(headers, dataRows, mesTexto) {
+  async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo) {
     const { jsPDF } = window.jspdf;
     const idxEfeito = headers.findIndex(h => normalizeText(h) === 'efeito');
     const idxNome = headers.findIndex(h => normalizeText(h).includes('nome') && normalizeText(h).includes('responsavel'));
@@ -2539,8 +2615,9 @@
 
     // Ordena as famílias pela melhor rota de visita (bloco por bairro, na
     // ordem 13 de Setembro -> Araceli -> outros bairros; dentro de cada
-    // bairro, por rua e depois por numeração crescente do imóvel).
-    const linhasRota = relatorioIndividualOrdenarPorRota(headers, dataRows);
+    // bairro, tenta usar a IA (Gemini) e, se não der, usa rua e depois a
+    // numeração crescente do imóvel).
+    const { linhasRota, usouIA, avisos } = await relatorioIndividualCalcularRota(headers, dataRows, usarIA, apiKey, modelo);
     const blocoLabels = ROTA_BLOCOS_DEF.map(b => b.label).concat([ROTA_OUTROS_LABEL]);
     const blocoContagem = blocoLabels.map((_, bi) => linhasRota.filter(l => l.bloco === bi).length);
 
@@ -2650,7 +2727,7 @@
 
     // ---------- resumo da rota de visita ----------
     docPdf.setFont('helvetica','bold'); docPdf.setFontSize(13); docPdf.setTextColor(...azul);
-    docPdf.text('Rota sugerida para as visitas', margin, y);
+    docPdf.text(usouIA ? 'Rota sugerida para as visitas (otimizada com IA · Gemini)' : 'Rota sugerida para as visitas', margin, y);
     y += 18;
     docPdf.setFont('helvetica','normal'); docPdf.setFontSize(9.5); docPdf.setTextColor(...slate);
     docPdf.text(`Partida: ${ROTA_PARTIDA}`, margin, y);
@@ -2891,6 +2968,7 @@
 
     const nomeArquivo = `Relatorio Repercussao Individual - ${mesTexto.replace(/\//g,'-')}.pdf`;
     docPdf.save(nomeArquivo);
+    return { usouIA, avisos };
   }
 
   window.__handleRelatorioIndividualUpload = async (input) => {
@@ -2901,18 +2979,54 @@
       input.value = '';
       return;
     }
+
+    const toggle = document.getElementById('geminiRotaToggle');
+    const apiKeyInput = document.getElementById('geminiApiKeyInput');
+    const usarIA = !!(toggle && toggle.checked);
+    const apiKey = ((apiKeyInput && apiKeyInput.value) || '').trim();
+    const labelTexto = document.getElementById('relatorioIndividualLabelTexto');
+    const statusEl = document.getElementById('relatorioIndividualStatus');
+    const labelTextoOriginal = labelTexto ? labelTexto.textContent : '';
+
+    if (usarIA && !apiKey) {
+      alert('Você marcou "Otimizar a rota com IA (Gemini)" mas não colou sua chave de API. Cole a chave (ou desmarque a opção) e envie a planilha de novo. Consiga uma chave gratuita em aistudio.google.com/apikey.');
+      input.value = '';
+      return;
+    }
+    if (usarIA && apiKey) safeStorageSet('anonaGeminiApiKey', apiKey);
+
+    if (usarIA && labelTexto && statusEl) {
+      labelTexto.textContent = 'Consultando a IA para otimizar a rota…';
+      statusEl.textContent = 'Isso pode levar alguns segundos — a rota é calculada bairro por bairro.';
+      statusEl.classList.remove('hidden');
+      input.disabled = true;
+    }
+
     try {
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
       if (!window.jspdf) throw new Error('Biblioteca de PDF não carregada.');
       const base64 = await fileToBase64(file);
       const dados = relatorioIndividualExtrairDados(base64);
       if (!dados) throw new Error('Não encontrei a coluna "Efeito" em nenhuma aba desta planilha.');
-      relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto);
+      const { usouIA, avisos } = await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey);
       input.value = '';
+      if (usarIA && avisos && avisos.length) {
+        alert(
+          (usouIA
+            ? 'A rota foi otimizada com o Gemini na maior parte, mas em pelo menos um bairro não deu certo, então usei a ordenação normal por proximidade nele:\n\n'
+            : 'Não consegui otimizar a rota com o Gemini agora, então o relatório foi gerado com a ordenação normal por proximidade (bairro/rua):\n\n') +
+          avisos.join('\n') +
+          '\n\nO PDF foi gerado normalmente.'
+        );
+      }
     } catch (e) {
       console.error(e);
       alert('Não consegui gerar o relatório. Confirme se a planilha tem uma coluna "Efeito" e a primeira linha (ou uma das primeiras) com os títulos das colunas.');
       input.value = '';
+    } finally {
+      if (labelTexto) labelTexto.textContent = labelTextoOriginal || 'Enviar tabela (.xlsx)';
+      if (statusEl) { statusEl.textContent = ''; statusEl.classList.add('hidden'); }
+      input.disabled = false;
     }
   };
 
