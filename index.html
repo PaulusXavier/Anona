@@ -804,6 +804,22 @@
         <div class="rounded-xl px-3 py-2 mb-3 text-[11px] text-slate-600" style="background:var(--line-soft)">
           <p><strong>Partida:</strong> <span id="unificarPartidaTexto">Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</span></p>
         </div>
+
+        <div class="rounded-xl px-3 py-2.5 mb-3" style="background:var(--line-soft)">
+          <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer">
+            <input type="checkbox" id="geminiRotaToggleUnificar" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
+            <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
+          </label>
+          <div id="geminiConfigWrapUnificar" class="hidden mt-2 space-y-1.5">
+            <input type="password" id="geminiApiKeyInputUnificar" placeholder="Cole aqui sua chave de API do Gemini" class="access-input w-full text-xs" style="padding:.5rem .7rem;">
+            <p class="text-[10px] text-slate-500 leading-relaxed">
+              A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.
+              Preencha o endereço de referência de cada família abaixo (rua/bairro) — só isso é enviado ao Gemini, nunca nome, NIS ou CPF.
+            </p>
+          </div>
+        </div>
+
         <p id="unificarStatusGeral" class="text-[11px] font-semibold text-slate-500 mb-3">0/30 arquivos · 0,0 MB de 50 MB</p>
 
         <div class="border rounded-xl p-3 mb-3" style="border-color:var(--line)">
@@ -814,6 +830,9 @@
           </label>
           <ol id="unificarLista0" class="space-y-1.5 text-xs"></ol>
           <p id="unificarVazio0" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada ainda.</p>
+          <button type="button" onclick="unificarSugerirOrdemIA(0,event)" class="w-full mt-2 px-2 py-1.5 rounded-lg text-[11px] font-bold border transition hover:bg-slate-50 flex items-center justify-center gap-1.5" style="border-color:var(--verde); color:var(--verde)">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem com IA
+          </button>
         </div>
 
         <div class="border rounded-xl p-3 mb-3" style="border-color:var(--line)">
@@ -824,9 +843,12 @@
           </label>
           <ol id="unificarLista1" class="space-y-1.5 text-xs"></ol>
           <p id="unificarVazio1" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada ainda.</p>
+          <button type="button" onclick="unificarSugerirOrdemIA(1,event)" class="w-full mt-2 px-2 py-1.5 rounded-lg text-[11px] font-bold border transition hover:bg-slate-50 flex items-center justify-center gap-1.5" style="border-color:var(--verde); color:var(--verde)">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem com IA
+          </button>
         </div>
 
-        <p class="text-[10px] text-slate-400 mb-2">Use as setinhas para colocar as famílias na ordem em que você vai visitar dentro de cada bairro (a rua de partida é só uma referência). Nada é enviado à internet — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
+        <p class="text-[10px] text-slate-400 mb-2">Preencha o endereço de referência de cada família para a IA poder sugerir a ordem, ou use as setinhas para reordenar manualmente (a rua de partida é só uma referência). Nada é enviado à internet além do texto do endereço enviado à IA — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
         <button onclick="unificarGerarPDF()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
           <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF unificado da rota
         </button>
@@ -3082,18 +3104,25 @@
     if (!ol) return;
     vazio.style.display = lista.length ? 'none' : '';
     ol.innerHTML = lista.map((item, i) => `
-      <li class="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1.5">
-        <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
-        <span class="flex-1 truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>
-        <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
-        <button type="button" onclick="unificarMover(${bloco},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
-        <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
-        <button type="button" onclick="unificarRemover(${bloco},${i})" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
+      <li class="bg-slate-50 rounded-lg px-2 py-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
+          <span class="flex-1 truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>
+          <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
+          <button type="button" onclick="unificarMover(${bloco},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+          <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+          <button type="button" onclick="unificarRemover(${bloco},${i})" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
+        </div>
+        <input type="text" value="${escapeHtml(item.endereco || '')}" oninput="unificarSetEndereco(${bloco},${i},this.value)" placeholder="Endereço/bairro de referência (opcional, para a IA)" class="w-full mt-1.5 text-[11px] border rounded-lg px-2 py-1" style="border-color:var(--line)">
       </li>
     `).join('');
     if (window.lucide) lucide.createIcons();
     renderUnificarStatusGeral();
   }
+
+  window.unificarSetEndereco = (bloco, i, valor) => {
+    if (unificarListas[bloco] && unificarListas[bloco][i]) unificarListas[bloco][i].endereco = valor;
+  };
 
   window.__handleUnificarUpload = (input, bloco) => {
     const files = Array.from(input.files || []);
@@ -3114,7 +3143,7 @@
         rejeitados.push(`${file.name} (passaria do limite de 50 MB)`);
         return;
       }
-      unificarListas[bloco].push({ id: unificarProximoId++, file });
+      unificarListas[bloco].push({ id: unificarProximoId++, file, endereco: '' });
       totalArquivos += 1;
       totalBytes += file.size;
     });
@@ -3133,6 +3162,79 @@
   window.unificarRemover = (bloco, i) => {
     unificarListas[bloco].splice(i, 1);
     renderUnificarLista(bloco);
+  };
+
+  // Liga a caixinha "Otimizar a rota com IA (Gemini)" desta seção — mesmo
+  // esquema da seção "Relatório Individual" (initGeminiRotaUI), só que com
+  // ids próprios (para não colidir na mesma página) e reaproveitando a
+  // chave de API já salva no navegador, se houver.
+  (function initGeminiRotaUnificarUI() {
+    const toggle = document.getElementById('geminiRotaToggleUnificar');
+    const configWrap = document.getElementById('geminiConfigWrapUnificar');
+    const apiKeyInput = document.getElementById('geminiApiKeyInputUnificar');
+    if (!toggle || !configWrap || !apiKeyInput) return;
+    const chaveSalva = safeStorageGet('anonaGeminiApiKey', '');
+    if (chaveSalva) apiKeyInput.value = chaveSalva;
+    const ativoSalvo = safeStorageGet('anonaGeminiRotaAtivaUnificar', '') === '1';
+    toggle.checked = ativoSalvo;
+    configWrap.classList.toggle('hidden', !ativoSalvo);
+    toggle.addEventListener('change', () => {
+      configWrap.classList.toggle('hidden', !toggle.checked);
+      safeStorageSet('anonaGeminiRotaAtivaUnificar', toggle.checked ? '1' : '0');
+    });
+    apiKeyInput.addEventListener('change', () => safeStorageSet('anonaGeminiApiKey', apiKeyInput.value.trim()));
+  })();
+
+  // Pede ao Gemini a melhor ordem de visita para as famílias de um bloco,
+  // usando o endereço de referência digitado em cada folha (campo opcional
+  // na lista). Só reordena quem tem endereço preenchido; quem não tem fica
+  // no final, mantendo a ordem relativa que já estava. Nada é alterado nos
+  // PDFs — só a ordem da lista deste bloco.
+  window.unificarSugerirOrdemIA = async (bloco, evt) => {
+    const toggle = document.getElementById('geminiRotaToggleUnificar');
+    const apiKeyInput = document.getElementById('geminiApiKeyInputUnificar');
+    const usarIA = !!(toggle && toggle.checked);
+    const apiKey = ((apiKeyInput && apiKeyInput.value) || '').trim();
+
+    if (!usarIA) {
+      alert('Marque a opção "Otimizar a rota com IA (Gemini)" acima antes de pedir a sugestão de ordem.');
+      return;
+    }
+    if (!apiKey) {
+      alert('Cole sua chave de API do Gemini no campo acima. Consiga uma gratuita em aistudio.google.com/apikey.');
+      return;
+    }
+    safeStorageSet('anonaGeminiApiKey', apiKey);
+
+    const lista = unificarListas[bloco] || [];
+    const comEndereco = [];
+    const semEndereco = [];
+    lista.forEach(item => {
+      if (String(item.endereco || '').trim()) comEndereco.push(item);
+      else semEndereco.push(item);
+    });
+    if (comEndereco.length < 2) {
+      alert('Preencha o endereço de referência de pelo menos duas famílias neste bloco (campo abaixo do nome de cada arquivo) para a IA poder sugerir a ordem.');
+      return;
+    }
+
+    const botao = evt && evt.currentTarget;
+    const textoOriginal = botao ? botao.innerHTML : '';
+    if (botao) {
+      botao.disabled = true;
+      botao.innerHTML = 'Consultando a IA…';
+    }
+    try {
+      const enderecos = comEndereco.map(item => String(item.endereco).trim());
+      const ordemIndices = await geminiSugerirOrdemVisita(UNIFICAR_PARTIDA, enderecos, apiKey);
+      unificarListas[bloco] = ordemIndices.map(idx => comEndereco[idx]).concat(semEndereco);
+      renderUnificarLista(bloco);
+    } catch (e) {
+      console.error(e);
+      alert(e && e.message ? e.message : 'Não consegui consultar o Gemini agora. Tente de novo em instantes.');
+    } finally {
+      if (botao) { botao.disabled = false; botao.innerHTML = textoOriginal; if (window.lucide) lucide.createIcons(); }
+    }
   };
 
   // Desenha uma página de capa/divisória simples no PDF unificado, usando
