@@ -26,6 +26,12 @@
     --verde:#146B47;
     --verde-soft:#DCEFE1;
     --azul-soft:#E3E9F5;
+    /* Cores vivas da bandeira, reservadas para elementos decorativos/
+       ambiente (planos de fundo, selos) — separadas das cores muted da
+       interface acima, que continuam controlando texto/botões. */
+    --verde-flag:#159947;
+    --amarelo-flag:#FFCC29;
+    --azul-flag:#0B2F7A;
     --paper:#F2EEE3;
     --card:#FFFDF8;
     --ink:#1D2333;
@@ -39,16 +45,16 @@
     color:var(--ink);
     background-color:var(--paper);
     background-image:
-      radial-gradient(85% 50% at 6% -4%, rgba(20,107,71,.11), transparent 58%),
-      radial-gradient(75% 45% at 102% -6%, rgba(216,155,50,.16), transparent 58%),
-      radial-gradient(65% 40% at 50% 104%, rgba(13,46,99,.07), transparent 62%),
-      radial-gradient(120% 85% at 50% 6%, transparent 52%, rgba(7,26,61,.075) 100%),
+      radial-gradient(70% 55% at 4% -8%, rgba(21,153,71,.15), transparent 60%),
+      radial-gradient(65% 50% at 100% -10%, rgba(255,204,41,.20), transparent 60%),
+      radial-gradient(55% 42% at 94% 62%, rgba(11,47,122,.10), transparent 65%),
+      radial-gradient(70% 48% at 50% 106%, rgba(11,47,122,.08), transparent 62%),
       linear-gradient(180deg, rgba(255,255,255,.55), transparent 16%),
       url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNzAnIGhlaWdodD0nMTcwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjc1JyBudW1PY3RhdmVzPScyJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdzYXR1cmF0ZScgdmFsdWVzPScwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJyBvcGFjaXR5PScwLjYyJy8+Cjwvc3ZnPg==");
-    background-repeat:no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
-    background-attachment:fixed, fixed, fixed, fixed, fixed, local;
-    background-size:auto, auto, auto, auto, auto, 170px 170px;
-    background-blend-mode:normal, normal, normal, normal, normal, multiply;
+    background-repeat:no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-attachment:fixed, fixed, fixed, fixed, fixed, fixed, local;
+    background-size:auto, auto, auto, auto, auto, auto, 170px 170px;
+    background-blend-mode:normal, normal, normal, normal, normal, normal, multiply;
     position:relative;
   }
   /* ---------- marca d'água de fundo: selo casa + coração + família ----------
@@ -213,11 +219,21 @@
      do app parecerem a capa de um mesmo documento, e não uma tela genérica. */
   .access-bg{
     background:
-      radial-gradient(130% 65% at 10% -8%, rgba(20,107,71,.42), transparent 52%),
-      radial-gradient(120% 65% at 105% 108%, rgba(216,155,50,.32), transparent 52%),
-      radial-gradient(90% 55% at 50% 45%, rgba(20,60,130,.35), transparent 70%),
-      linear-gradient(160deg,var(--azul-deep) 0%,#0D2E63 45%,#0A2757 75%,var(--azul-deep) 100%);
+      radial-gradient(125% 70% at -8% -12%, rgba(21,153,71,.58), transparent 55%),
+      radial-gradient(118% 68% at 110% 114%, rgba(255,204,41,.42), transparent 55%),
+      radial-gradient(95% 60% at 54% 42%, rgba(11,47,122,.55), transparent 68%),
+      linear-gradient(150deg,#030F26 0%,#0B2F63 42%,#0A2757 70%,#030F26 100%);
+    background-size:100% 100%, 100% 100%, 100% 100%, 220% 220%;
+    background-position:0 0, 0 0, 0 0, 20% 15%;
+    animation:auroraDrift 26s ease-in-out infinite alternate;
     position:relative; overflow:hidden;
+  }
+  @keyframes auroraDrift{
+    from{ background-position:0 0, 0 0, 0 0, 12% 10%; }
+    to{ background-position:0 0, 0 0, 0 0, 88% 82%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .access-bg{ animation:none; }
   }
   .access-bg::before{
     content:""; position:absolute; inset:0; pointer-events:none;
@@ -723,7 +739,23 @@
 
       <div class="tool-step" data-step="4">
         <h3><i data-lucide="file-text" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatório Individual</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros e um gráfico da quantidade de efeitos.</p>
+        <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros, um gráfico da quantidade de efeitos e uma rota de visita sugerida.</p>
+
+        <div class="rounded-xl px-3 py-2.5 mb-3" style="background:var(--line-soft)">
+          <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer">
+            <input type="checkbox" id="geminiRotaToggle" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
+            <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
+          </label>
+          <div id="geminiConfigWrap" class="hidden mt-2 space-y-1.5">
+            <input type="password" id="geminiApiKeyInput" placeholder="Cole aqui sua chave de API do Gemini" class="access-input w-full text-xs" style="padding:.5rem .7rem;">
+            <p class="text-[10px] text-slate-500 leading-relaxed">
+              A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.
+              Só o bairro/endereço de cada família é enviado ao Gemini — nunca nome, NIS ou CPF. Sem internet ou sem chave, o app usa normalmente a ordenação por proximidade (bairro/rua).
+            </p>
+          </div>
+        </div>
+
         <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
           <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
           <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
@@ -766,9 +798,21 @@
       </div>
 
       <div class="tool-step" data-step="6">
-        <h3><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Unificar Folhas de Família — Abrigos (Operação Acolhida)</h3>
-        <p class="text-xs text-slate-500 mb-2">Envie aqui as folhas resumo (PDF) das famílias de cada abrigo, já separadas por efeito. O app gera um PDF independente para cada abrigo, com as folhas organizadas por efeito (Alerta → Bloqueio → Suspensão).</p>
+        <h3><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatórios dos Abrigos (Operação Acolhida)</h3>
+        <p class="text-xs text-slate-500 mb-2">Envie aqui as folhas resumo (PDF) das famílias de cada abrigo, já separadas por efeito. Selecione o mês de repercussão e gere um relatório independente por vez — cada abrigo tem seu próprio botão, com uma capa contendo as informações da equipe de proteção social e as folhas organizadas por efeito (Alerta → Bloqueio → Suspensão).</p>
         <p id="abrigoStatusGeral" class="text-[11px] font-semibold text-slate-500 mb-3">0/60 arquivos · 0,0 MB de 80 MB</p>
+
+        <div class="mb-3">
+          <label class="text-[11px] font-bold text-slate-600 block mb-1">Mês de repercussão (cronograma 2026)</label>
+          <select id="abrigoMesRepercussao" class="w-full text-xs border rounded-lg px-2 py-1.5" style="border-color:var(--line)">
+            <option value="">Selecione o mês de repercussão…</option>
+            <option value="0">Março/2026</option>
+            <option value="1">Maio/2026</option>
+            <option value="2">Julho/2026</option>
+            <option value="3">Setembro/2026</option>
+            <option value="4">Novembro/2026</option>
+          </select>
+        </div>
 
         <div class="space-y-3 mb-3">
 
@@ -807,6 +851,9 @@
               <ol id="abrigoLista2" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio2" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
+            <button onclick="abrigoGerarPDFUnico(0)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — Rondon 1
+            </button>
           </div>
 
           <div class="border rounded-xl p-3" style="border-color:var(--line)">
@@ -844,6 +891,9 @@
               <ol id="abrigoLista5" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio5" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
+            <button onclick="abrigoGerarPDFUnico(1)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — Rondon 5
+            </button>
           </div>
 
           <div class="border rounded-xl p-3" style="border-color:var(--line)">
@@ -881,6 +931,9 @@
               <ol id="abrigoLista8" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio8" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
+            <button onclick="abrigoGerarPDFUnico(2)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — PRA
+            </button>
           </div>
 
           <div class="border rounded-xl p-3" style="border-color:var(--line)">
@@ -918,14 +971,14 @@
               <ol id="abrigoLista11" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio11" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
+            <button onclick="abrigoGerarPDFUnico(3)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — Tuaronoko
+            </button>
           </div>
 
         </div>
 
-        <p class="text-[10px] text-slate-400 mb-2">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados. Cada abrigo com pelo menos uma folha gera o seu próprio arquivo PDF, baixado separadamente.</p>
-        <button onclick="abrigoUnificarGerarPDF()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
-          <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF independente por abrigo
-        </button>
+        <p class="text-[10px] text-slate-400 mb-2">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — a geração do PDF acontece no seu aparelho, e os arquivos originais não são alterados. Cada abrigo é gerado e baixado de forma independente, um de cada vez, com a sua própria capa de informações.</p>
       </div>
     </div>
 
@@ -1402,7 +1455,12 @@
       notes = migrateNotes(snap.exists() && snap.data().notes ? snap.data().notes : {});
     } catch (e) {
       console.warn('Não consegui buscar as notas na nuvem agora, usando a cópia deste aparelho:', e);
-      notes = migrateNotes(JSON.parse(safeStorageGet('pbf_notes_local', '{}')));
+      try {
+        notes = migrateNotes(JSON.parse(safeStorageGet('pbf_notes_local', '{}')));
+      } catch (e2) {
+        console.warn('Cópia local de notas também não pôde ser lida (dado corrompido?):', e2);
+        notes = {};
+      }
     }
     render();
   }
@@ -2320,36 +2378,143 @@
     return m ? parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER;
   }
 
+  // Endereço "completo" de uma linha (Endereço + Bairro + Referência), para
+  // mostrar à IA — é só texto de localização, nunca nome/NIS/CPF.
+  function relatorioIndividualTextoEnderecoCompleto(row, idxEndereco, idxBairro, idxRef) {
+    const partes = [];
+    if (idxEndereco >= 0 && String(row[idxEndereco] || '').trim()) partes.push(String(row[idxEndereco]).trim());
+    if (idxBairro >= 0 && String(row[idxBairro] || '').trim()) partes.push(String(row[idxBairro]).trim());
+    if (idxRef >= 0 && String(row[idxRef] || '').trim()) partes.push(`(${String(row[idxRef]).trim()})`);
+    return partes.join(', ') || '(endereço não informado)';
+  }
+
+  // Pergunta ao Gemini a melhor ordem de visita para uma lista de
+  // endereços, partindo do endereço informado. Envia SÓ texto de
+  // localização (nunca nome/NIS/CPF). Devolve um array com os índices
+  // ORIGINAIS de `enderecos`, na ordem sugerida de visita — ou lança um
+  // erro (com uma mensagem amigável) se algo der errado, para quem chamar
+  // decidir cair na ordenação por proximidade (bairro/rua) como reserva.
+  async function geminiSugerirOrdemVisita(partida, enderecos, apiKey, modelo) {
+    if (!apiKey) throw new Error('Chave de API do Gemini não informada.');
+    if (!enderecos.length) return [];
+    const modeloUsar = (modelo || '').trim() || 'gemini-flash-latest';
+    const lista = enderecos.map((e, i) => `${i}: ${e}`).join('\n');
+    const prompt = `Você ajuda um profissional de assistência social a planejar visitas domiciliares a pé/de carro em Boa Vista, Roraima, Brasil.\n\nPonto de partida: ${partida}\n\nEndereços das famílias a visitar, um por linha no formato "índice: endereço":\n${lista}\n\nSugira a melhor ordem de visita para minimizar o deslocamento total, considerando a proximidade real das ruas e bairros de Boa Vista/RR, começando pelo endereço mais próximo da partida. Responda APENAS com um array JSON dos índices originais na ordem sugerida — todos os ${enderecos.length} índices (0 a ${enderecos.length - 1}), cada um exatamente uma vez.`;
+
+    let resp;
+    try {
+      resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modeloUsar)}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: { type: 'ARRAY', items: { type: 'INTEGER' } }
+          }
+        })
+      });
+    } catch (e) {
+      throw new Error('Falha de conexão ao consultar o Gemini. Confira sua internet.');
+    }
+    if (!resp.ok) {
+      let msg = `O Gemini respondeu com erro (${resp.status}).`;
+      try {
+        const errJson = await resp.json();
+        if (errJson && errJson.error && errJson.error.message) msg = `Gemini: ${errJson.error.message}`;
+      } catch (e) { /* mantém a mensagem genérica acima */ }
+      throw new Error(msg);
+    }
+    const data = await resp.json();
+    const texto = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [])
+      .map(p => p.text || '').join('');
+    let ordem;
+    try { ordem = JSON.parse(texto); }
+    catch (e) { throw new Error('O Gemini não devolveu uma lista válida.'); }
+    if (!Array.isArray(ordem) || ordem.length !== enderecos.length) {
+      throw new Error('O Gemini não devolveu todos os endereços esperados.');
+    }
+    const vistos = new Set();
+    for (const idx of ordem) {
+      if (!Number.isInteger(idx) || idx < 0 || idx >= enderecos.length || vistos.has(idx)) {
+        throw new Error('O Gemini devolveu índices inválidos ou repetidos.');
+      }
+      vistos.add(idx);
+    }
+    return ordem;
+  }
+
   // Reordena as linhas por melhor rota de visita: bloco de bairro a bloco
   // de bairro (na ordem definida em ROTA_BLOCOS_DEF, com "outros bairros"
-  // por último) e, dentro do bairro, por rua (alfabética) e depois pelo
-  // número do endereço.
-  function relatorioIndividualOrdenarPorRota(headers, dataRows) {
+  // por último). Dentro de cada bairro, tenta usar a ordem sugerida pelo
+  // Gemini (se `usarIA` e `apiKey` foram informados); quando isso não é
+  // possível — sem IA habilitada, sem chave, sem internet, ou qualquer
+  // falha na resposta — cai para a ordenação por rua (alfabética) e depois
+  // pelo número do endereço, sem nunca travar a geração do relatório.
+  async function relatorioIndividualCalcularRota(headers, dataRows, usarIA, apiKey, modelo) {
     const idxEndereco = headers.findIndex(h => normalizeText(h) === 'endereco');
     const idxBairro = headers.findIndex(h => normalizeText(h) === 'bairro');
     const idxRef = headers.findIndex(h => normalizeText(h).includes('referencia') && normalizeText(h).includes('endereco'));
+    const idxFamilia = headers.findIndex(h => normalizeText(h) === 'familia');
 
     const enriquecidas = dataRows.map((row, i) => {
       const textoBairro = relatorioIndividualTextoBairro(row, idxEndereco, idxBairro, idxRef);
       const textoEndereco = idxEndereco >= 0 ? row[idxEndereco] : textoBairro;
       return {
-        row,
-        i,
+        row, i,
+        familia: idxFamilia >= 0 ? String(row[idxFamilia]) : `linha${i}`,
         bloco: relatorioIndividualClassificarBloco(textoBairro),
         rua: relatorioIndividualNomeRua(textoEndereco),
-        numero: relatorioIndividualNumeroEndereco(textoEndereco)
+        numero: relatorioIndividualNumeroEndereco(textoEndereco),
+        enderecoCompleto: relatorioIndividualTextoEnderecoCompleto(row, idxEndereco, idxBairro, idxRef)
       };
     });
 
-    enriquecidas.sort((a, b) => {
-      if (a.bloco !== b.bloco) return a.bloco - b.bloco;
-      if (a.rua !== b.rua) return a.rua.localeCompare(b.rua, 'pt-BR');
-      if (a.numero !== b.numero) return a.numero - b.numero;
-      return a.i - b.i; // mantém ordem original como desempate
-    });
+    const blocoLabels = ROTA_BLOCOS_DEF.map(b => b.label).concat([ROTA_OUTROS_LABEL]);
+    const avisos = [];
+    let usouIA = false;
+    const linhasRota = [];
 
-    return enriquecidas.map(e => ({ row: e.row, bloco: e.bloco }));
+    for (let bi = 0; bi < blocoLabels.length; bi++) {
+      const doBloco = enriquecidas.filter(e => e.bloco === bi);
+      if (!doBloco.length) continue;
+
+      // Ordem por proximidade (rua -> número -> ordem original): base e
+      // também reserva caso a IA não possa ser usada neste bloco.
+      const heuristica = [...doBloco].sort((a, b) => {
+        if (a.rua !== b.rua) return a.rua.localeCompare(b.rua, 'pt-BR');
+        if (a.numero !== b.numero) return a.numero - b.numero;
+        return a.i - b.i;
+      });
+
+      let ordemFinalBloco = heuristica;
+
+      if (usarIA && apiKey) {
+        // Agrupa por família (várias linhas/integrantes podem compartilhar
+        // o mesmo endereço) — a IA só precisa ver um endereço por família.
+        const familiasOrdem = [];
+        const porFamilia = new Map();
+        heuristica.forEach(e => {
+          if (!porFamilia.has(e.familia)) { porFamilia.set(e.familia, []); familiasOrdem.push(e.familia); }
+          porFamilia.get(e.familia).push(e);
+        });
+        const enderecosFamilias = familiasOrdem.map(chave => porFamilia.get(chave)[0].enderecoCompleto);
+        try {
+          const ordemIndices = await geminiSugerirOrdemVisita(ROTA_PARTIDA, enderecosFamilias, apiKey, modelo);
+          ordemFinalBloco = ordemIndices.flatMap(idx => porFamilia.get(familiasOrdem[idx]));
+          usouIA = true;
+        } catch (e) {
+          console.warn(`Não consegui usar a IA para o ${blocoLabels[bi]}, usando ordenação por proximidade:`, e);
+          avisos.push(`${blocoLabels[bi]}: ${e && e.message ? e.message : 'falha ao consultar a IA'}`);
+        }
+      }
+
+      linhasRota.push(...ordemFinalBloco.map(e => ({ row: e.row, bloco: e.bloco })));
+    }
+
+    return { linhasRota, usouIA, avisos };
   }
+
 
   function relatorioIndividualGerarPDF(headers, dataRows, mesTexto) {
     const { jsPDF } = window.jspdf;
@@ -2805,7 +2970,7 @@
     ol.innerHTML = lista.map((item, i) => `
       <li class="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1.5">
         <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
-        <span class="flex-1 truncate" title="${item.file.name.replace(/"/g,'&quot;')}">${item.file.name}</span>
+        <span class="flex-1 truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>
         <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
         <button type="button" onclick="unificarMover(${bloco},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
         <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
@@ -2955,6 +3120,18 @@
   // =====================================================================
   const ABRIGO_UNIFICAR_ABRIGOS = ['Rondon 1', 'Rondon 5', 'PRA', 'Tuaronoko'];
   const ABRIGO_UNIFICAR_EFEITOS = ['Famílias em Alerta', 'Famílias em Bloqueio', 'Famílias Suspensas'];
+  // Cronograma de Repercussão 2026: para cada mês de repercussão, os meses
+  // de referência de Educação e Saúde considerados na frequência e a data
+  // limite para o beneficiário entrar com recurso daquele mês. Usado na
+  // capa do relatório de cada abrigo. Para atualizar o cronograma em anos
+  // seguintes, edite só esta lista.
+  const CRONOGRAMA_REPERCUSSAO_2026 = [
+    { mes: 'Março',     educacaoRef: 'Outubro/Novembro de 2025', saudeRef: '2º Semestre de 2025', dataLimite: '23/04/2026' },
+    { mes: 'Maio',      educacaoRef: 'Fevereiro/Março de 2026',  saudeRef: '—',                    dataLimite: '25/06/2026' },
+    { mes: 'Julho',     educacaoRef: 'Abril/Maio de 2026',       saudeRef: '—',                    dataLimite: '27/08/2026' },
+    { mes: 'Setembro',  educacaoRef: 'Junho/Julho de 2026',      saudeRef: '1º Semestre de 2026',  dataLimite: '29/10/2026' },
+    { mes: 'Novembro',  educacaoRef: 'Agosto/Setembro de 2026',  saudeRef: '—',                    dataLimite: '31/01/2027' }
+  ];
   // Lista "achatada" com um item por combinação abrigo+efeito, na ordem em
   // que aparecem no HTML (índice = abrigoIndex * 3 + efeitoIndex).
   const ABRIGO_UNIFICAR_GRUPOS = [];
@@ -2999,7 +3176,7 @@
     ol.innerHTML = lista.map((item, i) => `
       <li class="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1">
         <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
-        <span class="flex-1 truncate" title="${item.file.name.replace(/"/g,'&quot;')}">${item.file.name}</span>
+        <span class="flex-1 truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>
         <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
         <button type="button" onclick="abrigoUnificarMover(${grupo},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
         <button type="button" onclick="abrigoUnificarMover(${grupo},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
@@ -3050,16 +3227,29 @@
     renderAbrigoLista(grupo);
   };
 
-  // Gera um PDF INDEPENDENTE para cada abrigo (em vez de um único PDF
-  // juntando todos os abrigos). Cada abrigo com pelo menos uma folha
-  // enviada vira um arquivo próprio, com capa do abrigo + folhas
-  // organizadas por efeito (Alerta → Bloqueio → Suspensão), baixado
-  // separadamente. Abrigos sem nenhuma folha enviada são simplesmente
-  // ignorados (não geram arquivo vazio).
-  window.abrigoUnificarGerarPDF = async () => {
-    const totalArquivos = abrigoUnificarListas.reduce((soma, l) => soma + l.length, 0);
-    if (!totalArquivos) {
-      alert('Adicione pelo menos uma folha resumo (PDF) em algum abrigo/efeito antes de gerar os PDFs.');
+  // Gera o PDF de UM abrigo por vez (independente dos demais), a pedido do
+  // usuário: cada abrigo tem seu próprio botão "Gerar PDF". A primeira
+  // página do relatório é uma capa com as informações que a equipe de
+  // proteção social do abrigo precisa: mês de repercussão, meses de
+  // referência de frequência (Educação/Saúde), data limite para recurso,
+  // quantidade de efeitos e as condicionalidades do programa. Em seguida
+  // vêm as folhas de família, organizadas por efeito (Alerta → Bloqueio →
+  // Suspensão).
+  window.abrigoGerarPDFUnico = async (abrigoIdx) => {
+    const abrigo = ABRIGO_UNIFICAR_ABRIGOS[abrigoIdx];
+    const selectEl = document.getElementById('abrigoMesRepercussao');
+    const mesSel = selectEl ? selectEl.value : '';
+    if (mesSel === '') {
+      alert('Selecione o mês de repercussão (cronograma 2026) antes de gerar o relatório.');
+      return;
+    }
+    const cronograma = CRONOGRAMA_REPERCUSSAO_2026[parseInt(mesSel, 10)];
+
+    const inicio = abrigoIdx * ABRIGO_UNIFICAR_EFEITOS.length;
+    const contagens = ABRIGO_UNIFICAR_EFEITOS.map((_, efeitoIdx) => abrigoUnificarListas[inicio + efeitoIdx].length);
+    const totalAbrigo = contagens.reduce((soma, n) => soma + n, 0);
+    if (!totalAbrigo) {
+      alert(`Adicione pelo menos uma folha resumo (PDF) para o abrigo ${abrigo} antes de gerar o PDF.`);
       return;
     }
     if (!window.PDFLib) {
@@ -3068,73 +3258,80 @@
     }
     try {
       const { PDFDocument, StandardFonts } = window.PDFLib;
-      const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
-      let gerados = 0;
+      const outDoc = await PDFDocument.create();
+      const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
+      const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
+      const azul = window.PDFLib.rgb(0x0B/255, 0x2F/255, 0x7A/255);
+      const vermelho = window.PDFLib.rgb(0xDC/255, 0x26/255, 0x26/255);
 
-      for (let abrigoIdx = 0; abrigoIdx < ABRIGO_UNIFICAR_ABRIGOS.length; abrigoIdx++) {
-        const abrigo = ABRIGO_UNIFICAR_ABRIGOS[abrigoIdx];
-        const inicio = abrigoIdx * ABRIGO_UNIFICAR_EFEITOS.length;
-        const totalAbrigo = ABRIGO_UNIFICAR_EFEITOS.reduce((soma, _, efeitoIdx) => soma + abrigoUnificarListas[inicio + efeitoIdx].length, 0);
-        if (!totalAbrigo) continue; // abrigo sem nenhuma folha enviada: pula, sem gerar arquivo
+      // Capa: informações para a equipe de proteção social do abrigo.
+      unificarDesenharPagina(outDoc, fontBold, fontRegular, [
+        { texto: `Relatório de Repercussão — Abrigo ${abrigo}`, tamanho: 16, bold: true, cor: azul },
+        { texto: 'Informações para a equipe de proteção social do abrigo', tamanho: 10 },
+        { texto: ' ', tamanho: 5 },
+        { texto: `Mês de repercussão: ${cronograma.mes}/2026`, tamanho: 11, bold: true },
+        { texto: `Frequência de Educação considerada (referência): ${cronograma.educacaoRef}`, tamanho: 10.5 },
+        { texto: `Frequência de Saúde considerada (referência): ${cronograma.saudeRef}`, tamanho: 10.5 },
+        { texto: `Data limite para recurso deste mês de referência: ${cronograma.dataLimite}`, tamanho: 11, bold: true, cor: vermelho },
+        { texto: ' ', tamanho: 5 },
+        { texto: 'Quantidade de efeitos nesta remessa:', tamanho: 11, bold: true },
+        ...ABRIGO_UNIFICAR_EFEITOS.map((efeito, i) => ({ texto: `   ${efeito}: ${contagens[i]}`, tamanho: 10.5 })),
+        { texto: `   Total: ${totalAbrigo} família${totalAbrigo === 1 ? '' : 's'}`, tamanho: 10.5, bold: true },
+        { texto: ' ', tamanho: 5 },
+        { texto: 'Condicionalidades do Programa', tamanho: 12, bold: true, cor: azul },
+        { texto: 'Educação — 60% de frequência: crianças de 4 a 5 anos', tamanho: 10.5 },
+        { texto: 'Educação — 75% de frequência: crianças e adolescentes de 6 a 18 anos incompletos', tamanho: 10.5 },
+        { texto: 'Saúde — Pré-natal: acompanhamento pelo SUS (gestantes)', tamanho: 10.5 },
+        { texto: 'Saúde — Vacinação: menores de 7 anos', tamanho: 10.5 },
+        { texto: 'Saúde — Peso e Nutrição: menores de 7 anos', tamanho: 10.5 }
+      ]);
 
-        // Cada abrigo tem seu próprio documento PDF, independente dos demais.
-        const outDoc = await PDFDocument.create();
-        const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
-        const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
+      for (let efeitoIdx = 0; efeitoIdx < ABRIGO_UNIFICAR_EFEITOS.length; efeitoIdx++) {
+        const grupo = inicio + efeitoIdx;
+        const lista = abrigoUnificarListas[grupo];
+        if (!lista.length) continue;
+        const efeito = ABRIGO_UNIFICAR_EFEITOS[efeitoIdx];
 
-        // Capa do abrigo, listando quantas famílias em cada efeito.
+        // Divisória do efeito dentro do abrigo.
         unificarDesenharPagina(outDoc, fontBold, fontRegular, [
-          { texto: `Folhas de família unificadas — ${abrigo}`, tamanho: 16, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
-          { texto: `${totalAbrigo} família${totalAbrigo === 1 ? '' : 's'}, por efeito`, tamanho: 10.5 },
-          ...ABRIGO_UNIFICAR_EFEITOS.map((efeito, efeitoIdx) => ({ texto: `${efeito}: ${abrigoUnificarListas[inicio + efeitoIdx].length}`, tamanho: 10.5, bold: true }))
+          { texto: `${abrigo} · ${efeito}`, tamanho: 14, bold: true, cor: azul },
+          { texto: `${lista.length} família${lista.length === 1 ? '' : 's'}`, tamanho: 10.5 }
         ]);
 
-        for (let efeitoIdx = 0; efeitoIdx < ABRIGO_UNIFICAR_EFEITOS.length; efeitoIdx++) {
-          const grupo = inicio + efeitoIdx;
-          const lista = abrigoUnificarListas[grupo];
-          if (!lista.length) continue;
-          const efeito = ABRIGO_UNIFICAR_EFEITOS[efeitoIdx];
-
-          // Divisória do efeito dentro do abrigo.
-          unificarDesenharPagina(outDoc, fontBold, fontRegular, [
-            { texto: `${abrigo} · ${efeito}`, tamanho: 14, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
-            { texto: `${lista.length} família${lista.length === 1 ? '' : 's'}`, tamanho: 10.5 }
-          ]);
-
-          for (const item of lista) {
-            let bytes, srcDoc;
-            try {
-              bytes = await item.file.arrayBuffer();
-              srcDoc = await PDFDocument.load(bytes);
-            } catch (e) {
-              throw new Error(`Não consegui abrir o arquivo "${item.file.name}" (${abrigo} · ${efeito}). Confirme se é um PDF válido e tente enviá-lo de novo.`);
-            }
-            const paginas = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
-            paginas.forEach(p => outDoc.addPage(p));
+        for (const item of lista) {
+          let bytes, srcDoc;
+          try {
+            bytes = await item.file.arrayBuffer();
+            srcDoc = await PDFDocument.load(bytes);
+          } catch (e) {
+            throw new Error(`Não consegui abrir o arquivo "${item.file.name}" (${abrigo} · ${efeito}). Confirme se é um PDF válido e tente enviá-lo de novo.`);
           }
+          const paginas = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+          paginas.forEach(p => outDoc.addPage(p));
         }
-
-        const bytesFinais = await outDoc.save();
-        const blob = new Blob([bytesFinais], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Abrigo ${abrigo} - Folhas de Familia - ${dataArquivo}.pdf`;
-        document.body.appendChild(link); link.click(); link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
-        gerados++;
-
-        // Pequena pausa entre downloads: navegadores costumam bloquear
-        // vários downloads automáticos disparados ao mesmo tempo.
-        await new Promise(resolve => setTimeout(resolve, 400));
       }
 
-      abrigoUnificarListas.forEach((_, i) => { abrigoUnificarListas[i] = []; });
-      ABRIGO_UNIFICAR_GRUPOS.forEach((_, i) => renderAbrigoLista(i));
-      alert(`${gerados} PDF${gerados === 1 ? '' : 's'} gerado${gerados === 1 ? '' : 's'} — um arquivo independente por abrigo. Se o navegador bloquear algum dos downloads, permita "downloads múltiplos" para este site e tente novamente.`);
+      const bytesFinais = await outDoc.save();
+      const blob = new Blob([bytesFinais], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Abrigo ${abrigo} - Repercussao ${cronograma.mes} - ${dataArquivo}.pdf`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+
+      // Limpa só os arquivos deste abrigo — os demais abrigos continuam
+      // com suas folhas, já que cada um é gerado de forma independente.
+      for (let efeitoIdx = 0; efeitoIdx < ABRIGO_UNIFICAR_EFEITOS.length; efeitoIdx++) {
+        abrigoUnificarListas[inicio + efeitoIdx] = [];
+        renderAbrigoLista(inicio + efeitoIdx);
+      }
+
+      alert(`PDF do abrigo ${abrigo} gerado e baixado com sucesso!`);
     } catch (e) {
       console.error(e);
-      alert(e && e.message ? e.message : 'Não consegui gerar os PDFs das folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
+      alert(e && e.message ? e.message : `Não consegui gerar o PDF do abrigo ${abrigo}. Confirme se todos os arquivos são PDFs válidos.`);
     }
   };
 
@@ -3293,9 +3490,14 @@
 
   window.__deleteReport = async (id) => {
     if (!confirm('Apagar este arquivo guardado? Essa ação não pode ser desfeita.')) return;
-    const local = JSON.parse(safeStorageGet('pbf_repercussao_local', '[]')).filter(r => r.id !== id);
-    safeStorageSet('pbf_repercussao_local', JSON.stringify(local));
-    await loadReports();
+    try {
+      const local = JSON.parse(safeStorageGet('pbf_repercussao_local', '[]')).filter(r => r.id !== id);
+      safeStorageSet('pbf_repercussao_local', JSON.stringify(local));
+      await loadReports();
+    } catch (e) {
+      console.error(e);
+      alert('Não consegui apagar este arquivo. Os dados guardados neste navegador podem estar corrompidos.');
+    }
   };
 
   function renderReports() {
@@ -3388,8 +3590,14 @@
         </div>
         <p class="text-[10px] text-blue-200 mt-1 flex items-center gap-1 justify-end"><span>●</span> sincronizado na nuvem</p>`;
       if (window.lucide) lucide.createIcons();
-      await loadNotesFromCloud();
-      await loadReports();
+      try {
+        await loadNotesFromCloud();
+        await loadReports();
+      } catch (e) {
+        // Mesmo se algo falhar aqui, o app continua utilizável — evita
+        // deixar a pessoa travada numa tela em branco sem explicação.
+        console.error('Falha ao carregar notas/planilhas ao entrar:', e);
+      }
       render();
     } else {
       notes = {};
@@ -3398,7 +3606,11 @@
   }
 
   onAuthStateChanged(auth, async (user) => {
-    await runAuthUI(user);
+    try {
+      await runAuthUI(user);
+    } catch (e) {
+      console.error('Falha ao processar o estado de login:', e);
+    }
   });
 
   window.__getNotes = () => notes;
