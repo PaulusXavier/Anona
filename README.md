@@ -236,6 +236,14 @@ O app foi revisado e alguns pontos foram corrigidos diretamente no código. Resu
 - **Regras do Firestore** (`firestore.rules`): cada pessoa só lê/escreve os próprios dados (`request.auth.uid == userId`). Isso já garante que ninguém acessa notas ou planilhas de outra conta pelo banco de dados.
 - O texto das notas já era exibido com escape (protegido contra injeção de código).
 
+### Revisão mais recente (avisos e acessibilidade)
+- **Os avisos do app (erro, sucesso, validação) trocaram o `alert()` do navegador** por um aviso no próprio estilo do app, que aparece no rodapé da tela e some sozinho — não trava mais a tela nem o teclado, e funciona melhor dentro do app instalado (PWA).
+- **Botões que só tinham ícone** (mês anterior/próximo, mover ou remover um arquivo da lista, baixar/apagar planilha) agora têm `aria-label`, para quem usa leitor de tela.
+- **Ações demoradas** (juntar PDFs de rota de visita/abrigos, gerar o relatório de repercussão, dividir a planilha do Território Volante) agora mostram um texto de "processando" no próprio botão/campo enquanto trabalham, em vez de parecerem travadas.
+- **Calendário navegável por teclado**: cada dia agora responde a Tab/Enter/Espaço e tem uma descrição (data, se é hoje, se é dia de pagamento, se tem anotação) para quem usa leitor de tela — antes só funcionava no toque/clique do mouse.
+- **Confirmação de exclusão** (apagar uma planilha guardada) trocou o `confirm()` do navegador por uma janela no estilo do app.
+- **Aviso de "sem internet"**: uma faixa aparece no topo quando o aparelho perde conexão, avisando que as anotações continuam sendo salvas nele e sincronizam sozinhas quando a internet voltar.
+
 ### Limitações que continuam existindo (importante saber)
 - **A `apiKey` do Firebase aparece no código do site.** Isso é normal e esperado para apps desse tipo (não é uma senha secreta) — a proteção de verdade é feita pelas regras do Firestore e pela autenticação, que já estão corretas. Mesmo assim, para reforçar, você pode:
   1. No **Google Cloud Console** (console.cloud.google.com) → **APIs e Serviços > Credenciais**, abrir essa chave de API e restringir "Restrições de aplicativo" para aceitar apenas o domínio do seu GitHub Pages (`https://SEU-USUARIO.github.io/*`). Isso impede que alguém copie sua chave e a use em outro site.
