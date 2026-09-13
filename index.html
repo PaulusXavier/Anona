@@ -418,6 +418,61 @@
   a:focus-visible, button:focus-visible, summary:focus-visible{
     outline:2px solid var(--azul); outline-offset:2px; border-radius:.4rem;
   }
+  .day-cell:focus-visible{
+    outline:2px solid var(--azul); outline-offset:-2px; z-index:2;
+  }
+
+  /* CONFIRMAÇÃO (modal) — substitui o confirm() nativo do navegador para
+     ações destrutivas (ex.: apagar um arquivo guardado). */
+  #confirmModalOverlay{
+    position:fixed; inset:0; z-index:99997; background:rgba(7,26,61,.55);
+    display:flex; align-items:center; justify-content:center; padding:16px;
+    animation:anonaToastIn .15s ease;
+  }
+  #confirmModalOverlay.hidden{ display:none; }
+  #confirmModalBox{
+    background:#fff; border-radius:16px; max-width:360px; width:100%;
+    padding:22px; box-shadow:0 20px 50px rgba(0,0,0,.3);
+  }
+  #confirmModalMsg{
+    font:600 14px/1.5 Inter, system-ui, sans-serif; color:#1f2937; margin-bottom:18px;
+  }
+  #confirmModalBox .confirm-btns{ display:flex; gap:8px; justify-content:flex-end; }
+  #confirmModalBox button{
+    font:700 13px/1 Inter, system-ui, sans-serif; padding:.65rem 1.1rem; border-radius:10px;
+    border:none; cursor:pointer; transition:opacity .15s ease;
+  }
+  #confirmModalBox button:hover{ opacity:.9; }
+  #confirmModalCancel{ background:#F1F3F6; color:#334155; }
+  #confirmModalOk{ background:#B3261E; color:#fff; }
+
+  /* AVISOS (toasts) — substituem os alert() nativos do navegador por um
+     aviso no próprio estilo do app, que não trava a tela. */
+  #toastContainer{
+    position:fixed; left:0; right:0; bottom:0; z-index:99998;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    padding:12px; pointer-events:none;
+  }
+  .anona-toast{
+    pointer-events:auto; max-width:460px; width:calc(100% - 8px);
+    color:#fff; font:600 13px/1.5 Inter, system-ui, sans-serif;
+    padding:12px 14px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.28);
+    display:flex; align-items:flex-start; gap:10px; white-space:pre-line;
+    animation:anonaToastIn .18s ease;
+  }
+  .anona-toast[data-tipo="success"]{ background:var(--verde); }
+  .anona-toast[data-tipo="error"]{ background:#B3261E; }
+  .anona-toast[data-tipo="info"]{ background:var(--azul); }
+  .anona-toast .anona-toast-fechar{
+    background:transparent; border:none; color:#fff; opacity:.75; cursor:pointer;
+    font-size:17px; line-height:1; padding:0 2px; flex-shrink:0;
+  }
+  .anona-toast .anona-toast-fechar:hover{ opacity:1; }
+  @keyframes anonaToastIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes anonaToastOut{ from{ opacity:1; transform:translateY(0); } to{ opacity:0; transform:translateY(6px); } }
+  @media (prefers-reduced-motion: reduce){
+    .anona-toast{ animation:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -432,6 +487,130 @@
   <button onclick="location.reload()" style="background:#fff; color:#B3261E; border:none; border-radius:8px; padding:5px 10px; font-weight:800; cursor:pointer;">Recarregar</button>
   <button onclick="document.getElementById('globalErrorBanner').style.display='none'" style="background:transparent; color:#fff; border:1px solid rgba(255,255,255,.6); border-radius:8px; padding:5px 10px; font-weight:800; cursor:pointer;">Fechar</button>
 </div>
+
+<!-- AVISO DE CONEXÃO — aparece só quando o aparelho perde internet, para
+     deixar claro que o app continua funcionando (as notas são salvas
+     neste aparelho e sincronizam sozinhas quando a conexão voltar). -->
+<div id="offlineBanner" role="status" style="position:fixed; left:0; right:0; top:0; z-index:99996; background:var(--amarelo-text,#6B4E00); color:#fff; font:600 12px/1.4 Inter, system-ui, sans-serif; padding:8px 14px; display:none; align-items:center; justify-content:center; gap:8px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.2);">
+  <span>📶 Sem internet — suas anotações continuam sendo salvas neste aparelho e sincronizam sozinhas quando a conexão voltar.</span>
+</div>
+<script>
+(function () {
+  var banner = document.getElementById('offlineBanner');
+  if (!banner) return;
+  function atualizarBannerOffline() {
+    banner.style.display = navigator.onLine ? 'none' : 'flex';
+  }
+  window.addEventListener('online', function () {
+    atualizarBannerOffline();
+    if (window.toast) window.toast('Conexão de volta — sincronizando suas anotações…', 'success');
+  });
+  window.addEventListener('offline', atualizarBannerOffline);
+  atualizarBannerOffline();
+})();
+</script>
+
+<!-- AVISOS (toasts) — mensagens de sucesso/erro/informação do app aparecem
+     aqui embaixo, empilhadas, no lugar do alert() nativo do navegador. -->
+<div id="toastContainer" aria-live="polite"></div>
+<script>
+(function () {
+  // Mostra um aviso (toast) no rodapé da tela. tipo: 'success' | 'error' | 'info'.
+  // Some sozinho depois de um tempo (mais tempo para erros) ou ao clicar em "×".
+  window.toast = function (mensagem, tipo) {
+    tipo = (tipo === 'success' || tipo === 'error') ? tipo : 'info';
+    var container = document.getElementById('toastContainer');
+    if (!container) { console.warn('[Anona] toast sem container:', mensagem); return; }
+    var el = document.createElement('div');
+    el.className = 'anona-toast';
+    el.setAttribute('data-tipo', tipo);
+    el.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+    var texto = document.createElement('span');
+    texto.style.flex = '1';
+    texto.textContent = String(mensagem == null ? '' : mensagem);
+    var fechar = document.createElement('button');
+    fechar.type = 'button';
+    fechar.className = 'anona-toast-fechar';
+    fechar.setAttribute('aria-label', 'Fechar aviso');
+    fechar.textContent = '×';
+    el.appendChild(texto);
+    el.appendChild(fechar);
+    container.appendChild(el);
+    var duracao = tipo === 'error' ? 9000 : 5000;
+    var timer = setTimeout(remover, duracao);
+    function remover() {
+      clearTimeout(timer);
+      if (!el.isConnected) return;
+      el.style.animation = 'anonaToastOut .18s ease forwards';
+      setTimeout(function () { el.remove(); }, 180);
+    }
+    fechar.addEventListener('click', remover);
+  };
+
+  // Troca o alert() nativo do navegador (bloqueia a tela) por um aviso no
+  // estilo do app (toast, no rodapé, some sozinho). Todo o resto do código
+  // continua chamando alert(...) normalmente — só a exibição muda aqui,
+  // num único lugar, então nenhuma outra função precisou ser editada.
+  window.alert = function (mensagem) {
+    var msg = String(mensagem == null ? '' : mensagem);
+    var tipo = 'error';
+    if (/sucesso/i.test(msg)) tipo = 'success';
+    else if (/^(Nenhuma|Você (ainda )?não tem)/i.test(msg) || /gerado normalmente/i.test(msg)) tipo = 'info';
+    window.toast(msg, tipo);
+  };
+})();
+</script>
+
+<!-- CONFIRMAÇÃO (modal) — usado no lugar do confirm() nativo para ações
+     destrutivas, como apagar um arquivo guardado. -->
+<div id="confirmModalOverlay" class="hidden">
+  <div id="confirmModalBox" role="alertdialog" aria-modal="true" aria-labelledby="confirmModalMsg">
+    <p id="confirmModalMsg"></p>
+    <div class="confirm-btns">
+      <button type="button" id="confirmModalCancel">Cancelar</button>
+      <button type="button" id="confirmModalOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  // Mostra uma confirmação (modal) no estilo do app, no lugar do confirm()
+  // nativo do navegador. Devolve uma Promise<boolean> (true = confirmou).
+  window.anonaConfirm = function (mensagem, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      var overlay = document.getElementById('confirmModalOverlay');
+      var msgEl = document.getElementById('confirmModalMsg');
+      var okBtn = document.getElementById('confirmModalOk');
+      var cancelBtn = document.getElementById('confirmModalCancel');
+      if (!overlay || !msgEl || !okBtn || !cancelBtn) { resolve(window.confirm(mensagem)); return; }
+      msgEl.textContent = mensagem;
+      okBtn.textContent = opts.confirmLabel || 'Confirmar';
+      cancelBtn.textContent = opts.cancelLabel || 'Cancelar';
+      overlay.classList.remove('hidden');
+      var focadoAntes = document.activeElement;
+      okBtn.focus();
+      function limpar(resultado) {
+        overlay.classList.add('hidden');
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        overlay.removeEventListener('keydown', onKeydown);
+        overlay.removeEventListener('click', onOverlayClick);
+        if (focadoAntes && focadoAntes.focus) focadoAntes.focus();
+        resolve(resultado);
+      }
+      function onOk() { limpar(true); }
+      function onCancel() { limpar(false); }
+      function onKeydown(e) { if (e.key === 'Escape') limpar(false); }
+      function onOverlayClick(e) { if (e.target === overlay) limpar(false); }
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      overlay.addEventListener('keydown', onKeydown);
+      overlay.addEventListener('click', onOverlayClick);
+    });
+  };
+})();
+</script>
 <script>
 (function () {
   var jaMostrou = false;
@@ -608,11 +787,11 @@
   <!-- CALENDÁRIO — o "documento principal", em destaque na largura toda -->
     <div class="panel overflow-hidden mb-6">
       <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--line)">
-        <button onclick="changeMonth(-1)" id="btnPrev" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
+        <button onclick="changeMonth(-1)" id="btnPrev" aria-label="Mês anterior" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
           <i data-lucide="chevron-left" class="w-6 h-6 text-slate-600"></i>
         </button>
         <h3 id="currentMonthLabel" class="display text-2xl sm:text-3xl font-semibold text-slate-800 capitalize"></h3>
-        <button onclick="changeMonth(1)" id="btnNext" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
+        <button onclick="changeMonth(1)" id="btnNext" aria-label="Próximo mês" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
           <i data-lucide="chevron-right" class="w-6 h-6 text-slate-600"></i>
         </button>
       </div>
@@ -727,7 +906,7 @@
         <h3><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Repercussão de Condicionalidades</h3>
         <p class="text-xs text-slate-500 mb-3">Guarde aqui a planilha que o MDS manda todo mês ímpar. Fica sincronizada na nuvem (se você estiver logado) e você baixa de novo quando precisar.</p>
         <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-3" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> Enviar planilha (.xlsx)
+          <i data-lucide="upload" class="w-4 h-4"></i> <span id="reportUploadLabelTexto">Enviar planilha (.xlsx)</span>
           <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleReportUpload(this)">
         </label>
         <select id="reportAnoFilter" onchange="renderReports()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold mb-3 focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
@@ -751,8 +930,8 @@
         <h3><i data-lucide="users" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Divisão por técnico</h3>
         <p class="text-xs text-slate-500 mb-3">Envie aqui a tabela de condicionalidades só do Território Volante. O app ordena as famílias de A a Z e divide em três partes iguais: a primeira parte para o <strong>Paulo Xavier</strong>, a segunda para o <strong>Danilo Braga</strong> e a terceira para a <strong>Keomara Teles</strong>.</p>
         <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> Enviar tabela (.xlsx)
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
+          <i data-lucide="upload" class="w-4 h-4"></i> <span id="volanteLabelTexto">Enviar tabela (.xlsx)</span>
+          <input type="file" id="volanteInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
         </label>
         <p class="text-[10px] text-slate-400 mt-2">Gera e baixa na hora uma planilha com 3 abas: <strong>Paulo Xavier</strong> (Psicólogo), <strong>Danilo Braga</strong> (Psicólogo) e <strong>Keomara Teles</strong> (Assistente Social) — nada é guardado na nuvem, o arquivo original não é alterado.</p>
       </div>
@@ -786,6 +965,7 @@
               A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
               <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.
               Só o bairro/endereço de cada família é enviado ao Gemini — nunca nome, NIS ou CPF. Sem internet ou sem chave, o app usa normalmente a ordenação por proximidade (bairro/rua).
+              <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.
             </p>
           </div>
         </div>
@@ -816,6 +996,7 @@
               A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
               <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.
               Preencha o endereço de referência de cada família abaixo (rua/bairro) — só isso é enviado ao Gemini, nunca nome, NIS ou CPF.
+              <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.
             </p>
           </div>
         </div>
@@ -849,8 +1030,8 @@
         </div>
 
         <p class="text-[10px] text-slate-400 mb-2">Preencha o endereço de referência de cada família para a IA poder sugerir a ordem, ou use as setinhas para reordenar manualmente (a rua de partida é só uma referência). Nada é enviado à internet além do texto do endereço enviado à IA — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
-        <button onclick="unificarGerarPDF()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
-          <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF unificado da rota
+        <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait" style="background:var(--azul)">
+          <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
         </button>
       </div>
 
@@ -908,8 +1089,8 @@
               <ol id="abrigoLista2" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio2" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
-            <button onclick="abrigoGerarPDFUnico(0)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — Rondon 1
+            <button onclick="abrigoGerarPDFUnico(0,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Rondon 1</span>
             </button>
           </div>
 
@@ -948,8 +1129,8 @@
               <ol id="abrigoLista5" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio5" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
-            <button onclick="abrigoGerarPDFUnico(1)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — Rondon 5
+            <button onclick="abrigoGerarPDFUnico(1,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Rondon 5</span>
             </button>
           </div>
 
@@ -988,8 +1169,8 @@
               <ol id="abrigoLista8" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio8" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
-            <button onclick="abrigoGerarPDFUnico(2)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — PRA
+            <button onclick="abrigoGerarPDFUnico(2,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — PRA</span>
             </button>
           </div>
 
@@ -1028,8 +1209,8 @@
               <ol id="abrigoLista11" class="space-y-1 text-[11px]"></ol>
               <p id="abrigoVazio11" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
             </div>
-            <button onclick="abrigoGerarPDFUnico(3)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> Gerar PDF — Tuaronoko
+            <button onclick="abrigoGerarPDFUnico(3,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Tuaronoko</span>
             </button>
           </div>
 
@@ -1924,6 +2105,10 @@
       input.value = '';
       return;
     }
+    const labelTexto = document.getElementById('volanteLabelTexto');
+    const labelTextoOriginal = labelTexto ? labelTexto.textContent : '';
+    if (labelTexto) labelTexto.textContent = 'Dividindo a planilha…';
+    input.disabled = true;
     try {
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
       const base64 = await fileToBase64(file);
@@ -1947,6 +2132,9 @@
       console.error(e);
       alert('Não consegui dividir esta tabela. Confirme se a primeira linha tem os títulos das colunas e se há famílias nas linhas seguintes.');
       input.value = '';
+    } finally {
+      if (labelTexto) labelTexto.textContent = labelTextoOriginal || 'Enviar tabela (.xlsx)';
+      input.disabled = false;
     }
   };
 
@@ -2202,13 +2390,16 @@
       input.value = '';
       return;
     }
+    const labelEl = document.getElementById(papel === 'anterior' ? 'comparacaoAnteriorLabel' : 'comparacaoAtualLabel');
+    const labelTextoOriginal = labelEl ? labelEl.textContent : '';
+    if (labelEl) labelEl.textContent = 'Lendo planilha…';
+    input.disabled = true;
     try {
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
       const base64 = await fileToBase64(file);
       const dados = lerFamiliasRepercussao(base64);
       if (!dados.familias.size) throw new Error('Não encontrei famílias nesta planilha.');
       window.__comparacaoVolante[papel] = dados;
-      const labelEl = document.getElementById(papel === 'anterior' ? 'comparacaoAnteriorLabel' : 'comparacaoAtualLabel');
       if (labelEl) labelEl.textContent = `${dados.mes || 'Mês não identificado'} — ${dados.familias.size} família(s) (${file.name})`;
       if (window.__comparacaoVolante.anterior && window.__comparacaoVolante.atual) {
         gerarComparacaoFamiliasRecorrentes(window.__comparacaoVolante.anterior, window.__comparacaoVolante.atual);
@@ -2218,6 +2409,9 @@
       console.error(e);
       alert('Não consegui ler esta planilha. Confirme se ela tem as colunas do relatório de condicionalidades (Efeito, NIS do Responsável Familiar etc.).');
       input.value = '';
+      if (labelEl) labelEl.textContent = labelTextoOriginal;
+    } finally {
+      input.disabled = false;
     }
   };
 
@@ -3017,9 +3211,11 @@
     }
     if (usarIA && apiKey) safeStorageSet('anonaGeminiApiKey', apiKey);
 
-    if (usarIA && labelTexto && statusEl) {
-      labelTexto.textContent = 'Consultando a IA para otimizar a rota…';
-      statusEl.textContent = 'Isso pode levar alguns segundos — a rota é calculada bairro por bairro.';
+    if (labelTexto && statusEl) {
+      labelTexto.textContent = usarIA ? 'Consultando a IA para otimizar a rota…' : 'Gerando o relatório em PDF…';
+      statusEl.textContent = usarIA
+        ? 'Isso pode levar alguns segundos — a rota é calculada bairro por bairro.'
+        : 'Isso pode levar alguns segundos em planilhas grandes.';
       statusEl.classList.remove('hidden');
       input.disabled = true;
     }
@@ -3109,9 +3305,9 @@
           <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
           <span class="flex-1 truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>
           <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
-          <button type="button" onclick="unificarMover(${bloco},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
-          <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
-          <button type="button" onclick="unificarRemover(${bloco},${i})" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
+          <button type="button" onclick="unificarMover(${bloco},${i},-1)" ${i === 0 ? 'disabled' : ''} aria-label="Mover para cima" title="Mover para cima" class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+          <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} aria-label="Mover para baixo" title="Mover para baixo" class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+          <button type="button" onclick="unificarRemover(${bloco},${i})" aria-label="Remover arquivo" title="Remover arquivo" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
         </div>
         <input type="text" value="${escapeHtml(item.endereco || '')}" oninput="unificarSetEndereco(${bloco},${i},this.value)" placeholder="Endereço/bairro de referência (opcional, para a IA)" class="w-full mt-1.5 text-[11px] border rounded-lg px-2 py-1" style="border-color:var(--line)">
       </li>
@@ -3269,6 +3465,11 @@
       alert('A biblioteca de PDF ainda não carregou. Verifique sua internet e tente novamente.');
       return;
     }
+    const btn = document.getElementById('unificarGerarPDFBtn');
+    const btnTextoEl = btn ? btn.querySelector('span') : null;
+    const btnTextoOriginal = btnTextoEl ? btnTextoEl.textContent : '';
+    if (btn) { btn.disabled = true; }
+    if (btnTextoEl) { btnTextoEl.textContent = `Juntando ${totalArquivos} arquivo${totalArquivos === 1 ? '' : 's'}…`; }
     try {
       const { PDFDocument, StandardFonts } = window.PDFLib;
       const outDoc = await PDFDocument.create();
@@ -3321,6 +3522,9 @@
     } catch (e) {
       console.error(e);
       alert(e && e.message ? e.message : 'Não consegui unificar as folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
+    } finally {
+      if (btn) { btn.disabled = false; }
+      if (btnTextoEl) { btnTextoEl.textContent = btnTextoOriginal || 'Gerar PDF unificado da rota'; }
     }
   };
 
@@ -3394,9 +3598,9 @@
         <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
         <span class="flex-1 truncate" title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</span>
         <span class="text-[10px] text-slate-400 flex-shrink-0">${unificarFormatarMB(item.file.size)} MB</span>
-        <button type="button" onclick="abrigoUnificarMover(${grupo},${i},-1)" ${i === 0 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
-        <button type="button" onclick="abrigoUnificarMover(${grupo},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
-        <button type="button" onclick="abrigoUnificarRemover(${grupo},${i})" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
+        <button type="button" onclick="abrigoUnificarMover(${grupo},${i},-1)" ${i === 0 ? 'disabled' : ''} aria-label="Mover para cima" title="Mover para cima" class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+        <button type="button" onclick="abrigoUnificarMover(${grupo},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} aria-label="Mover para baixo" title="Mover para baixo" class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+        <button type="button" onclick="abrigoUnificarRemover(${grupo},${i})" aria-label="Remover arquivo" title="Remover arquivo" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
       </li>
     `).join('');
     if (window.lucide) lucide.createIcons();
@@ -3451,7 +3655,7 @@
   // quantidade de efeitos e as condicionalidades do programa. Em seguida
   // vêm as folhas de família, organizadas por efeito (Alerta → Bloqueio →
   // Suspensão).
-  window.abrigoGerarPDFUnico = async (abrigoIdx) => {
+  window.abrigoGerarPDFUnico = async (abrigoIdx, event) => {
     const abrigo = ABRIGO_UNIFICAR_ABRIGOS[abrigoIdx];
     const selectEl = document.getElementById('abrigoMesRepercussao');
     const mesSel = selectEl ? selectEl.value : '';
@@ -3472,6 +3676,11 @@
       alert('A biblioteca de PDF ainda não carregou. Verifique sua internet e tente novamente.');
       return;
     }
+    const btn = event ? event.currentTarget : null;
+    const btnTextoEl = btn ? btn.querySelector('span') : null;
+    const btnTextoOriginal = btnTextoEl ? btnTextoEl.textContent : '';
+    if (btn) { btn.disabled = true; btn.classList.add('opacity-60'); btn.style.cursor = 'wait'; }
+    if (btnTextoEl) { btnTextoEl.textContent = `Juntando ${totalAbrigo} família${totalAbrigo === 1 ? '' : 's'}…`; }
     try {
       const { PDFDocument, StandardFonts } = window.PDFLib;
       const outDoc = await PDFDocument.create();
@@ -3548,6 +3757,9 @@
     } catch (e) {
       console.error(e);
       alert(e && e.message ? e.message : `Não consegui gerar o PDF do abrigo ${abrigo}. Confirme se todos os arquivos são PDFs válidos.`);
+    } finally {
+      if (btn) { btn.disabled = false; btn.classList.remove('opacity-60'); btn.style.cursor = ''; }
+      if (btnTextoEl) { btnTextoEl.textContent = btnTextoOriginal || `Gerar PDF — ${abrigo}`; }
     }
   };
 
@@ -3573,6 +3785,10 @@
       input.value = '';
       return;
     }
+    const labelTexto = document.getElementById('reportUploadLabelTexto');
+    const labelTextoOriginal = labelTexto ? labelTexto.textContent : '';
+    if (labelTexto) labelTexto.textContent = 'Organizando planilha…';
+    input.disabled = true;
     try {
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
       const originalBase64 = await fileToBase64(file);
@@ -3616,6 +3832,9 @@
       console.error(e);
       alert('Não consegui organizar esta planilha. Confirme se ela possui a coluna “Técnico/equipe”.');
       input.value = '';
+    } finally {
+      if (labelTexto) labelTexto.textContent = labelTextoOriginal || 'Enviar planilha (.xlsx)';
+      input.disabled = false;
     }
   };
 
@@ -3705,7 +3924,8 @@
   };
 
   window.__deleteReport = async (id) => {
-    if (!confirm('Apagar este arquivo guardado? Essa ação não pode ser desfeita.')) return;
+    const ok = await window.anonaConfirm('Apagar este arquivo guardado? Essa ação não pode ser desfeita.', { confirmLabel: 'Apagar', cancelLabel: 'Cancelar' });
+    if (!ok) return;
     try {
       const local = JSON.parse(safeStorageGet('pbf_repercussao_local', '[]')).filter(r => r.id !== id);
       safeStorageSet('pbf_repercussao_local', JSON.stringify(local));
@@ -3747,8 +3967,8 @@
           <p class="text-[10px] text-slate-400 truncate">${escapeHtml(r.filename || '')} · ${r.sizeKB || 0} KB</p>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button onclick="__downloadReport('${r.id}')" title="Baixar" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="download" class="w-4 h-4" style="color:var(--azul)"></i></button>
-          <button onclick="__deleteReport('${r.id}')" title="Apagar" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i></button>
+          <button onclick="__downloadReport('${r.id}')" title="Baixar" aria-label="Baixar planilha" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="download" class="w-4 h-4" style="color:var(--azul)"></i></button>
+          <button onclick="__deleteReport('${r.id}')" title="Apagar" aria-label="Apagar planilha" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i></button>
         </div>
       </div>`).join('');
     if (window.lucide) lucide.createIcons();
@@ -4023,6 +4243,21 @@ function render(){
     const cell = document.createElement('div');
     cell.className = `day-cell ${isSelected?'selected':''} ${isPayday?'payday':''} ${isToday?'today':''}`;
     cell.onclick = () => { selectedDay = date; render(); };
+    cell.tabIndex = 0;
+    cell.setAttribute('role', 'button');
+    cell.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+    const rotuloPartes = [date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })];
+    if (isToday) rotuloPartes.push('hoje');
+    if (isPayday) rotuloPartes.push('dia de pagamento');
+    if (hasNote) rotuloPartes.push(noteObj.emphasis ? 'com anotação em destaque' : 'com anotação');
+    if (events.length) rotuloPartes.push(events[0].title);
+    cell.setAttribute('aria-label', rotuloPartes.join(', '));
+    cell.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        selectedDay = date; render();
+      }
+    });
 
     let bottomContent = '';
     if (hasNote) {
