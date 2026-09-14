@@ -577,7 +577,7 @@
           <ol id="unificarLista0" class="space-y-1.5 text-xs"></ol>
           <p id="unificarVazio0" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada ainda.</p>
           <button type="button" onclick="unificarSugerirOrdemIA(0,event)" class="w-full mt-2 px-2 py-1.5 rounded-lg text-[11px] font-bold border transition hover:bg-slate-50 flex items-center justify-center gap-1.5" style="border-color:var(--verde); color:var(--verde)">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem com IA
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
           </button>
         </div>
 
@@ -590,11 +590,11 @@
           <ol id="unificarLista1" class="space-y-1.5 text-xs"></ol>
           <p id="unificarVazio1" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada ainda.</p>
           <button type="button" onclick="unificarSugerirOrdemIA(1,event)" class="w-full mt-2 px-2 py-1.5 rounded-lg text-[11px] font-bold border transition hover:bg-slate-50 flex items-center justify-center gap-1.5" style="border-color:var(--verde); color:var(--verde)">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem com IA
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
           </button>
         </div>
 
-        <p class="text-[10px] text-slate-400 mb-2">Preencha o endereço de referência de cada família para a IA poder sugerir a ordem, ou use as setinhas para reordenar manualmente (a rua de partida é só uma referência). Nada é enviado à internet além do texto do endereço enviado à IA — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
+        <p class="text-[10px] text-slate-400 mb-2">Preencha o endereço de referência de cada família e clique em "Sugerir ordem": o app organiza por rua e depois pela numeração do imóvel (funciona offline, sem precisar da IA) e, se a opção de IA acima estiver marcada e configurada, refina ainda mais essa ordem com o Gemini. Você também pode usar as setinhas para reordenar manualmente a qualquer momento (a rua de partida é só uma referência). Nada é enviado à internet além do texto do endereço, e só quando a IA está ativada — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
         <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait" style="background:var(--azul)">
           <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
         </button>
@@ -2930,7 +2930,7 @@
           <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} aria-label="Mover para baixo" title="Mover para baixo" class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
           <button type="button" onclick="unificarRemover(${bloco},${i})" aria-label="Remover arquivo" title="Remover arquivo" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
         </div>
-        <input type="text" value="${escapeHtml(item.endereco || '')}" oninput="unificarSetEndereco(${bloco},${i},this.value)" placeholder="Endereço/bairro de referência (opcional, para a IA)" class="w-full mt-1.5 text-[11px] border rounded-lg px-2 py-1" style="border-color:var(--line)">
+        <input type="text" value="${escapeHtml(item.endereco || '')}" oninput="unificarSetEndereco(${bloco},${i},this.value)" placeholder="Rua e número (opcional, usado em 'Sugerir ordem')" class="w-full mt-1.5 text-[11px] border rounded-lg px-2 py-1" style="border-color:var(--line)">
       </li>
     `).join('');
     if (window.lucide) lucide.createIcons();
@@ -3002,26 +3002,28 @@
     apiKeyInput.addEventListener('input', () => syncGeminiApiKey(apiKeyInput.value, 'geminiApiKeyInputUnificar'));
   })();
 
-  // Pede ao Gemini a melhor ordem de visita para as famílias de um bloco,
-  // usando o endereço de referência digitado em cada folha (campo opcional
-  // na lista). Só reordena quem tem endereço preenchido; quem não tem fica
-  // no final, mantendo a ordem relativa que já estava. Nada é alterado nos
+  // Sugere a melhor ordem de visita para as famílias de um bloco, usando o
+  // endereço de referência digitado em cada folha (campo opcional na
+  // lista). Só reordena quem tem endereço preenchido; quem não tem fica no
+  // final, mantendo a ordem relativa que já estava. Nada é alterado nos
   // PDFs — só a ordem da lista deste bloco.
+  //
+  // Funciona em duas camadas, para sempre dar um resultado útil:
+  // 1) Ordenação por proximidade (rua -> número do imóvel), a mesma lógica
+  //    já usada no Relatório Individual — não depende de internet nem de
+  //    chave de API, então é sempre calculada primeiro.
+  // 2) Se a opção "Otimizar a rota com IA (Gemini)" estiver marcada e com
+  //    uma chave preenchida, tenta refinar essa ordem com o Gemini
+  //    (considera proximidade real de ruas/bairros de Boa Vista, não só o
+  //    texto do endereço). Se a IA falhar por qualquer motivo (sem
+  //    internet, chave inválida, fora do ar), cai automaticamente para a
+  //    ordenação por rua/número calculada no passo 1, em vez de travar.
   window.unificarSugerirOrdemIA = async (bloco, evt) => {
     const toggle = document.getElementById('geminiRotaToggleUnificar');
     const apiKeyInput = document.getElementById('geminiApiKeyInputUnificar');
-    const usarIA = !!(toggle && toggle.checked);
     const apiKey = ((apiKeyInput && apiKeyInput.value) || '').trim();
-
-    if (!usarIA) {
-      alert('Marque a opção "Otimizar a rota com IA (Gemini)" acima antes de pedir a sugestão de ordem.');
-      return;
-    }
-    if (!apiKey) {
-      alert('Cole sua chave de API do Gemini no campo acima. Consiga uma gratuita em aistudio.google.com/apikey.');
-      return;
-    }
-    safeStorageSet('anonaGeminiApiKey', apiKey);
+    const usarIA = !!(toggle && toggle.checked) && !!apiKey;
+    if (usarIA) safeStorageSet('anonaGeminiApiKey', apiKey);
 
     const lista = unificarListas[bloco] || [];
     const comEndereco = [];
@@ -3031,7 +3033,7 @@
       else semEndereco.push(item);
     });
     if (comEndereco.length < 2) {
-      alert('Preencha o endereço de referência de pelo menos duas famílias neste bloco (campo abaixo do nome de cada arquivo) para a IA poder sugerir a ordem.');
+      alert('Preencha o endereço de referência de pelo menos duas famílias neste bloco (campo abaixo do nome de cada arquivo) para poder sugerir a ordem.');
       return;
     }
 
@@ -3039,16 +3041,35 @@
     const textoOriginal = botao ? botao.innerHTML : '';
     if (botao) {
       botao.disabled = true;
-      botao.innerHTML = 'Consultando a IA…';
+      botao.innerHTML = usarIA ? 'Consultando a IA…' : 'Calculando ordem…';
     }
     try {
-      const enderecos = comEndereco.map(item => String(item.endereco).trim());
-      const ordemIndices = await geminiSugerirOrdemVisita(UNIFICAR_PARTIDA, enderecos, apiKey);
-      unificarListas[bloco] = ordemIndices.map(idx => comEndereco[idx]).concat(semEndereco);
+      // Passo 1: ordenação por rua e depois por número do imóvel — mesma
+      // heurística do Relatório Individual (relatorioIndividualNomeRua /
+      // relatorioIndividualNumeroEndereco), sempre disponível.
+      const porProximidade = [...comEndereco].sort((a, b) => {
+        const ruaA = relatorioIndividualNomeRua(a.endereco);
+        const ruaB = relatorioIndividualNomeRua(b.endereco);
+        if (ruaA !== ruaB) return ruaA.localeCompare(ruaB, 'pt-BR');
+        return relatorioIndividualNumeroEndereco(a.endereco) - relatorioIndividualNumeroEndereco(b.endereco);
+      });
+
+      let ordenados = porProximidade;
+      let avisoFallback = '';
+      if (usarIA) {
+        try {
+          const enderecos = comEndereco.map(item => String(item.endereco).trim());
+          const ordemIndices = await geminiSugerirOrdemVisita(UNIFICAR_PARTIDA, enderecos, apiKey);
+          ordenados = ordemIndices.map(idx => comEndereco[idx]);
+        } catch (e) {
+          console.warn('Não consegui usar a IA, usando ordenação por rua/número:', e);
+          avisoFallback = `${e && e.message ? e.message : 'Não consegui consultar o Gemini agora.'} Usei a ordenação por rua/número neste bloco.`;
+        }
+      }
+
+      unificarListas[bloco] = ordenados.concat(semEndereco);
       renderUnificarLista(bloco);
-    } catch (e) {
-      console.error(e);
-      alert(e && e.message ? e.message : 'Não consegui consultar o Gemini agora. Tente de novo em instantes.');
+      if (avisoFallback) alert(avisoFallback);
     } finally {
       if (botao) { botao.disabled = false; botao.innerHTML = textoOriginal; if (window.lucide) lucide.createIcons(); }
     }
