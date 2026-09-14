@@ -169,10 +169,12 @@ Na barra lateral, bloco **"Relatório de Repercussão Individual"**:
 Na barra lateral, bloco **"Unificar Folhas de Família — Rota de Visita"**:
 
 - Envie as folhas resumo (**PDF**, uma por família) no **Bloco 1** (bairro Professora Araceli Souto Maior) e no **Bloco 2** (bairro 13 de Setembro). Limite: até **30 arquivos** e **50 MB** no total, somando os dois blocos (o contador no topo do bloco mostra quanto já foi usado).
-- Use as setinhas ▲▼ ao lado de cada arquivo para colocá-lo na ordem em que você vai visitar aquela família dentro do bairro.
+- Em cada folha, preencha o campo **"Rua e número"** com o endereço de referência da família e clique em **"Sugerir ordem de visita"**: o app organiza automaticamente por rua e depois pela numeração do imóvel — funciona **offline, sem precisar de IA nem de internet**. É preciso pelo menos 2 famílias com endereço preenchido no bloco; quem ficar sem endereço vai para o final da lista, na ordem em que foi enviado.
+- Se além disso você marcar **"Otimizar a rota com IA (Gemini)"** e colar uma chave de API, o botão tenta refinar essa ordem com o Gemini (que conhece melhor a proximidade real das ruas/bairros de Boa Vista). Se a IA falhar por qualquer motivo (sem internet, chave inválida, fora do ar), o app avisa e usa automaticamente a ordenação por rua/número, em vez de travar.
+- Você pode ajustar a ordem a qualquer momento com as setinhas ▲▼ ao lado de cada arquivo (inclusive depois de usar "Sugerir ordem de visita").
 - Clique em **"Gerar PDF unificado da rota"**: o app junta tudo em um único PDF — capa com o endereço de partida e a quantidade de famílias por bloco, seguida do Bloco 1 completo (na ordem definida) e depois do Bloco 2 completo.
 - Endereço de partida e nome/ordem dos blocos ficam nas constantes `UNIFICAR_PARTIDA` e `UNIFICAR_BLOCOS` no `index.html`, caso precise trocar de bairro ou de ponto de partida em outro dia.
-- Nada é enviado à internet — a junção dos PDFs acontece no próprio aparelho, e os arquivos originais enviados não são alterados nem guardados.
+- Nada é enviado à internet além do texto do endereço (e só quando a IA está ativada) — a junção dos PDFs acontece no próprio aparelho, e os arquivos originais enviados não são alterados nem guardados.
 
 ## 8.4 Unificar Folhas de Família — Abrigos (Operação Acolhida)
 
