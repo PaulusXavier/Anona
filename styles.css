@@ -1,0 +1,456 @@
+  :root{
+    --azul:#0D2E63;
+    --azul-deep:#071A3D;
+    --amarelo:#D89B32;
+    --amarelo-soft:#F3D9A3;
+    --amarelo-text:#6B4E00;
+    --verde:#146B47;
+    --verde-soft:#DCEFE1;
+    --azul-soft:#E3E9F5;
+    /* Cores vivas da bandeira, reservadas para elementos decorativos/
+       ambiente (planos de fundo, selos) — separadas das cores muted da
+       interface acima, que continuam controlando texto/botões. */
+    --verde-flag:#159947;
+    --amarelo-flag:#FFCC29;
+    --azul-flag:#0B2F7A;
+    --paper:#F2EEE3;
+    --card:#FFFDF8;
+    --ink:#1D2333;
+    --line:rgba(13,46,99,.16);
+    --line-soft:rgba(13,46,99,.09);
+    --radius-doc:.65rem;
+    --radius-focus:1.4rem;
+  }
+  body{
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    background-color:var(--paper);
+    background-image:
+      radial-gradient(70% 55% at 4% -8%, rgba(21,153,71,.15), transparent 60%),
+      radial-gradient(65% 50% at 100% -10%, rgba(255,204,41,.20), transparent 60%),
+      radial-gradient(55% 42% at 94% 62%, rgba(11,47,122,.10), transparent 65%),
+      radial-gradient(70% 48% at 50% 106%, rgba(11,47,122,.08), transparent 62%),
+      linear-gradient(180deg, rgba(255,255,255,.55), transparent 16%),
+      url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNzAnIGhlaWdodD0nMTcwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjc1JyBudW1PY3RhdmVzPScyJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdzYXR1cmF0ZScgdmFsdWVzPScwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJyBvcGFjaXR5PScwLjYyJy8+Cjwvc3ZnPg==");
+    background-repeat:no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-attachment:fixed, fixed, fixed, fixed, fixed, fixed, local;
+    background-size:auto, auto, auto, auto, auto, auto, 170px 170px;
+    background-blend-mode:normal, normal, normal, normal, normal, normal, multiply;
+    position:relative;
+  }
+  /* ---------- marca d'água de fundo: selo casa + coração + família ----------
+     Ilustração própria do app (não é foto/logo de terceiros), representando o
+     tema do Bolsa Família — moradia, cuidado e apoio à família. Fica fixa e
+     bem sutil (baixa opacidade) atrás dos painéis, sem atrapalhar a leitura. */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    pointer-events:none;
+    background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiMwQjJGN0EiIHN0cm9rZS13aWR0aD0iNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTAiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNjcgMTU4IEgyMzMgVjIwMiBIMTY3IFogTTE2NyAxNzggSDIzMyBWMTgyIEgxNjcgWiBNMTg2IDEzOCBIMjE0IFYxNTggSDE4NiBaIE0xOTEgMTQyIEgyMDkgVjE1OCBIMTkxIFoiIGZpbGw9IiNGRkNDMjkiIHN0cm9rZT0ibm9uZSIvPgogIDxnIHN0cm9rZT0iIzE1OTk0NyIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTExMiAzNzIgUTE1OCA0MDAgMjAwIDM4MiBRMjQyIDQwMCAyODggMzcyIi8+CiAgICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSIzNDYiIHI9IjE3Ii8+CiAgICA8cGF0aCBkPSJNOTUgMzY2IEM5MyAzODQgOTEgNDAyIDkxIDQxMCBMMTMzIDQxMCBDMTMzIDQwMiAxMzEgMzg0IDEyOSAzNjYiLz4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjM1OCIgcj0iMTMiLz4KICAgIDxwYXRoIGQ9Ik0xODYgMzc0IEMxODUgMzg4IDE4NCA0MDQgMTg0IDQxMCBMMjE2IDQxMCBDMjE2IDQwNCAyMTUgMzg4IDIxNCAzNzQiLz4KICAgIDxjaXJjbGUgY3g9IjI4OCIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik0yNzEgMzY2IEMyNjkgMzg0IDI2NyA0MDIgMjY3IDQxMCBMMzA5IDQxMCBDMzA5IDQwMiAzMDcgMzg0IDMwNSAzNjYiLz4KICA8L2c+Cjwvc3ZnPgo=");
+    background-repeat:no-repeat;
+    background-position:center 10%;
+    background-size:min(78vw, 620px) auto;
+    opacity:.085;
+  }
+  /* segundo selo, menor e espelhado, mais para baixo — para o fundo
+     acompanhar melhor páginas mais longas sem ficar vazio nem repetitivo */
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    pointer-events:none;
+    background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiMwQjJGN0EiIHN0cm9rZS13aWR0aD0iNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTAiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNjcgMTU4IEgyMzMgVjIwMiBIMTY3IFogTTE2NyAxNzggSDIzMyBWMTgyIEgxNjcgWiBNMTg2IDEzOCBIMjE0IFYxNTggSDE4NiBaIE0xOTEgMTQyIEgyMDkgVjE1OCBIMTkxIFoiIGZpbGw9IiNGRkNDMjkiIHN0cm9rZT0ibm9uZSIvPgogIDxnIHN0cm9rZT0iIzE1OTk0NyIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTExMiAzNzIgUTE1OCA0MDAgMjAwIDM4MiBRMjQyIDQwMCAyODggMzcyIi8+CiAgICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSIzNDYiIHI9IjE3Ii8+CiAgICA8cGF0aCBkPSJNOTUgMzY2IEM5MyAzODQgOTEgNDAyIDkxIDQxMCBMMTMzIDQxMCBDMTMzIDQwMiAxMzEgMzg0IDEyOSAzNjYiLz4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjM1OCIgcj0iMTMiLz4KICAgIDxwYXRoIGQ9Ik0xODYgMzc0IEMxODUgMzg4IDE4NCA0MDQgMTg0IDQxMCBMMjE2IDQxMCBDMjE2IDQwNCAyMTUgMzg4IDIxNCAzNzQiLz4KICAgIDxjaXJjbGUgY3g9IjI4OCIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik0yNzEgMzY2IEMyNjkgMzg0IDI2NyA0MDIgMjY3IDQxMCBMMzA5IDQxMCBDMzA5IDQwMiAzMDcgMzg4IDMwNSAzNjYiLz4KICA8L2c+Cjwvc3ZnPgo=");
+    background-repeat:no-repeat;
+    background-position:right -60px bottom -40px;
+    background-size:min(46vw, 360px) auto;
+    transform:scaleX(-1);
+    opacity:.05;
+  }
+  .display{ font-family:'Fraunces',serif; font-optical-sizing:auto; letter-spacing:-.01em; }
+  .flag-ribbon{ height:4px; background:linear-gradient(90deg, var(--verde) 0 33%, var(--amarelo) 33% 66%, var(--azul) 66% 100%); }
+
+  /* ---------- cartões: dois registros deliberados ----------
+     .panel  = o "documento principal" (calendário, dia selecionado): branco
+     puro, cantos mais generosos, sombra quase imperceptível — é onde o olho
+     deve pousar primeiro.
+     .panel-tool = os "formulários" da lateral (upload de planilha, NIS,
+     exportação): fundo levemente amarelado como papel, cantos mais retos,
+     sem sombra — para parecerem utilitários, não o conteúdo principal. */
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius-focus); box-shadow:0 1px 3px rgba(13,46,99,.06), 0 14px 34px -22px rgba(13,46,99,.35); }
+  .panel-tool{ background:linear-gradient(180deg,var(--card),#FAF6EC); border:1px solid var(--line); border-radius:var(--radius-doc); box-shadow:0 1px 2px rgba(13,46,99,.04), 0 10px 24px -18px rgba(13,46,99,.3); }
+  .eyebrow{ font-family:'Fraunces',serif; font-weight:600; font-size:.95rem; color:var(--ink); display:flex; align-items:center; gap:.55rem; }
+  .eyebrow .chip{ width:1.9rem; height:1.9rem; border-radius:.55rem; display:flex; align-items:center; justify-content:center; background:var(--verde-soft); flex-shrink:0; }
+
+  /* ---------- ferramentas de planilha: um "carnê" de 4 passos ----------
+     As quatro etapas do fluxo mensal (guardar a planilha do MDS, dividir
+     por técnico, comparar recorrentes, gerar o PDF individual) viram
+     canhotos numerados dentro de um único cartão, separados por um
+     tracejado — como as folhas destacáveis de um carnê — em vez de quatro
+     cartões repetidos. */
+  .tool-step{ position:relative; padding:1rem 0 1rem 2.35rem; border-top:1px dashed var(--line); }
+  .tool-step:first-child{ border-top:none; padding-top:.15rem; }
+  .tool-step:first-child::before{ top:.25rem; }
+  .tool-step::before{
+    content:attr(data-step);
+    position:absolute; left:0; top:1.15rem;
+    width:1.55rem; height:1.55rem; border-radius:50%;
+    background:var(--verde); color:#fff;
+    font-family:'Fraunces',serif; font-weight:600; font-size:.78rem;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tool-step h3{ font-family:'Fraunces',serif; font-weight:600; font-size:.92rem; color:var(--ink); margin-bottom:.4rem; display:flex; align-items:center; gap:.4rem; }
+
+  /* ---------- calendário ---------- */
+  .calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:var(--line-soft); border:1px solid var(--line-soft); }
+  .day-cell{ min-height:110px; min-width:0; overflow:hidden; background:#fff; cursor:pointer; position:relative; padding:.5rem; display:flex; flex-direction:column; transition:background .15s, transform .15s, box-shadow .15s; }
+  /* fins de semana recebem um fundo levemente diferente — ajuda a "ler" de
+     relance a regra dos últimos 10 dias ÚTEIS sem precisar contar no dedo.
+     Vale para o cabeçalho (Dom/Sáb) e para as células vazias/dias do mês. */
+  .weekday-head > div:first-child, .weekday-head > div:last-child{ background:rgba(13,46,99,.05); }
+  .day-cell:nth-child(7n+1), .day-cell:nth-child(7n){ background:#FBFBFC; }
+  .day-cell:nth-child(7n+1):hover, .day-cell:nth-child(7n):hover{ background:#F4F6FA; }
+  /* células maiores em telas médias/grandes, para o calendário ficar mais
+     confortável de ler e clicar (no celular mantém o tamanho um pouco maior
+     que antes, e cresce bastante em telas maiores para mostrar todos os
+     dias com folga) */
+  @media (min-width:640px){
+    .day-cell{ min-height:118px; padding:.65rem; }
+  }
+  @media (min-width:1024px){
+    .day-cell{ min-height:128px; padding:.75rem; }
+  }
+  @media (min-width:1280px){
+    .day-cell{ min-height:136px; padding:.8rem; }
+  }
+  .day-cell:hover{ background:#F7F9FC; }
+  /* em telas com mouse (não touch), a célula "levanta" de leve ao passar o
+     cursor — reforça que é clicável sem criar movimento em toques no celular */
+  @media (hover:hover){
+    .day-cell:not(.empty):hover{ transform:translateY(-1px); box-shadow:0 6px 14px -8px rgba(13,46,99,.28); z-index:2; }
+  }
+  .day-cell.selected{ outline:2px solid var(--azul); outline-offset:-2px; background:#EEF3FB; z-index:1; }
+  .day-cell.empty{ background:#FAFBFC; cursor:default; }
+  /* dia de HOJE: um sublinhado curto sob o número, na cor verde da bandeira
+     — discreto o bastante para não competir com o dia selecionado (azul,
+     outline) nem com o selo de pagamento (canto superior), mas visível o
+     bastante para achar "onde estou" no mês de relance. */
+  .day-cell.today .day-num{ position:relative; }
+  .day-cell.today .day-num::after{
+    content:""; position:absolute; left:0; right:0; bottom:-3px; height:2.5px;
+    border-radius:99px; background:var(--verde);
+  }
+  /* dia de pagamento: um selo circular no canto, como um carimbo de recebido */
+  .day-cell.payday::before{
+    content:"";
+    position:absolute; top:5px; right:5px; width:15px; height:15px; border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, var(--amarelo-soft), var(--amarelo) 62%, #A9781F 100%);
+    box-shadow:0 0 0 2px rgba(216,155,50,.28);
+    pointer-events:none;
+  }
+  @media (min-width:640px){
+    .day-cell.payday::before{ top:8px; right:8px; width:19px; height:19px; }
+  }
+  .badge{ font-size:9.5px; font-weight:700; letter-spacing:.02em; padding:2px 7px; border-radius:99px; }
+  .scrollhide::-webkit-scrollbar{ display:none; }
+  .fade-in{ animation: fadeIn .25s ease both; }
+  @keyframes fadeIn{ from{ opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion: reduce){ .fade-in{ animation:none; } }
+
+  /* ---------- painel "verso da caderneta" (referência) ---------- */
+  .passbook{
+    background:linear-gradient(165deg,var(--azul-deep),#0A2C6E 65%,var(--azul-deep));
+    color:#EAF0FF;
+    border-radius:1.25rem;
+    position:relative;
+    overflow:hidden;
+  }
+  .passbook::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.07) 1px, transparent 0);
+    background-size:16px 16px;
+    pointer-events:none;
+  }
+  .passbook-section{ position:relative; padding:1.1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,.1); }
+  .passbook-section:last-child{ border-bottom:none; }
+  .passbook-label{ font-family:'Fraunces',serif; font-weight:600; font-size:.85rem; color:#fff; margin-bottom:.65rem; }
+
+  /* ---------- carteirinha do NIS ---------- */
+  .id-card{ border-radius:1rem; overflow:hidden; border:1px solid var(--line); }
+  .id-card-strip{ height:8px; background:linear-gradient(90deg,var(--verde),var(--amarelo),var(--azul)); }
+
+  /* ---------- selo casa+coração+família em relevo sobre fundos azuis ----------
+     Usado no cabeçalho e nas telas de acesso (senha / sincronizar). Antes
+     esta classe não tinha regra própria e o selo do cabeçalho ficava
+     invisível — corrigido aqui e reaproveitado nas telas de login. */
+  .brand-seal{
+    position:absolute;
+    width:min(60vw, 340px); aspect-ratio:400/420;
+    background-repeat:no-repeat; background-position:center; background-size:contain;
+    opacity:.1;
+    pointer-events:none;
+  }
+
+  /* ---------- telas de acesso (senha do app / sincronizar notas) ----------
+     Fundo "caderneta": mesmo azul profundo do cabeçalho, com a textura de
+     pontilhado e o selo da família em relevo, para as duas telas de entrada
+     do app parecerem a capa de um mesmo documento, e não uma tela genérica. */
+  .access-bg{
+    background:
+      radial-gradient(125% 70% at -8% -12%, rgba(21,153,71,.58), transparent 55%),
+      radial-gradient(118% 68% at 110% 114%, rgba(255,204,41,.42), transparent 55%),
+      radial-gradient(95% 60% at 54% 42%, rgba(11,47,122,.55), transparent 68%),
+      linear-gradient(150deg,#030F26 0%,#0B2F63 42%,#0A2757 70%,#030F26 100%);
+    background-size:100% 100%, 100% 100%, 100% 100%, 220% 220%;
+    background-position:0 0, 0 0, 0 0, 20% 15%;
+    animation:auroraDrift 26s ease-in-out infinite alternate;
+    position:relative; overflow:hidden;
+  }
+  @keyframes auroraDrift{
+    from{ background-position:0 0, 0 0, 0 0, 12% 10%; }
+    to{ background-position:0 0, 0 0, 0 0, 88% 82%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .access-bg{ animation:none; }
+  }
+  .access-bg::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNzAnIGhlaWdodD0nMTcwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjc1JyBudW1PY3RhdmVzPScyJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdzYXR1cmF0ZScgdmFsdWVzPScwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJyBvcGFjaXR5PScwLjU1Jy8+Cjwvc3ZnPg==");
+    background-repeat:repeat;
+    background-size:170px 170px;
+    mix-blend-mode:soft-light;
+    opacity:1;
+  }
+  /* brilho suave vindo de cima + leve vinheta nas bordas, para o fundo azul
+     ter mais profundidade e empurrar o olho para o cartão central em vez
+     de ficar chapado ou competir com ele. Um filete de luz na diagonal
+     (bem discreto) dá o acabamento "capa encadernada" — como o reflexo
+     que um material encerado pega sob luz de estúdio. */
+  .access-bg::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:
+      linear-gradient(120deg, transparent 42%, rgba(255,255,255,.05) 50%, transparent 58%),
+      radial-gradient(65% 55% at 50% -8%, rgba(255,255,255,.16), transparent 70%),
+      radial-gradient(120% 85% at 50% 50%, transparent 55%, rgba(3,12,31,.35) 100%);
+  }
+  /* Anéis "abertos" (mesmo traço do selo psi da tela de senha) soltos ao
+     fundo, bem discretos — repete a mesma linguagem visual do círculo
+     incompleto pra dar profundidade sem competir com o cartão branco. */
+  .ring-seal{
+    position:absolute; aspect-ratio:1/1; border-radius:50%;
+    border:5px solid rgba(255,255,255,.12);
+    border-bottom-color:transparent;
+    pointer-events:none;
+  }
+  /* Pontinhos soltos (verde/dourado) espalhados no fundo azul — dão vida
+     à tela de acesso sem virar confete: poucos, pequenos, bem discretos. */
+  .access-dot{
+    position:absolute; border-radius:50%; pointer-events:none;
+    box-shadow:0 0 14px 2px currentColor;
+  }
+  .access-card{
+    background:var(--card);
+    border-radius:1.75rem;
+    box-shadow:0 40px 80px -20px rgba(3,12,31,.65), 0 2px 10px rgba(3,12,31,.18),
+      inset 0 1px 0 rgba(255,255,255,.6);
+    position:relative; overflow:hidden;
+  }
+  .access-icon{
+    width:3.1rem; height:3.1rem; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 32% 26%, var(--amarelo-soft), var(--amarelo) 68%, #A9781F 100%);
+    box-shadow:0 0 0 5px rgba(216,155,50,.16), 0 6px 16px -4px rgba(216,155,50,.55);
+  }
+
+  /* ---------- logotipo Anona (monograma "A") ----------
+     Marca única usada no cabeçalho, na tela de login e nos PDFs: um selo
+     verde com um losango amarelo e um círculo azul no centro (mesma
+     composição da bandeira do Brasil), com o "A" em creme por cima — cores
+     vivas e opacas, por isso funciona igual em fundo claro (cartão de
+     login) ou escuro (cabeçalho/PDF), sem precisar de variante separada. */
+  .logo-mark{ display:inline-flex; flex-shrink:0; border-radius:22%; overflow:hidden; box-shadow:0 1px 3px rgba(13,46,99,.22); }
+  .logo-mark svg{ display:block; width:100%; height:100%; }
+
+  /* selinho Ψ (psicologia): mantido na tela de login, agora pequeno e ao
+     lado do nome/CRP — a marca do app (acima) é quem assume o papel de
+     logotipo principal; este é só um toque da identidade profissional. */
+  .psi-mini{
+    width:1.3rem; height:1.3rem; border-radius:50%; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1.4px solid var(--azul); color:var(--azul);
+    font-family:'Georgia','Times New Roman',serif; font-weight:700; font-size:.82rem; line-height:1;
+  }
+  /* ---------- divisória "canhoto de bilhete" ----------
+     Uma linha tracejada com dois recortes circulares nas bordas, como a
+     parte destacável de um bilhete/carnê — reforça a linguagem visual de
+     "documento" que o resto do app já usa (.tool-step, .passbook, .id-card)
+     também nas telas de entrada. */
+  .ticket-notch{ position:relative; border-top:1.5px dashed var(--line); margin:0 -1.75rem; }
+  .ticket-notch::before, .ticket-notch::after{
+    content:""; position:absolute; top:-.5rem; width:1rem; height:1rem;
+    border-radius:50%; background:var(--azul-deep);
+  }
+  .ticket-notch::before{ left:-.5rem; }
+  .ticket-notch::after{ right:-.5rem; }
+  .access-input{
+    width:100%; border:1.5px solid var(--line); border-radius:1rem;
+    padding:.85rem .9rem .85rem 2.6rem; font-size:.9rem;
+    background:#FCFBF8; transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .access-input:focus{ outline:none; border-color:var(--azul); background:#fff; box-shadow:0 0 0 4px rgba(13,46,99,.13); }
+  .access-input-wrap{ position:relative; }
+  .access-input-wrap > svg, .access-input-wrap > .lucide{
+    position:absolute; left:.9rem; top:50%; transform:translateY(-50%);
+    width:1.05rem; height:1.05rem; color:var(--azul); opacity:.55; pointer-events:none;
+  }
+  .access-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:.25rem; background:var(--azul-soft); border-radius:.9rem; padding:.25rem; }
+  .access-tab{ padding:.5rem 0; border-radius:.7rem; font-size:.75rem; font-weight:700; transition:all .15s; color:var(--azul); opacity:.55; display:flex; align-items:center; justify-content:center; gap:.3rem; }
+  .access-tab.active{ background:var(--card); opacity:1; box-shadow:0 1px 4px rgba(13,46,99,.18); }
+  .access-tab svg{ width:.85rem; height:.85rem; }
+  /* Botão principal das telas de acesso: gradiente sutil + brilho que
+     desliza no hover, em vez de azul chapado, para reforçar que é a ação
+     principal da tela. */
+  .access-btn{
+    background:linear-gradient(135deg,var(--azul) 0%,#123A78 100%);
+    box-shadow:0 14px 28px -10px rgba(13,46,99,.6), inset 0 1px 0 rgba(255,255,255,.16);
+    position:relative; overflow:hidden;
+  }
+  .access-btn::before{
+    content:""; position:absolute; inset:0; border-radius:inherit;
+    background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.22) 45%, transparent 60%);
+    transform:translateX(-100%); transition:transform .5s ease;
+  }
+  .access-btn:hover::before{ transform:translateX(100%); }
+  @keyframes shake{
+    10%,90%{ transform:translateX(-1px); } 20%,80%{ transform:translateX(2px); }
+    30%,50%,70%{ transform:translateX(-4px); } 40%,60%{ transform:translateX(4px); }
+  }
+  .shake{ animation:shake .4s both; }
+  @media (prefers-reduced-motion: reduce){ .shake{ animation:none; } }
+
+  /* =====================================================================
+     REPAGINADA VISUAL GERAL — refinamento de formatação sobre a base que
+     já existia (cores, cartões, calendário mantidos). O objetivo aqui é
+     costurar tudo num conjunto mais coeso: cabeçalhos de seção com mais
+     presença, os ~15 cartões-ferramenta ganham uma "lombada" com as cores
+     da bandeira (o mesmo tema do .flag-ribbon do topo, só que discreto),
+     botões sólidos com profundidade e leve resposta ao toque/mouse em vez
+     de opacidade chapada, a única tabela do app ganha cabeçalho e hover
+     de linha, e o foco de teclado fica padronizado em todo o app.
+     Nenhum id/classe usada pelo JavaScript foi alterado — só aparência. */
+
+  /* cabeçalho de cada seção (.eyebrow, ~20 cartões): mais peso e uma
+     linha fina separando do conteúdo, para o olho encontrar rápido do
+     que se trata cada bloco ao rolar a página */
+  .eyebrow{ font-size:1.03rem; padding-bottom:.6rem; margin-bottom:.85rem !important; border-bottom:1px solid var(--line-soft); }
+  .eyebrow .chip{ box-shadow:0 1px 2px rgba(13,46,99,.08), inset 0 0 0 1px rgba(13,46,99,.05); }
+
+  /* lombada com as cores da bandeira no topo dos cartões-ferramenta —
+     repete a identidade visual do cabeçalho em todo cartão informativo,
+     sem competir com o conteúdo (fica inset, não toca as bordas arredondadas) */
+  .panel-tool{ position:relative; }
+  .panel-tool::before{
+    content:""; position:absolute; top:0; left:1.25rem; right:1.25rem; height:2px;
+    background:linear-gradient(90deg, var(--verde), var(--amarelo), var(--azul));
+    opacity:.5; border-radius:0 0 3px 3px; pointer-events:none;
+  }
+  .id-card{ box-shadow:0 1px 3px rgba(13,46,99,.06), 0 14px 30px -22px rgba(13,46,99,.32); }
+  .passbook{ box-shadow:0 1px 3px rgba(3,12,31,.2), 0 18px 40px -24px rgba(3,12,31,.55); }
+
+  /* botões sólidos principais (Baixar PDF, Salvar nota, planilha
+     filtrada, SIGPBF/Sicon): sombra com profundidade e leve "levante" ao
+     passar o mouse/tocar, no lugar do hover:opacity-90 chapado */
+  button[style="background:var(--azul)"], a[style="background:var(--azul)"],
+  button[style="background:var(--verde)"], a[style="background:var(--verde)"]{
+    box-shadow:0 10px 22px -12px rgba(13,46,99,.55);
+    transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  @media (hover:hover){
+    button[style="background:var(--azul)"]:hover, a[style="background:var(--azul)"]:hover,
+    button[style="background:var(--verde)"]:hover, a[style="background:var(--verde)"]:hover{
+      transform:translateY(-1.5px); filter:brightness(1.06);
+      box-shadow:0 14px 26px -12px rgba(13,46,99,.6);
+    }
+  }
+  button[style="background:var(--azul)"]:active, a[style="background:var(--azul)"]:active,
+  button[style="background:var(--verde)"]:active, a[style="background:var(--verde)"]:active{
+    transform:translateY(0); filter:brightness(.97);
+  }
+
+  /* botões de upload (tracejados): o fundo acompanha a cor do passo ao
+     passar o mouse, em vez do cinza genérico — reforça que "aceita soltar" */
+  label.border-dashed{ transition:background .15s ease, border-color .15s ease; }
+  @media (hover:hover){ label.border-dashed:hover{ background:var(--verde-soft) !important; } }
+
+  /* tabela do Cronograma de Repercussão (única tabela do app): cabeçalho
+     com fundo e linha em destaque ao passar o mouse */
+  table thead tr{ background:var(--azul-soft); }
+  table thead th:first-child{ border-radius:.5rem 0 0 .5rem; }
+  table thead th:last-child{ border-radius:0 .5rem .5rem 0; }
+  table thead th{ padding-left:.6rem; }
+  table tbody tr{ transition:background .15s ease; }
+  @media (hover:hover){ table tbody tr:hover{ background:var(--line-soft); } }
+
+  /* foco de teclado (Tab) padronizado em todo o app — complementa, sem
+     substituir, os anéis de foco específicos que os campos já tinham */
+  a:focus-visible, button:focus-visible, summary:focus-visible{
+    outline:2px solid var(--azul); outline-offset:2px; border-radius:.4rem;
+  }
+  .day-cell:focus-visible{
+    outline:2px solid var(--azul); outline-offset:-2px; z-index:2;
+  }
+
+  /* CONFIRMAÇÃO (modal) — substitui o confirm() nativo do navegador para
+     ações destrutivas (ex.: apagar um arquivo guardado). */
+  #confirmModalOverlay{
+    position:fixed; inset:0; z-index:99997; background:rgba(7,26,61,.55);
+    display:flex; align-items:center; justify-content:center; padding:16px;
+    animation:anonaToastIn .15s ease;
+  }
+  #confirmModalOverlay.hidden{ display:none; }
+  #confirmModalBox{
+    background:#fff; border-radius:16px; max-width:360px; width:100%;
+    padding:22px; box-shadow:0 20px 50px rgba(0,0,0,.3);
+  }
+  #confirmModalMsg{
+    font:600 14px/1.5 Inter, system-ui, sans-serif; color:#1f2937; margin-bottom:18px;
+  }
+  #confirmModalBox .confirm-btns{ display:flex; gap:8px; justify-content:flex-end; }
+  #confirmModalBox button{
+    font:700 13px/1 Inter, system-ui, sans-serif; padding:.65rem 1.1rem; border-radius:10px;
+    border:none; cursor:pointer; transition:opacity .15s ease;
+  }
+  #confirmModalBox button:hover{ opacity:.9; }
+  #confirmModalCancel{ background:#F1F3F6; color:#334155; }
+  #confirmModalOk{ background:#B3261E; color:#fff; }
+
+  /* AVISOS (toasts) — substituem os alert() nativos do navegador por um
+     aviso no próprio estilo do app, que não trava a tela. */
+  #toastContainer{
+    position:fixed; left:0; right:0; bottom:0; z-index:99998;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    padding:12px; pointer-events:none;
+  }
+  .anona-toast{
+    pointer-events:auto; max-width:460px; width:calc(100% - 8px);
+    color:#fff; font:600 13px/1.5 Inter, system-ui, sans-serif;
+    padding:12px 14px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.28);
+    display:flex; align-items:flex-start; gap:10px; white-space:pre-line;
+    animation:anonaToastIn .18s ease;
+  }
+  .anona-toast[data-tipo="success"]{ background:var(--verde); }
+  .anona-toast[data-tipo="error"]{ background:#B3261E; }
+  .anona-toast[data-tipo="info"]{ background:var(--azul); }
+  .anona-toast .anona-toast-fechar{
+    background:transparent; border:none; color:#fff; opacity:.75; cursor:pointer;
+    font-size:17px; line-height:1; padding:0 2px; flex-shrink:0;
+  }
+  .anona-toast .anona-toast-fechar:hover{ opacity:1; }
+  @keyframes anonaToastIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes anonaToastOut{ from{ opacity:1; transform:translateY(0); } to{ opacity:0; transform:translateY(6px); } }
+  @media (prefers-reduced-motion: reduce){
+    .anona-toast{ animation:none !important; }
+  }
