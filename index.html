@@ -709,11 +709,17 @@
           <div class="access-input-wrap">
             <i data-lucide="lock"></i>
             <input id="authPass" type="password" placeholder="Mín. 6 caracteres" autocomplete="current-password" required minlength="6"
-              class="access-input" style="padding-right:2.5rem">
+              class="access-input" style="padding-right:2.5rem" oninput="updateAuthPassStrength()">
             <button type="button" onclick="toggleAuthPassVisibility()" aria-label="Mostrar ou ocultar senha"
               class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
               <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
             </button>
+          </div>
+          <div id="authPassStrengthWrap" class="hidden mt-1.5">
+            <div class="h-1 rounded-full bg-slate-200 overflow-hidden flex gap-0.5">
+              <div id="authPassStrengthBar" class="h-full rounded-full transition-all" style="width:0%; background:#DC2626;"></div>
+            </div>
+            <p id="authPassStrengthLabel" class="text-[10px] font-semibold mt-1 text-slate-400"></p>
           </div>
         </div>
         <div class="text-right -mt-1">
@@ -1579,22 +1585,66 @@
     const tabSignup = document.getElementById('authTabSignup');
     const activeCls = 'access-tab active';
     const inactiveCls = 'access-tab';
+    const passEl = document.getElementById('authPass');
     if (mode === 'login') {
       tabLogin.className = activeCls;
       tabSignup.className = inactiveCls;
       document.getElementById('authModalSubtitle').textContent = 'Entre com e-mail e senha para acessar suas anotações com segurança, em qualquer aparelho.';
       document.getElementById('authForgotBtn').classList.remove('hidden');
-      document.getElementById('authPass').setAttribute('autocomplete', 'current-password');
+      passEl.setAttribute('autocomplete', 'current-password');
+      // No login, mantém a exigência mínima do próprio Firebase (6) para
+      // não bloquear quem já tem conta com senha mais curta criada antes
+      // desta revisão.
+      passEl.setAttribute('minlength', '6');
+      passEl.placeholder = 'Sua senha';
+      document.getElementById('authPassStrengthWrap').classList.add('hidden');
     } else {
       tabSignup.className = activeCls;
       tabLogin.className = inactiveCls;
       document.getElementById('authModalSubtitle').textContent = 'Crie uma conta gratuita para proteger suas anotações e acessá-las em qualquer aparelho.';
       document.getElementById('authForgotBtn').classList.add('hidden');
-      document.getElementById('authPass').setAttribute('autocomplete', 'new-password');
+      passEl.setAttribute('autocomplete', 'new-password');
+      // Ao criar conta nova, pede uma senha um pouco mais forte — as notas
+      // podem conter dados sensíveis de famílias atendidas.
+      passEl.setAttribute('minlength', '8');
+      passEl.placeholder = 'Mín. 8 caracteres';
+      document.getElementById('authPassStrengthWrap').classList.remove('hidden');
+      updateAuthPassStrength();
     }
     setAuthLoading(false);
   }
   window.setAuthMode = setAuthMode;
+
+  // Indicador simples de força da senha, mostrado só na criação de conta.
+  // É só uma orientação visual (não bloqueia o envio além do minlength=8
+  // já exigido no campo) para ajudar a pessoa a escolher uma senha melhor,
+  // já que as anotações podem conter dados sensíveis de famílias atendidas.
+  window.updateAuthPassStrength = function () {
+    if (authMode !== 'signup') return;
+    const val = document.getElementById('authPass').value;
+    const bar = document.getElementById('authPassStrengthBar');
+    const label = document.getElementById('authPassStrengthLabel');
+    if (!bar || !label) return;
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (val.length >= 12) score++;
+    if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const niveis = [
+      { pct: 0,   cor: '#DC2626', texto: '' },
+      { pct: 20,  cor: '#DC2626', texto: 'Fraca' },
+      { pct: 40,  cor: '#D97706', texto: 'Fraca' },
+      { pct: 60,  cor: '#D89B32', texto: 'Razoável' },
+      { pct: 80,  cor: '#146B47', texto: 'Boa' },
+      { pct: 100, cor: '#0F8A4E', texto: 'Forte' }
+    ];
+    const n = val.length === 0 ? niveis[0] : niveis[Math.min(score + 1, 5)];
+    bar.style.width = n.pct + '%';
+    bar.style.background = n.cor;
+    label.textContent = val.length === 0 ? '' : n.texto;
+    label.style.color = n.cor;
+  };
 
   window.toggleAuthPassVisibility = () => {
     const input = document.getElementById('authPass');
@@ -1625,8 +1675,9 @@
       authError.classList.remove('hidden');
       return;
     }
-    if (pass.length < 6) {
-      authError.textContent = 'A senha precisa ter ao menos 6 caracteres.';
+    const minPass = authMode === 'signup' ? 8 : 6;
+    if (pass.length < minPass) {
+      authError.textContent = `A senha precisa ter ao menos ${minPass} caracteres.`;
       authError.classList.remove('hidden');
       return;
     }
@@ -1673,7 +1724,7 @@
   function showAuthError(e) {
     const map = {
       'auth/invalid-email': 'E-mail inválido.',
-      'auth/weak-password': 'A senha precisa ter ao menos 6 caracteres.',
+      'auth/weak-password': 'Senha muito fraca — use ao menos 8 caracteres.',
       'auth/email-already-in-use': 'Este e-mail já tem uma conta — tente Entrar.',
       'auth/invalid-credential': 'E-mail ou senha incorretos.',
       'auth/user-not-found': 'Conta não encontrada — tente Criar conta.',
@@ -2713,6 +2764,24 @@
     return ordem;
   }
 
+  // Mantém a chave de API do Gemini sincronizada entre os DOIS campos que
+  // existem no app (Relatório Individual e Unificar Folhas de Família):
+  // ambos guardam/leem a mesma chave em 'anonaGeminiApiKey', mas antes só
+  // liam o valor salvo uma vez, na abertura da página — se a pessoa
+  // atualizasse a chave num campo, o outro campo continuava com o valor
+  // antigo até recarregar. Esta função central atualiza o localStorage E
+  // o(s) outro(s) campo(s) visível(is) a cada letra digitada.
+  function syncGeminiApiKey(valor, origemId) {
+    const v = String(valor || '').trim();
+    safeStorageSet('anonaGeminiApiKey', v);
+    ['geminiApiKeyInput', 'geminiApiKeyInputUnificar'].forEach((id) => {
+      if (id === origemId) return;
+      const el = document.getElementById(id);
+      if (el && el.value !== valor) el.value = valor;
+    });
+  }
+  window.__syncGeminiApiKey = syncGeminiApiKey;
+
   // Liga a caixinha "Otimizar a rota com IA (Gemini)": mostra/esconde o
   // campo da chave de API e lembra (só neste navegador, via localStorage)
   // se a pessoa deixou a opção marcada e qual chave já usou antes, para
@@ -2731,7 +2800,7 @@
       configWrap.classList.toggle('hidden', !toggle.checked);
       safeStorageSet('anonaGeminiRotaAtiva', toggle.checked ? '1' : '0');
     });
-    apiKeyInput.addEventListener('change', () => safeStorageSet('anonaGeminiApiKey', apiKeyInput.value.trim()));
+    apiKeyInput.addEventListener('input', () => syncGeminiApiKey(apiKeyInput.value, 'geminiApiKeyInput'));
   })();
 
   // Reordena as linhas por melhor rota de visita: bloco de bairro a bloco
@@ -3378,7 +3447,7 @@
       configWrap.classList.toggle('hidden', !toggle.checked);
       safeStorageSet('anonaGeminiRotaAtivaUnificar', toggle.checked ? '1' : '0');
     });
-    apiKeyInput.addEventListener('change', () => safeStorageSet('anonaGeminiApiKey', apiKeyInput.value.trim()));
+    apiKeyInput.addEventListener('input', () => syncGeminiApiKey(apiKeyInput.value, 'geminiApiKeyInputUnificar'));
   })();
 
   // Pede ao Gemini a melhor ordem de visita para as famílias de um bloco,
@@ -3985,11 +4054,23 @@
     const savedLocally = safeStorageSet('pbf_notes_local', JSON.stringify(notes));
     if (currentUser) {
       await setDoc(doc(db, 'users', currentUser.uid), { notes }, { merge: true });
+      markCloudSynced();
     }
     if (!savedLocally && !currentUser) {
       throw new Error('Não foi possível guardar a nota (armazenamento indisponível neste navegador).');
     }
   };
+
+  // Atualiza o indicador "sincronizado às HH:MM" no cabeçalho, mostrado
+  // sempre que os dados foram confirmados na nuvem (ao entrar e a cada nota
+  // salva com sucesso), para dar confiança de que nada foi perdido.
+  function markCloudSynced() {
+    const el = document.getElementById('cloudSyncStatus');
+    if (!el) return;
+    const hora = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date());
+    el.innerHTML = `<span>●</span> sincronizado às ${hora}`;
+  }
+  window.__markCloudSynced = markCloudSynced;
 
   // As funções abaixo controlam a troca entre a tela de acesso (login real
   // por e-mail/senha) e o conteúdo do app: só mostram dados de verdade
@@ -4006,6 +4087,7 @@
     const emailEl = document.getElementById('authEmail');
     const passEl = document.getElementById('authPass');
     if (passEl) { passEl.value = ''; passEl.type = 'password'; }
+    if (typeof updateAuthPassStrength === 'function') updateAuthPassStrength();
     const eyeIcon = document.getElementById('authPassEyeIcon');
     if (eyeIcon) eyeIcon.setAttribute('data-lucide', 'eye');
     if (window.lucide) lucide.createIcons();
@@ -4024,11 +4106,12 @@
           <span class="hidden sm:inline text-blue-100">${escapeHtml(user.email)}</span>
           <button onclick="doLogout()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5"><i data-lucide="log-out" class="w-3.5 h-3.5"></i> Sair da conta</button>
         </div>
-        <p class="text-[10px] text-blue-200 mt-1 flex items-center gap-1 justify-end"><span>●</span> sincronizado na nuvem</p>`;
+        <p id="cloudSyncStatus" class="text-[10px] text-blue-200 mt-1 flex items-center gap-1 justify-end"><span>●</span> sincronizando…</p>`;
       if (window.lucide) lucide.createIcons();
       try {
         await loadNotesFromCloud();
         await loadReports();
+        markCloudSynced();
       } catch (e) {
         // Mesmo se algo falhar aqui, o app continua utilizável — evita
         // deixar a pessoa travada numa tela em branco sem explicação.
