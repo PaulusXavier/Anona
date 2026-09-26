@@ -468,7 +468,7 @@
       <div>
       <div class="tool-step" data-step="1">
         <h3><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Repercussão de Condicionalidades</h3>
-        <p class="text-xs text-slate-500 mb-3">Guarde aqui a planilha que o MDS manda todo mês ímpar. Fica sincronizada na nuvem (se você estiver logado) e você baixa de novo quando precisar.</p>
+        <p class="text-xs text-slate-500 mb-3">Guarde aqui a planilha que o MDS manda todo mês ímpar. <strong>Fica guardada só neste navegador/aparelho</strong> (não é enviada à nuvem) — troque de aparelho ou de navegador e ela não vai estar lá; baixe uma cópia para outro lugar seguro se precisar dela em outro dispositivo.</p>
         <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-3" style="border-color:var(--verde); color:var(--verde)">
           <i data-lucide="upload" class="w-4 h-4"></i> <span id="reportUploadLabelTexto">Enviar planilha (.xlsx)</span>
           <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleReportUpload(this)">
@@ -487,6 +487,7 @@
             <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar planilha filtrada
           </button>
         </div>
+        <p id="reportsStorageStatus" class="text-[10px] text-slate-400 mb-2"></p>
         <div id="reportsList" class="space-y-2"></div>
       </div>
 
@@ -1372,6 +1373,7 @@
       'PROFESSORA ARACELI SOUTO MAIOR':['Território Volante','Equipe volante','Professora Araceli Souto Maior']
     };
     const groups = new Map();
+    const bairrosNaoMapeados = new Map();
     let rawHeader = null;
     const informacoesRelatorio = ['CRAS Cristiana Vicente Nunes'];
     source.SheetNames.forEach(sheetName => {
@@ -1420,7 +1422,10 @@
         if (!config && key.includes('ARACELI') && key.includes('SOUTO')) config = ['Território Volante','Equipe volante','Professora Araceli Souto Maior'];
         if (!config && key.includes('PROF') && key.includes('ARACEL')) config = ['Território Volante','Equipe volante','Professora Araceli Souto Maior'];
         if (!config && key.includes('TANCREDO')) config = ['Bárbara Parente','Assistente Social','Tancredo Neves'];
-        if (!config) return;
+        if (!config) {
+          bairrosNaoMapeados.set(currentBairro, (bairrosNaoMapeados.get(currentBairro) || 0) + 1);
+          return;
+        }
         const [team, formacao, bairroNome] = config;
         if (!groups.has(team)) groups.set(team, {rows:[], bairros:new Set(), formacao});
         const g = groups.get(team);
@@ -1545,7 +1550,7 @@
     const bytes=written instanceof ArrayBuffer ? new Uint8Array(written) : written;
     let binary=''; const chunk=0x8000;
     for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.slice(i,i+chunk));
-    return btoa(binary);
+    return { dataBase64: btoa(binary), bairrosNaoMapeados };
   };
 
   // Divide uma tabela de condicionalidades só do Território Volante em três
@@ -2225,12 +2230,26 @@
     return normalizeText(textoEndereco).replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
   }
 
-  // Extrai o número do imóvel (primeiro número encontrado no endereço) para
-  // ordenar as visitas em sequência dentro da mesma rua.
+  // Extrai o número do imóvel para ordenar as visitas em sequência dentro
+  // da mesma rua. Importante: o PRIMEIRO número do texto nem sempre é o
+  // número da casa — em ruas com número no próprio nome (comuns em Boa
+  // Vista, ex.: "Rua 7 de Setembro, 245"), pegar sempre o primeiro número
+  // pegaria o "7" da rua, não o "245" da casa. Por isso a ordem de
+  // prioridade abaixo: primeiro procura um número junto de "nº"/"n°"/
+  // "numero", depois um número logo após vírgula (formato comum "Rua X,
+  // 123"), e só em último caso cai no primeiro número do texto inteiro
+  // (reserva; ainda pode errar se a rua tiver número no nome E o endereço
+  // não usar vírgula nem "nº" antes do número da casa).
   function relatorioIndividualNumeroEndereco(textoEndereco) {
-    const m = String(textoEndereco || '').match(/\d+/);
+    const texto = String(textoEndereco || '');
+    let m = texto.match(/n[ºo°.]{0,2}\s*(\d+)/i);
+    if (m) return parseInt(m[1], 10);
+    m = texto.match(/,\s*(\d+)/);
+    if (m) return parseInt(m[1], 10);
+    m = texto.match(/\d+/);
     return m ? parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER;
   }
+
 
   // Endereço "completo" de uma linha (Endereço + Bairro + Referência), para
   // mostrar à IA — é só texto de localização, nunca nome/NIS/CPF.
@@ -3448,7 +3467,7 @@
       const mes = autoGuess.mes;
       const ano = autoGuess.ano;
 
-      const dataBase64 = makeCrasFormattedWorkbook(originalBase64);
+      const { dataBase64, bairrosNaoMapeados } = makeCrasFormattedWorkbook(originalBase64);
       const nomeMes = MESES_NOMES[mes] || 'Mês';
       const nomeArquivo = `Repercussão ${nomeMes} de ${ano} (CRAS Cristiana).xlsx`;
       const testeSaida = XLSX.read(bytesFromBase64(dataBase64), {type:'array'});
@@ -3460,16 +3479,26 @@
       linkDownload.download = nomeArquivo;
       document.body.appendChild(linkDownload); linkDownload.click(); linkDownload.remove();
       const record = { filename: nomeArquivo, mes, ano, sizeKB: Math.round((dataBase64.length * 3 / 4) / 1024), uploadedAt: Date.now(), dataBase64 };
+      let guardadoNoAparelho = false;
       try {
         const local = JSON.parse(safeStorageGet('pbf_repercussao_local', '[]'));
         local.push({ id: 'local_' + Date.now(), ...record });
-        safeStorageSet('pbf_repercussao_local', JSON.stringify(local));
-        await loadReports();
+        guardadoNoAparelho = safeStorageSet('pbf_repercussao_local', JSON.stringify(local));
+        if (guardadoNoAparelho) await loadReports();
       } catch (storageError) {
         console.warn('Download concluído, mas não foi possível guardar a cópia neste navegador:', storageError);
       }
       input.value = '';
-      alert(`Planilha organizada e baixada com sucesso: ${nomeArquivo}`);
+      if (bairrosNaoMapeados.size) {
+        const totalLinhas = [...bairrosNaoMapeados.values()].reduce((a, b) => a + b, 0);
+        const detalhes = [...bairrosNaoMapeados.entries()].map(([bairro, qtd]) => `"${bairro}" (${qtd})`).join(', ');
+        alert(`Atenção: ${totalLinhas} linha(s) da planilha original tinham um bairro que eu não reconheço, então NÃO entraram no relatório gerado: ${detalhes}. Pode ser erro de digitação no nome do bairro — confira essas famílias na planilha original para não perder o acompanhamento delas, e avise quem mantém o Anona para incluir esse bairro na lista.`);
+      }
+      if (guardadoNoAparelho) {
+        alert(`Planilha organizada e baixada com sucesso: ${nomeArquivo}`);
+      } else {
+        alert(`O download de "${nomeArquivo}" foi concluído, mas não coube no espaço de armazenamento deste navegador — ela NÃO vai aparecer na lista "Planilhas guardadas" nem poderá ser filtrada por bairro depois. Guarde o arquivo baixado em outro lugar seguro e, se precisar de espaço, apague planilhas antigas da lista abaixo.`);
+      }
     } catch (e) {
       console.error(e);
       alert('Não consegui organizar esta planilha. Confirme se ela possui a coluna “Técnico/equipe”.');
@@ -3596,6 +3625,18 @@
       const previous = fileFilterEl.value;
       fileFilterEl.innerHTML = '<option value="">Escolha uma planilha</option>' + reports.map(r => `<option value="${r.id}">${escapeHtml(MESES_NOMES[r.mes] || '?')} / ${r.ano} — ${escapeHtml(r.filename || 'arquivo')}</option>`).join('');
       if (reports.some(r => r.id === previous)) fileFilterEl.value = previous;
+    }
+
+    const statusEl = document.getElementById('reportsStorageStatus');
+    if (statusEl) {
+      const totalKB = reports.reduce((soma, r) => soma + (r.sizeKB || 0), 0);
+      const totalMB = totalKB / 1024;
+      const pertoDoLimite = totalMB >= 3.5;
+      statusEl.textContent = reports.length
+        ? `${reports.length} planilha(s) guardada(s) neste aparelho · ~${totalMB.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB usados`
+        : '';
+      statusEl.style.color = pertoDoLimite ? '#DC2626' : '';
+      statusEl.style.fontWeight = pertoDoLimite ? '700' : '';
     }
 
     if (!filtered.length) {
@@ -3960,7 +4001,7 @@ function updateDetails(){
   if (isPayday) {
     html += `<div class="p-3 rounded-xl border-l-4" style="border-color:var(--amarelo); background:#FFF8DF;">
       <h4 class="text-xs font-black uppercase" style="color:var(--amarelo-text)">Dia de pagamento</h4>
-      <p class="text-[11px] text-slate-600 mt-1">Data prevista do Bolsa Família para NIS final ${document.getElementById('nisInput').value}.</p>
+      <p class="text-[11px] text-slate-600 mt-1">Data prevista do Bolsa Família para NIS final ${escapeHtml(document.getElementById('nisInput').value)}.</p>
     </div>`;
   }
   html += events.map(e=>`
