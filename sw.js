@@ -26,7 +26,8 @@ const SHELL_FILES = [
   "./",
   "./index.html",
   "./manifest.json",
-  "./styles.css"
+  "./styles.css",
+  "./anona-mascot.js"
 ];
 
 // Imagens do próprio site: importantes para a aparência do app (ícone da
