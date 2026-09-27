@@ -454,3 +454,95 @@
   @media (prefers-reduced-motion: reduce){
     .anona-toast{ animation:none !important; }
   }
+
+  /* =====================================================================
+     REFINAMENTO VISUAL 3 — cores, tipografia e cartões
+     Uma segunda passada de polimento por cima de tudo que já existia:
+     tons de hover/active derivados da paleta (em vez de opacity genérica),
+     cartões com mais profundidade e uma "lombada" mais nítida, tipografia
+     com melhor ritmo entre títulos e números, e pequenos detalhes de
+     acabamento (seleção de texto, barra de rolagem, botões com brilho).
+     Só aparência: nenhum id/classe usado pelo JavaScript foi alterado ou
+     removido — tudo aqui é adição ou reforço de regras existentes. */
+
+  :root{
+    --azul-hover:#0A2554;
+    --verde-hover:#0E5735;
+    --amarelo-hover:#C08A2C;
+    --shadow-card:0 1px 2px rgba(13,46,99,.05), 0 20px 40px -24px rgba(13,46,99,.4);
+    --shadow-card-tool:0 1px 2px rgba(13,46,99,.04), 0 14px 30px -20px rgba(13,46,99,.32);
+  }
+
+  /* ---------- tipografia: mais ritmo entre título, rótulo e número ----------
+     Números (dia do mês, valores em R$, o dígito do NIS) ganham
+     tabular-nums para não "dançar" de largura, e os títulos em Fraunces
+     não quebram no meio de uma palavra/expressão curta. */
+  .display, .eyebrow{ text-wrap:balance; }
+  #currentMonthLabel, #selectedDayBox, #nisInput, .day-num{ font-variant-numeric:tabular-nums; }
+  #currentMonthLabel{ letter-spacing:-.015em; }
+  body{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+
+  /* cabeçalho de cada cartão (.eyebrow): tom mais azul-marinho (em vez de
+     tinta neutra) para puxar mais para a identidade do app, e o selinho
+     ganha um verniz sutil no topo em vez de cor chapada */
+  .eyebrow{ color:var(--azul-deep); }
+  .eyebrow .chip{
+    background-image:linear-gradient(165deg, rgba(255,255,255,.65), rgba(255,255,255,0) 60%);
+    background-blend-mode:soft-light;
+  }
+
+  /* ---------- cartões: mais profundidade e separação clara entre registros ----------
+     .panel ganha sombra mais envolvente (é o "documento principal"); os
+     ~15 .panel-tool ganham cantos um pouco mais macios e a lombada colorida
+     do topo fica mais nítida, sem gradiente esmaecendo tão rápido. */
+  .panel{ box-shadow:var(--shadow-card); }
+  .panel-tool{ --radius-doc:.85rem; box-shadow:var(--shadow-card-tool); }
+  .panel-tool::before{ opacity:.62; height:2.5px; }
+  .id-card{ box-shadow:0 1px 3px rgba(13,46,99,.07), 0 18px 36px -22px rgba(13,46,99,.34); }
+  .passbook{ box-shadow:0 1px 3px rgba(3,12,31,.22), 0 22px 46px -24px rgba(3,12,31,.58); }
+
+  /* numeração dos passos do "carnê" (.tool-step): um relevo suave em vez
+     de verde chapado, reforçando a metáfora de selo/carimbo numerado */
+  .tool-step::before{
+    background-image:radial-gradient(circle at 30% 26%, rgba(255,255,255,.35), transparent 60%), linear-gradient(165deg, var(--verde), #0E4F35);
+    box-shadow:0 2px 6px -2px rgba(13,46,99,.5);
+  }
+
+  /* ---------- botões sólidos: brilho no topo (glossy) + tons de hover próprios ----------
+     Complementa a regra de sombra/levante que já existia: agora o hover
+     usa um tom mais escuro derivado da própria cor (--azul-hover etc.),
+     em vez de só clarear com filter:brightness, e ganha um reflexo fino
+     no topo para não parecer um retângulo chapado. */
+  button[style="background:var(--azul)"], a[style="background:var(--azul)"],
+  button[style="background:var(--verde)"], a[style="background:var(--verde)"],
+  button[style="background:var(--amarelo)"], a[style="background:var(--amarelo)"]{
+    box-shadow:0 10px 22px -12px rgba(13,46,99,.55), inset 0 1px 0 rgba(255,255,255,.2);
+    background-blend-mode:normal;
+  }
+  @media (hover:hover){
+    button[style="background:var(--azul)"]:hover, a[style="background:var(--azul)"]:hover{ background-color:var(--azul-hover) !important; }
+    button[style="background:var(--verde)"]:hover, a[style="background:var(--verde)"]:hover{ background-color:var(--verde-hover) !important; }
+    button[style="background:var(--amarelo)"]:hover, a[style="background:var(--amarelo)"]:hover{ background-color:var(--amarelo-hover) !important; }
+  }
+
+  /* ---------- acabamento geral: seleção de texto e barra de rolagem ----------
+     Detalhes pequenos que somam: selecionar um texto ou arrastar a barra
+     de rolagem (nas listas de bairro, textarea de nota) usa a paleta do
+     app em vez do azul/cinza padrão do navegador. */
+  ::selection{ background:var(--azul-soft); color:var(--azul-deep); }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:rgba(13,46,99,.22); border-radius:99px; border:2px solid transparent; background-clip:padding-box; }
+  ::-webkit-scrollbar-thumb:hover{ background:rgba(13,46,99,.38); background-clip:padding-box; }
+  * { scrollbar-width:thin; scrollbar-color:rgba(13,46,99,.28) transparent; }
+
+  /* ---------- calendário: pequenos retoques de acabamento ----------
+     O dia selecionado ganha uma sombra suave por baixo do outline (hoje só
+     tinha o contorno), e o selo de dia de pagamento ganha um leve relevo
+     para parecer mais um carimbo e menos um adesivo plano. */
+  .day-cell.selected{ box-shadow:inset 0 0 0 1px rgba(13,46,99,.05), 0 4px 14px -8px rgba(13,46,99,.35); }
+  .day-cell.payday::before{ box-shadow:0 0 0 2px rgba(216,155,50,.28), 0 2px 4px -1px rgba(107,78,0,.4); }
+
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+  }
