@@ -17,7 +17,7 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v21";
+const CACHE_NAME = "pbf-app-shell-v22";
 
 // Tempo máximo (ms) que a busca da página mais nova pode levar antes do
 // service worker desistir de esperar e mostrar a cópia guardada. Sem isso,
@@ -57,6 +57,7 @@ const EXTERNAL_FILES = [
   "https://unpkg.com/lucide@0.469.0",
   "https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js",
   "https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js",
+  "https://unpkg.com/jszip@3.10.1/dist/jszip.min.js",
   "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js",
   "https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&family=Inter:wght@400;500;600;700;800&display=swap"
 ];
