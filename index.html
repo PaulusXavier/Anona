@@ -495,6 +495,19 @@
           </button>
           <p class="text-[10px] text-slate-400">Gera um PDF de Relatório de Repercussão Individual para cada aba de técnico da planilha escolhida acima (um PDF por técnico), sem incluir o <strong>Território Volante</strong> — a equipe volante tem sua própria seção de relatórios individuais, no bloco "Divisão por técnico" ao lado.</p>
         </div>
+        <div class="border-t border-slate-100 pt-3 mt-3 space-y-2">
+          <p class="text-[11px] font-bold text-slate-600">Backup das planilhas guardadas neste aparelho</p>
+          <div class="flex gap-2">
+            <button type="button" onclick="baixarBackupRepercussao()" class="flex-1 text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--verde)">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar backup (.json)
+            </button>
+            <label class="flex-1 flex items-center justify-center gap-2 border-2 border-dashed rounded-xl px-3 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--azul); color:var(--azul)">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i> <span id="restaurarBackupLabelTexto">Restaurar backup</span>
+              <input type="file" accept=".json,application/json" class="hidden" onchange="restaurarBackupRepercussao(this)">
+            </label>
+          </div>
+          <p class="text-[10px] text-slate-400">Essas planilhas ficam só neste navegador (sem nuvem) — baixe esse backup de vez em quando e guarde num lugar seguro (pen drive, e-mail para você mesmo, nuvem pessoal). Restaurar não apaga o que já está guardado, só adiciona o que faltar.</p>
+        </div>
         <p id="reportsStorageStatus" class="text-[10px] text-slate-400 mb-2"></p>
         <div id="reportsList" class="space-y-2"></div>
       </div>
@@ -1089,9 +1102,14 @@
     signInWithEmailAndPassword, signOut, sendPasswordResetEmail
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, doc, getDoc, setDoc, enableIndexedDbPersistence,
-    collection, addDoc, getDocs, deleteDoc, query, orderBy
+    getFirestore, doc, getDoc, setDoc, enableIndexedDbPersistence
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  // Nota: só usamos doc/getDoc/setDoc (para as anotações, em users/{uid}).
+  // As planilhas de Repercussão NÃO usam Firestore — ficam só no
+  // localStorage do navegador (ver loadReports()/__handleReportUpload).
+  // Os imports collection/addDoc/getDocs/deleteDoc/query/orderBy foram
+  // removidos por não terem uso nenhum no código (a subcoleção
+  // "repercussao" do firestore.rules está reservada para o futuro).
 
   const firebaseConfig = {
     apiKey: "AIzaSyBASuIGCLTmykRmyv8ux6Es2BCJuQztTsw",
@@ -3620,6 +3638,78 @@
     document.body.appendChild(a); a.click(); a.remove();
   };
 
+  // ---------- backup/restauração das planilhas guardadas neste aparelho ----------
+  // As planilhas de Repercussão vivem só no localStorage (ver nota acima em
+  // loadReports()), sem sincronização entre aparelhos nem nuvem. Estas duas
+  // funções deixam a pessoa baixar tudo num único .json de vez em quando (e
+  // guardar num pen drive, e-mail, nuvem pessoal etc.) e trazer de volta se
+  // precisar — por exemplo depois de limpar os dados do navegador ou trocar
+  // de aparelho.
+  window.baixarBackupRepercussao = () => {
+    if (!reports.length) {
+      alert('Você ainda não tem nenhuma planilha guardada neste aparelho para fazer backup.');
+      return;
+    }
+    const payload = {
+      app: 'Anona',
+      tipo: 'backup-repercussao',
+      geradoEm: new Date().toISOString(),
+      reports
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Anona - backup planilhas Repercussao - ${dataArquivo}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    alert(`Backup baixado com ${reports.length} planilha(s). Guarde este arquivo em um lugar seguro.`);
+  };
+
+  window.restaurarBackupRepercussao = async (input) => {
+    const file = input.files[0];
+    if (!file) return;
+    const labelTexto = document.getElementById('restaurarBackupLabelTexto');
+    const labelTextoOriginal = labelTexto ? labelTexto.textContent : '';
+    if (labelTexto) labelTexto.textContent = 'Restaurando…';
+    input.disabled = true;
+    try {
+      const texto = await file.text();
+      const payload = JSON.parse(texto);
+      const vindos = Array.isArray(payload) ? payload : (Array.isArray(payload.reports) ? payload.reports : null);
+      if (!vindos) throw new Error('Formato de backup não reconhecido.');
+      const validos = vindos.filter(r => r && r.dataBase64 && r.dataBase64.length > 100);
+      if (!validos.length) throw new Error('Nenhuma planilha válida encontrada neste arquivo.');
+      // Não duplica planilhas que já existem (mesmo id); as demais recebem
+      // um id novo para não colidir com o que já está guardado.
+      const existentesIds = new Set(reports.map(r => r.id));
+      const novos = validos
+        .filter(r => !(r.id && existentesIds.has(r.id)))
+        .map(r => ({ ...r, id: (r.id && !existentesIds.has(r.id)) ? r.id : ('restaurado_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)) }));
+      if (!novos.length) {
+        alert('Todas as planilhas deste backup já estão guardadas neste aparelho — nada novo para restaurar.');
+        return;
+      }
+      const atual = JSON.parse(safeStorageGet('pbf_repercussao_local', '[]'));
+      const combinado = [...atual, ...novos];
+      const guardou = safeStorageSet('pbf_repercussao_local', JSON.stringify(combinado));
+      if (!guardou) {
+        alert('Não coube tudo no espaço de armazenamento deste navegador. Tente restaurar um backup menor ou apague planilhas antigas da lista antes de tentar de novo.');
+        return;
+      }
+      await loadReports();
+      alert(`Restaurado(s) ${novos.length} planilha(s) com sucesso.`);
+    } catch (e) {
+      console.error(e);
+      alert('Não consegui restaurar este arquivo. Confirme se é um backup gerado pelo próprio Anona (.json) e se não está corrompido.');
+    } finally {
+      if (labelTexto) labelTexto.textContent = labelTextoOriginal || 'Restaurar backup';
+      input.disabled = false;
+      input.value = '';
+    }
+  };
+
   function bytesFromBase64(base64) {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
@@ -4671,6 +4761,11 @@ if ('serviceWorker' in navigator) {
   });
 })();
 </script>
+
+<!-- Mascote do app (cartãozinho com aceno) — puramente decorativo, some
+     atrás de qualquer modal. Carregado por último e sem bloquear o resto
+     da página (defer). -->
+<script src="anona-mascot.js" defer></script>
 
 </div><!-- fim #appContent -->
 </body>
