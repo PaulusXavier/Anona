@@ -18,12 +18,13 @@ index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
 anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas)
-icon-192.png                    -> ícone do app (ilustração própria, sem uso de marca de terceiros)
-icon-512.png                    -> ícone do app (versão maior)
+icon-192.png                    -> ícone do app para Android/desktop (cantos transparentes; ilustração própria, sem uso de marca de terceiros)
+icon-512.png                    -> ícone do app (versão maior, mesmo arquivo de cantos transparentes)
+apple-touch-icon.png            -> mesmo ícone, mas com cantos na cor da marca (opacos) em vez de transparentes — usado só no iPhone/iPad, porque o iOS pinta de preto qualquer canto transparente do ícone da tela de início
 firestore.rules                 -> regras de segurança (cole no console do Firebase)
 ```
 
-**Importante:** os arquivos `icon-192.png` e `icon-512.png` têm que ficar **soltos na raiz do repositório, com esses nomes exatos** (não dentro de uma pasta `icons/` nem renomeados) — é assim que o `index.html`, o `manifest.json` e o `sw.js` procuram por eles. Se algum desses arquivos não for enviado ou for renomeado, a imagem correspondente simplesmente não aparece (o app continua funcionando normalmente, o `sw.js` já foi ajustado para não travar a instalação por causa disso).
+**Importante:** os arquivos `icon-192.png`, `icon-512.png` e `apple-touch-icon.png` têm que ficar **soltos na raiz do repositório, com esses nomes exatos** (não dentro de uma pasta `icons/` nem renomeados) — é assim que o `index.html`, o `manifest.json` e o `sw.js` procuram por eles. Se algum desses arquivos não for enviado ou for renomeado, a imagem correspondente simplesmente não aparece (o app continua funcionando normalmente, o `sw.js` já foi ajustado para não travar a instalação por causa disso).
 
 Suba todos esses arquivos para a raiz do seu repositório no GitHub.
 
@@ -257,6 +258,12 @@ O app foi revisado e alguns pontos foram corrigidos diretamente no código. Resu
 - **Calendário navegável por teclado**: cada dia agora responde a Tab/Enter/Espaço e tem uma descrição (data, se é hoje, se é dia de pagamento, se tem anotação) para quem usa leitor de tela — antes só funcionava no toque/clique do mouse.
 - **Confirmação de exclusão** (apagar uma planilha guardada) trocou o `confirm()` do navegador por uma janela no estilo do app.
 - **Aviso de "sem internet"**: uma faixa aparece no topo quando o aparelho perde conexão, avisando que as anotações continuam sendo salvas nele e sincronizam sozinhas quando a internet voltar.
+
+### Revisão de ícones/PWA (mais recente)
+- **Cantos pretos nos ícones (corrigido):** os arquivos `icon-192.png`/`icon-512.png` tinham os quatro cantos preenchidos de preto sólido por trás do desenho arredondado, em vez de transparentes. Em qualquer lugar que mostrasse o ícone sem aplicar seu próprio recorte arredondado (aba do navegador, atalho no Windows, algumas telas de "instalar app"), aparecia um quadrado preto feio em volta do ícone. Os cantos agora são transparentes.
+- **`purpose: "any maskable"` removido do `manifest.json` (corrigido):** o ícone tinha essa dupla finalidade declarada, mas o desenho não tem a "zona de segurança" que o Android exige para ícones `maskable` (elementos chegam perto demais da borda) — o Android podia cortar partes do desenho ao aplicar sua própria máscara circular/quadrada. Agora o ícone é só `any`, deixando o sistema decidir como arredondar sem cortar o desenho.
+- **Ícone próprio para iPhone/iPad:** como o iOS pinta de preto sólido qualquer transparência no ícone da tela de início (o mesmo problema dos cantos pretos, só que causado pelo próprio sistema), foi criado um `apple-touch-icon.png` separado, com os cantos preenchidos na cor azul-marinho da marca (opacos) em vez de transparentes — só para essa finalidade.
+- Sempre que os arquivos de ícone mudam, o número de versão do cache em `sw.js` (`CACHE_NAME`) precisa subir (ex.: `v17` → `v18`) para quem já instalou o app antes baixar os ícones novos — isso já foi feito nesta revisão.
 
 ### Limitações que continuam existindo (importante saber)
 - **A `apiKey` do Firebase aparece no código do site.** Isso é normal e esperado para apps desse tipo (não é uma senha secreta) — a proteção de verdade é feita pelas regras do Firestore e pela autenticação, que já estão corretas. Mesmo assim, para reforçar, você pode:
