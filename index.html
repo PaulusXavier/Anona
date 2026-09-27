@@ -487,6 +487,14 @@
             <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar planilha filtrada
           </button>
         </div>
+
+        <div class="border-t border-slate-100 pt-3 mt-3 space-y-2">
+          <p class="text-[11px] font-bold text-slate-600">Relatórios individuais — técnicos gerais</p>
+          <button onclick="gerarRelatoriosIndividuaisPorTecnicoUI()" id="gerarRelatoriosIndividuaisBtn" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait" style="background:var(--azul)">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span>Gerar relatórios individuais por técnico</span>
+          </button>
+          <p class="text-[10px] text-slate-400">Gera um PDF de Relatório de Repercussão Individual para cada aba de técnico da planilha escolhida acima (um PDF por técnico), sem incluir o <strong>Território Volante</strong> — a equipe volante tem sua própria seção de relatórios individuais, no bloco "Divisão por técnico" ao lado.</p>
+        </div>
         <p id="reportsStorageStatus" class="text-[10px] text-slate-400 mb-2"></p>
         <div id="reportsList" class="space-y-2"></div>
       </div>
@@ -499,6 +507,14 @@
           <input type="file" id="volanteInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
         </label>
         <p class="text-[10px] text-slate-400 mt-2">Gera e baixa na hora uma planilha com 3 abas: <strong>Paulo Xavier</strong> (Psicólogo), <strong>Danilo Braga</strong> (Psicólogo) e <strong>Keomara Teles</strong> (Assistente Social) — nada é guardado na nuvem, o arquivo original não é alterado.</p>
+
+        <div class="border-t border-slate-100 pt-3 mt-3 space-y-2">
+          <p class="text-[11px] font-bold text-slate-600">Relatórios individuais — equipe volante</p>
+          <button onclick="gerarRelatoriosVolanteIndividuaisUI()" id="gerarRelatoriosVolanteBtn" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed" style="background:var(--azul)" disabled>
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span>Gerar relatórios individuais (Paulo, Danilo e Keomara)</span>
+          </button>
+          <p id="gerarRelatoriosVolanteAviso" class="text-[10px] text-slate-400">Envie a tabela acima primeiro; depois de dividida, este botão fica liberado para gerar um PDF de Relatório de Repercussão Individual para cada um dos três (Paulo Xavier, Danilo Braga e Keomara Teles), sem precisar enviar a tabela de novo.</p>
+        </div>
       </div>
 
       <div class="tool-step" data-step="3">
@@ -1705,6 +1721,13 @@
     return { base64: btoa(binary), mesRepercussao };
   }
 
+  // Guarda o resultado (em base64) da última divisão do Território Volante
+  // feita nesta sessão, para o botão "Relatórios individuais — equipe
+  // volante" poder gerar os PDFs sem precisar que o usuário envie a tabela
+  // de novo. Nada disso é guardado na nuvem nem entre sessões — só em
+  // memória, enquanto a página estiver aberta.
+  let ultimaDivisaoVolante = null;
+
   window.__handleVolanteUpload = async (input) => {
     const file = input.files[0];
     if (!file) return;
@@ -1734,6 +1757,11 @@
       link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + outBase64;
       link.download = nomeArquivo;
       document.body.appendChild(link); link.click(); link.remove();
+      ultimaDivisaoVolante = { base64: outBase64, mesRepercussao };
+      const btnVolante = document.getElementById('gerarRelatoriosVolanteBtn');
+      const avisoVolante = document.getElementById('gerarRelatoriosVolanteAviso');
+      if (btnVolante) btnVolante.disabled = false;
+      if (avisoVolante) avisoVolante.textContent = 'Pronto: gera um PDF de Relatório de Repercussão Individual para cada um dos três, com base na divisão que acabou de ser baixada.';
       input.value = '';
       alert(`Divisão gerada e baixada com sucesso: ${nomeArquivo}`);
     } catch (e) {
@@ -1743,6 +1771,56 @@
     } finally {
       if (labelTexto) labelTexto.textContent = labelTextoOriginal || 'Enviar tabela (.xlsx)';
       input.disabled = false;
+    }
+  };
+
+  // Gera um PDF de Relatório de Repercussão Individual para CADA técnico da
+  // equipe volante (Paulo Xavier, Danilo Braga e Keomara Teles), a partir
+  // da última divisão gerada no bloco "Divisão por técnico" logo acima —
+  // não precisa reenviar a tabela.
+  window.gerarRelatoriosVolanteIndividuaisUI = async () => {
+    if (!ultimaDivisaoVolante) { alert('Envie a tabela do Território Volante no campo acima primeiro.'); return; }
+    const btn = document.getElementById('gerarRelatoriosVolanteBtn');
+    const textoOriginal = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> <span>Gerando relatórios…</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+    try {
+      if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
+      if (!window.jspdf) throw new Error('Biblioteca de PDF não carregada.');
+      const wb = XLSX.read(bytesFromBase64(ultimaDivisaoVolante.base64), {type:'array'});
+      const tecnicos = wb.SheetNames.filter(name => !normalizeText(name).startsWith('resumo'));
+      if (!tecnicos.length) throw new Error('Não encontrei abas de técnico na divisão gerada.');
+
+      let gerados = 0;
+      const semRegistros = [];
+      for (const nomeTecnico of tecnicos) {
+        const dados = relatorioIndividualExtrairDadosDoWorkbook(wb, [nomeTecnico]);
+        if (!dados || !dados.rows.length) { semRegistros.push(nomeTecnico); continue; }
+        // O nome da aba vem como "Paulo Xavier - Psicólogo"; separa nome e
+        // formação para exibir corretamente no cabeçalho do PDF.
+        const partes = nomeTecnico.split(' - ');
+        const nome = partes[0].trim();
+        const formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : (dados.formacao || '');
+        await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome, formacao });
+        gerados++;
+        await new Promise(r => setTimeout(r, 400));
+      }
+
+      if (!gerados) throw new Error('Nenhum dos três técnicos tinha registros com a coluna "Efeito" para gerar relatório.');
+      const avisoSemRegistros = semRegistros.length ? ` (${semRegistros.join(', ')} sem registros, pulado(s))` : '';
+      alert(`${gerados} relatório(s) individual(is) da equipe volante gerado(s) e baixado(s)${avisoSemRegistros}.`);
+    } catch (e) {
+      console.error(e);
+      alert('Não consegui gerar os relatórios individuais da equipe volante. ' + (e && e.message ? e.message : ''));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+        if (window.lucide) lucide.createIcons();
+      }
     }
   };
 
@@ -2078,6 +2156,16 @@
   // que outra — cada linha é encaixada nas colunas certas pelo nome).
   function relatorioIndividualExtrairDados(base64) {
     const wb = XLSX.read(bytesFromBase64(base64), {type:'array'});
+    return relatorioIndividualExtrairDadosDoWorkbook(wb, null);
+  }
+
+  // Mesma extração acima, mas a partir de um workbook já lido (evita reler o
+  // arquivo) e podendo se restringir a uma lista específica de abas — usado
+  // para gerar um relatório individual por técnico (uma aba = um técnico) a
+  // partir da planilha de Repercussão já organizada por bairro (seção 8).
+  // Sem `sheetNamesFiltro` (null/undefined/vazio), lê todas as abas, igual
+  // ao comportamento original de `relatorioIndividualExtrairDados`.
+  function relatorioIndividualExtrairDadosDoWorkbook(wb, sheetNamesFiltro) {
     let headerGlobal = [];
     const headerIndexGlobal = new Map(); // normalizado -> posição em headerGlobal
     const linhas = [];
@@ -2091,7 +2179,8 @@
       return headerIndexGlobal.get(norm);
     }
 
-    wb.SheetNames.forEach(sheetName => {
+    const sheetNames = (sheetNamesFiltro && sheetNamesFiltro.length) ? sheetNamesFiltro : wb.SheetNames;
+    sheetNames.forEach(sheetName => {
       if (normalizeText(sheetName).startsWith('resumo')) return;
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
       const headerIndex = relatorioIndividualDetectarCabecalho(rows);
@@ -2111,6 +2200,15 @@
       posicoes.forEach((destino, origem) => { linha[destino] = valores[origem] != null ? valores[origem] : ''; });
       return linha;
     });
+
+    // Formação do técnico (só existe quando a aba vem da planilha
+    // organizada por bairro, seção 8) — usada apenas para identificar o
+    // técnico no relatório individual gerado aba por aba; não aparece na
+    // tabela do PDF.
+    const idxFormacaoBruta = headerGlobal.findIndex(h => normalizeText(h) === 'formacao');
+    const formacaoTecnico = idxFormacaoBruta >= 0
+      ? (dataRowsBrutas.map(r => String(r[idxFormacaoBruta] || '').trim()).find(Boolean) || '')
+      : '';
 
     // Descarta colunas totalmente vazias em todas as linhas (ex.: colunas
     // em branco que às vezes aparecem entre blocos do relatório original).
@@ -2157,7 +2255,7 @@
     const headersComFamilia = ['Família', ...headersFinais];
     const dataRowsComFamilia = dataRowsFinais.map((r, i) => [numerosFamilia[i], ...r]);
 
-    return { headers: headersComFamilia, rows: dataRowsComFamilia, mesTexto };
+    return { headers: headersComFamilia, rows: dataRowsComFamilia, mesTexto, formacao: formacaoTecnico };
   }
 
   // Identifica a "chave" da família de uma linha (integrante), para saber
@@ -2448,7 +2546,7 @@
   }
 
 
-  async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo) {
+  async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo, tecnicoInfo) {
     const { jsPDF } = window.jspdf;
     const idxEfeito = headers.findIndex(h => normalizeText(h) === 'efeito');
     const idxNome = headers.findIndex(h => normalizeText(h).includes('nome') && normalizeText(h).includes('responsavel'));
@@ -2518,7 +2616,10 @@
       docPdf.text('Anona · Relatório de Repercussão Individual', textX, 24);
       docPdf.setFont('helvetica','normal'); docPdf.setFontSize(8.5);
       docPdf.setTextColor(200,215,255);
-      docPdf.text('CRAS Cristiana Vicente Nunes · SEMADS · Paulo Xavier, Psicólogo, CRP-20/09816', textX, 38);
+      const linhaResponsavel = (tecnicoInfo && tecnicoInfo.nome)
+        ? `CRAS Cristiana Vicente Nunes · SEMADS · ${tecnicoInfo.nome}${tecnicoInfo.formacao ? ', ' + tecnicoInfo.formacao : ''}`
+        : 'CRAS Cristiana Vicente Nunes · SEMADS · Paulo Xavier, Psicólogo, CRP-20/09816';
+      docPdf.text(linhaResponsavel, textX, 38);
       docPdf.setTextColor(255,255,255);
       docPdf.text(`Repercussão de ${mesTexto}`, pageW-margin, 24, {align:'right'});
       docPdf.setTextColor(200,215,255);
@@ -2822,7 +2923,8 @@
       docPdf.text(`Página ${p} de ${totalPages}`, pageW/2, pageH-16, {align:'center'});
     }
 
-    const nomeArquivo = `Relatorio Repercussao Individual - ${mesTexto.replace(/\//g,'-')}.pdf`;
+    const sufixoTecnico = (tecnicoInfo && tecnicoInfo.nome) ? ` - ${tecnicoInfo.nome}` : '';
+    const nomeArquivo = `Relatorio Repercussao Individual${sufixoTecnico} - ${mesTexto.replace(/\//g,'-')}.pdf`;
     docPdf.save(nomeArquivo);
     return { usouIA, avisos };
   }
@@ -3594,6 +3696,66 @@
     } catch (e) { console.error(e); alert('Não foi possível gerar a planilha filtrada.'); }
   };
 
+  // Gera um PDF de Relatório de Repercussão Individual para CADA aba de
+  // técnico da planilha de Repercussão organizada por bairro (escolhida no
+  // mesmo seletor usado para "Baixar planilha filtrada"). Cada aba dessa
+  // planilha já corresponde a um técnico (ver makeCrasFormattedWorkbook) —
+  // a aba "Território Volante" fica de fora de propósito, porque ela já
+  // tem seu próprio fluxo de divisão/relatório por técnico (Paulo Xavier,
+  // Danilo Braga e Keomara Teles) na seção "Divisão por técnico" ao lado.
+  window.gerarRelatoriosIndividuaisPorTecnicoUI = async () => {
+    const fileId = document.getElementById('reportFileFilter').value;
+    const rep = reports.find(r => r.id === fileId);
+    if (!rep) { alert('Escolha uma planilha primeiro, no campo "Filtrar planilha por bairro" acima.'); return; }
+
+    const btn = document.getElementById('gerarRelatoriosIndividuaisBtn');
+    const textoOriginal = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> <span>Gerando relatórios…</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    try {
+      if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
+      if (!window.jspdf) throw new Error('Biblioteca de PDF não carregada.');
+      const wb = XLSX.read(bytesFromBase64(rep.dataBase64), {type:'array'});
+      const nomeVolante = normalizeText('Território Volante');
+      const tecnicos = wb.SheetNames.filter(name => {
+        const norm = normalizeText(name);
+        return !norm.startsWith('resumo') && norm !== nomeVolante;
+      });
+      if (!tecnicos.length) {
+        throw new Error('Não encontrei nenhuma aba de técnico nesta planilha (só sobrou o Território Volante e/ou o Resumo).');
+      }
+
+      let gerados = 0;
+      const semRegistros = [];
+      for (const nomeTecnico of tecnicos) {
+        const dados = relatorioIndividualExtrairDadosDoWorkbook(wb, [nomeTecnico]);
+        if (!dados || !dados.rows.length) { semRegistros.push(nomeTecnico); continue; }
+        await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome: nomeTecnico, formacao: dados.formacao });
+        gerados++;
+        // Pequena pausa entre um PDF e outro para o navegador não bloquear
+        // downloads múltiplos disparados muito rápido em sequência.
+        await new Promise(r => setTimeout(r, 400));
+      }
+
+      if (!gerados) throw new Error('Nenhum técnico desta planilha tinha registros com a coluna "Efeito" para gerar relatório.');
+      const avisoSemRegistros = semRegistros.length ? ` (${semRegistros.join(', ')} sem registros, pulado(s))` : '';
+      alert(`${gerados} relatório(s) individual(is) por técnico gerado(s) e baixado(s)${avisoSemRegistros}. O Território Volante não entra aqui — use a "Divisão por técnico" para ele.`);
+    } catch (e) {
+      console.error(e);
+      alert('Não consegui gerar os relatórios individuais por técnico. ' + (e && e.message ? e.message : ''));
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  };
+
   window.__deleteReport = async (id) => {
     const ok = await window.anonaConfirm('Apagar este arquivo guardado? Essa ação não pode ser desfeita.', { confirmLabel: 'Apagar', cancelLabel: 'Cancelar' });
     if (!ok) return;
@@ -3752,94 +3914,117 @@
 <!-- APP -->
 <script>
 /* ======================================================================
-   ANO VIGENTE — TROQUE SÓ ISSO AQUI TODO INÍCIO DE ANO (passo 1)
-   Esse número controla o título, o cabeçalho, o rodapé, o PDF exportado
-   e a navegação do calendário (não deixa passar para outro ano).
+   CALENDÁRIO POR ANO — TODO INÍCIO DE ANO, ADICIONE (não substitua) uma
+   nova chave aqui dentro com o número do ano novo (ex.: 2027) e os três
+   blocos de dados oficiais daquele ano (monthHighlights, officialEvents
+   e paymentCalendar), copiando o formato do ano de 2026 já cadastrado.
+   Os anos anteriores continuam guardados — é isso que faz o
+   "Acompanhamento de Condicionalidades" valer para todos os anos
+   cadastrados, não só o mais recente: quem quiser conferir o calendário
+   de um ano anterior ainda consegue navegar até lá.
+
+   Pegue os dados novos no calendário oficial MDS/Caixa (bolsa família) e
+   nos comunicados de Condicionalidades (saúde/educação/SICON) do ano
+   novo. Mantenha o mesmo formato dentro de cada ano (mesmas chaves 0–11
+   para meses, mesmo formato de data "AAAA-MM-DD" e mesma ordem de 10
+   posições — dígito final do NIS 1,2,3,4,5,6,7,8,9,0 — no
+   paymentCalendar).
+
+   Cadastre os anos em sequência, sem pular nenhum (ex.: 2026, depois
+   2027, depois 2028...) — é assim que a navegação sabe até onde pode ir
+   para trás e para frente.
    ====================================================================== */
-const ANO_VIGENTE = 2026;
+const CALENDARIOS_POR_ANO = {
+  2026: {
+    monthHighlights: {
+      0:[{type:"saude",title:"Saúde: 1ª Vigência",desc:"Período de Coleta e Registro iniciado (Jan-Jun)."},{type:"interrupt",title:"Interrupção",desc:"Mês de aplicação dos efeitos de Interrupção Temporária."}],
+      1:[{type:"saude",title:"Saúde: 1ª Vigência",desc:"Período de Coleta em andamento."},{type:"edu",title:"Educação: Início de Ciclo",desc:"Acompanhamento da frequência escolar (Fev/Mar)."}],
+      2:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Out/Nov-25 e 2ª Vig Saúde-25)."},{type:"saude",title:"Saúde: 1ª Vigência",desc:"Registro no sistema aberto."}],
+      3:[{type:"edu",title:"Edu: Fev/Mar",desc:"Mês de encerramento do sistema de frequência."}],
+      4:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Fev/Mar-26)."}],
+      5:[{type:"saude",title:"Saúde: Final 1ª Vig",desc:"Mês final para coleta de dados da 1ª vigência."}],
+      6:[{type:"saude",title:"Saúde: 2ª Vigência",desc:"Início da coleta da 2ª vigência (Jul-Dez)."},{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Abr/Mai-26)."}],
+      7:[],
+      8:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Jun/Jul-26 e 1ª Vig Saúde-26)."}],
+      9:[],
+      10:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos (Ref: Ago/Set-26)."}],
+      11:[]
+    },
+    officialEvents: {
+      "2026-01-01":[{type:"saude",title:"Saúde: Início Coleta (1ª Vig)",desc:"Início do registro (Jan a Jun/2026)."}],
+      "2026-02-17":[{type:"saude",title:"Saúde: Abertura Sistema (1ª Vig)",desc:"Abertura do sistema para registro."}],
+      "2026-06-30":[{type:"saude",title:"Saúde: Final Coleta (1ª Vig)",desc:"Último dia para coleta da 1ª vigência."}],
+      "2026-07-01":[{type:"saude",title:"Saúde: Início Coleta (2ª Vig)",desc:"Início do registro (Jul a Dez/2026)."}],
+      "2026-07-10":[{type:"saude",title:"Saúde: Fechamento (1ª Vig)",desc:"Prazo final digitação 1ª Vigência."}],
+      "2026-08-17":[{type:"saude",title:"Saúde: Abertura (2ª Vig)",desc:"Abertura do sistema (2ª Vigência)."}],
+      "2026-03-16":[{type:"edu",title:"Edu: Impressão (Fev/Mar)"}],
 
+      "2026-04-23":[{type:"edu",title:"Edu: Fechamento (Fev/Mar)"},{type:"sicon",title:"SICON: Recurso Mar/26",desc:"Prazo para registro de recursos no Sicon."},{type:"interrupt",title:"Interrupt: Limite Abr",desc:"Data limite para vigência em Maio."}],
+      "2026-05-18":[{type:"edu",title:"Edu: Impressão (Abr/Mai)"}],
+      "2026-05-29":[{type:"edu",title:"Edu: Registro (Abr/Mai)"}],
+      "2026-06-25":[{type:"edu",title:"Edu: Fechamento (Abr/Mai)"},{type:"sicon",title:"SICON: Recurso Mai/26"},{type:"interrupt",title:"Interrupt: Limite Jun"}],
+      "2026-07-15":[{type:"edu",title:"Edu: Impressão (Jun/Jul)"}],
+      "2026-07-31":[{type:"edu",title:"Edu: Registro (Jun/Jul)"},{type:"interrupt",title:"Interrupt: Limite Jul"}],
+      "2026-08-27":[{type:"edu",title:"Edu: Fechamento (Jun/Jul)"},{type:"sicon",title:"SICON: Recurso Jul/26"},{type:"interrupt",title:"Interrupt: Limite Ago"}],
+      "2026-09-14":[{type:"edu",title:"Edu: Impressão (Ago/Set)"}],
+      "2026-09-30":[{type:"edu",title:"Edu: Registro (Ago/Set)"},{type:"interrupt",title:"Interrupt: Limite Set"}],
+      "2026-10-29":[{type:"edu",title:"Edu: Fechamento (Ago/Set)"},{type:"sicon",title:"SICON: Recurso Set/26"},{type:"interrupt",title:"Interrupt: Limite Out"}],
+      "2026-11-16":[{type:"edu",title:"Edu: Impressão (Out/Nov)"}],
+      "2026-11-30":[{type:"edu",title:"Edu: Registro (Out/Nov)"},{type:"interrupt",title:"Interrupt: Limite Nov"}],
+      "2026-12-18":[{type:"edu",title:"Edu: Fechamento (Out/Nov)"}],
+      "2026-01-31":[{type:"interrupt",title:"Interrupt: Limite Jan"}],
+      "2026-02-28":[{type:"interrupt",title:"Interrupt: Limite Fev"}],
+      "2026-03-31":[{type:"edu",title:"Edu: Registro (Fev/Mar)"},{type:"interrupt",title:"Interrupt: Limite Mar"}],
+      "2026-05-31":[{type:"interrupt",title:"Interrupt: Limite Mai"}],
+      "2026-12-31":[{type:"saude",title:"Saúde: Final Coleta (2ª Vig)",desc:"Fim da coleta 2ª vigência."},{type:"interrupt",title:"Interrupt: Limite Dez"}]
+    },
+    paymentCalendar: {
+      // Ordem das 10 colunas: NIS final 1,2,3,4,5,6,7,8,9,0 — nessa ordem.
+      0:[19,20,21,22,23,26,27,28,29,30],
+      1:[12,13,18,19,20,23,24,25,26,27],
+      2:[18,19,20,23,24,25,26,27,30,31],
+      3:[16,17,20,22,23,24,27,28,29,30],
+      4:[18,19,20,21,22,25,26,27,28,29],
+      5:[17,18,19,22,23,24,25,26,29,30],
+      6:[20,21,22,23,24,27,28,29,30,31],
+      7:[18,19,20,21,24,25,26,27,28,31],
+      8:[17,18,21,22,23,24,25,28,29,30],
+      9:[19,20,21,22,23,26,27,28,29,30],
+      10:[16,17,18,19,23,24,25,26,27,30],
+      11:[10,11,14,15,16,17,18,21,22,23]
+    }
+  }
+  // 2027: { monthHighlights: {...}, officialEvents: {...}, paymentCalendar: {...} },
+};
+/* ================= FIM DA ÁREA "EDITAR TODO INÍCIO DE ANO" ================= */
 
+// Anos com dados cadastrados, do mais antigo ao mais novo — controla até
+// onde a navegação do calendário pode ir para trás/frente.
+const ANOS_DISPONIVEIS = Object.keys(CALENDARIOS_POR_ANO).map(Number).sort((a,b) => a - b);
+const ANO_MIN = ANOS_DISPONIVEIS[0];
+const ANO_MAX = ANOS_DISPONIVEIS[ANOS_DISPONIVEIS.length - 1];
+// ANO_VIGENTE agora é só o ano mostrado nos textos fixos da tela (título,
+// tela de senha, rodapé) — sempre o ano mais recente cadastrado acima. O
+// calendário em si já não fica travado só nele: qualquer ano cadastrado
+// pode ser visitado navegando pelos meses.
+const ANO_VIGENTE = ANO_MAX;
 
-// Aplica o ANO_VIGENTE nos textos da tela (título da aba, tela de senha,
-// cabeçalho e rodapé) — assim você só troca o número lá em cima e tudo
-// isso se atualiza sozinho, sem precisar caçar cada lugar que mostra o ano.
+// Devolve os três blocos de dados de um ano; se o ano pedido não tiver
+// sido cadastrado (não deveria acontecer dentro do intervalo ANO_MIN–ANO_MAX
+// quando os anos são cadastrados em sequência), devolve tudo vazio em vez
+// de quebrar a tela.
+function dadosDoAno(ano) {
+  return CALENDARIOS_POR_ANO[ano] || { monthHighlights:{}, officialEvents:{}, paymentCalendar:{} };
+}
+
+// Aplica o ANO_VIGENTE nos textos fixos da tela (título da aba, tela de
+// senha, cabeçalho e rodapé) — assim você só cadastra o ano novo lá em
+// cima e esses textos se atualizam sozinhos para o ano mais recente.
 document.title = `Anona — Acompanhamento de Condicionalidades ${ANO_VIGENTE}`;
 document.getElementById('lockYearSubtitle').textContent = `Acompanhamento de condicionalidades · ${ANO_VIGENTE}`;
 document.getElementById('headerYearSpan').textContent = ANO_VIGENTE;
 document.getElementById('footerYearText').textContent =
   `Datas conforme calendário oficial MDS/Caixa ${ANO_VIGENTE}. Este app é uma ferramenta independente de organização pessoal — não é canal oficial do governo.`;
-
-
-/* ======================================================================
-   DADOS DO CALENDÁRIO OFICIAL — TROQUE TODO INÍCIO DE ANO (passo 2)
-   Pegue os dados novos no calendário oficial MDS/Caixa (bolsa família) e
-   nos comunicados de Condicionalidades (saúde/educação/SICON) do ano
-   vigente, e substitua os três blocos abaixo (monthHighlights,
-   officialEvents e paymentCalendar) pelos equivalentes do novo ano.
-   Mantenha o mesmo formato (mesmas chaves 0–11 para meses, mesmo
-   formato de data "AAAA-MM-DD" e mesma ordem de 10 posições — dígito
-   final do NIS 1,2,3,4,5,6,7,8,9,0 — no paymentCalendar).
-   ====================================================================== */
-const monthHighlights = {
-  0:[{type:"saude",title:"Saúde: 1ª Vigência",desc:"Período de Coleta e Registro iniciado (Jan-Jun)."},{type:"interrupt",title:"Interrupção",desc:"Mês de aplicação dos efeitos de Interrupção Temporária."}],
-  1:[{type:"saude",title:"Saúde: 1ª Vigência",desc:"Período de Coleta em andamento."},{type:"edu",title:"Educação: Início de Ciclo",desc:"Acompanhamento da frequência escolar (Fev/Mar)."}],
-  2:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Out/Nov-25 e 2ª Vig Saúde-25)."},{type:"saude",title:"Saúde: 1ª Vigência",desc:"Registro no sistema aberto."}],
-  3:[{type:"edu",title:"Edu: Fev/Mar",desc:"Mês de encerramento do sistema de frequência."}],
-  4:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Fev/Mar-26)."}],
-  5:[{type:"saude",title:"Saúde: Final 1ª Vig",desc:"Mês final para coleta de dados da 1ª vigência."}],
-  6:[{type:"saude",title:"Saúde: 2ª Vigência",desc:"Início da coleta da 2ª vigência (Jul-Dez)."},{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Abr/Mai-26)."}],
-  7:[],
-  8:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos de não cumprimento (Ref: Jun/Jul-26 e 1ª Vig Saúde-26)."}],
-  9:[],
-  10:[{type:"sicon",title:"Mês de Repercussão",desc:"Efeitos (Ref: Ago/Set-26)."}],
-  11:[]
-};
-
-const officialEvents = {
-  "2026-01-01":[{type:"saude",title:"Saúde: Início Coleta (1ª Vig)",desc:"Início do registro (Jan a Jun/2026)."}],
-  "2026-02-17":[{type:"saude",title:"Saúde: Abertura Sistema (1ª Vig)",desc:"Abertura do sistema para registro."}],
-  "2026-06-30":[{type:"saude",title:"Saúde: Final Coleta (1ª Vig)",desc:"Último dia para coleta da 1ª vigência."}],
-  "2026-07-01":[{type:"saude",title:"Saúde: Início Coleta (2ª Vig)",desc:"Início do registro (Jul a Dez/2026)."}],
-  "2026-07-10":[{type:"saude",title:"Saúde: Fechamento (1ª Vig)",desc:"Prazo final digitação 1ª Vigência."}],
-  "2026-08-17":[{type:"saude",title:"Saúde: Abertura (2ª Vig)",desc:"Abertura do sistema (2ª Vigência)."}],
-  "2026-03-16":[{type:"edu",title:"Edu: Impressão (Fev/Mar)"}],
-
-  "2026-04-23":[{type:"edu",title:"Edu: Fechamento (Fev/Mar)"},{type:"sicon",title:"SICON: Recurso Mar/26",desc:"Prazo para registro de recursos no Sicon."},{type:"interrupt",title:"Interrupt: Limite Abr",desc:"Data limite para vigência em Maio."}],
-  "2026-05-18":[{type:"edu",title:"Edu: Impressão (Abr/Mai)"}],
-  "2026-05-29":[{type:"edu",title:"Edu: Registro (Abr/Mai)"}],
-  "2026-06-25":[{type:"edu",title:"Edu: Fechamento (Abr/Mai)"},{type:"sicon",title:"SICON: Recurso Mai/26"},{type:"interrupt",title:"Interrupt: Limite Jun"}],
-  "2026-07-15":[{type:"edu",title:"Edu: Impressão (Jun/Jul)"}],
-  "2026-07-31":[{type:"edu",title:"Edu: Registro (Jun/Jul)"},{type:"interrupt",title:"Interrupt: Limite Jul"}],
-  "2026-08-27":[{type:"edu",title:"Edu: Fechamento (Jun/Jul)"},{type:"sicon",title:"SICON: Recurso Jul/26"},{type:"interrupt",title:"Interrupt: Limite Ago"}],
-  "2026-09-14":[{type:"edu",title:"Edu: Impressão (Ago/Set)"}],
-  "2026-09-30":[{type:"edu",title:"Edu: Registro (Ago/Set)"},{type:"interrupt",title:"Interrupt: Limite Set"}],
-  "2026-10-29":[{type:"edu",title:"Edu: Fechamento (Ago/Set)"},{type:"sicon",title:"SICON: Recurso Set/26"},{type:"interrupt",title:"Interrupt: Limite Out"}],
-  "2026-11-16":[{type:"edu",title:"Edu: Impressão (Out/Nov)"}],
-  "2026-11-30":[{type:"edu",title:"Edu: Registro (Out/Nov)"},{type:"interrupt",title:"Interrupt: Limite Nov"}],
-  "2026-12-18":[{type:"edu",title:"Edu: Fechamento (Out/Nov)"}],
-  "2026-01-31":[{type:"interrupt",title:"Interrupt: Limite Jan"}],
-  "2026-02-28":[{type:"interrupt",title:"Interrupt: Limite Fev"}],
-  "2026-03-31":[{type:"edu",title:"Edu: Registro (Fev/Mar)"},{type:"interrupt",title:"Interrupt: Limite Mar"}],
-  "2026-05-31":[{type:"interrupt",title:"Interrupt: Limite Mai"}],
-  "2026-12-31":[{type:"saude",title:"Saúde: Final Coleta (2ª Vig)",desc:"Fim da coleta 2ª vigência."},{type:"interrupt",title:"Interrupt: Limite Dez"}]
-};
-
-const paymentCalendar = {
-  // Ordem das 10 colunas: NIS final 1,2,3,4,5,6,7,8,9,0 — nessa ordem.
-  0:[19,20,21,22,23,26,27,28,29,30],
-  1:[12,13,18,19,20,23,24,25,26,27],
-  2:[18,19,20,23,24,25,26,27,30,31],
-  3:[16,17,20,22,23,24,27,28,29,30],
-  4:[18,19,20,21,22,25,26,27,28,29],
-  5:[17,18,19,22,23,24,25,26,29,30],
-  6:[20,21,22,23,24,27,28,29,30,31],
-  7:[18,19,20,21,24,25,26,27,28,31],
-  8:[17,18,21,22,23,24,25,28,29,30],
-  9:[19,20,21,22,23,26,27,28,29,30],
-  10:[16,17,18,19,23,24,25,26,27,30],
-  11:[10,11,14,15,16,17,18,21,22,23]
-};
-/* ================= FIM DA ÁREA "EDITAR TODO INÍCIO DE ANO" ================= */
 
 const eventStyles = {
   saude:{dot:"bg-emerald-500",text:"text-emerald-700",border:"border-emerald-500",bg:"bg-emerald-50",badge:"bg-emerald-100 text-emerald-800"},
@@ -3848,15 +4033,19 @@ const eventStyles = {
   interrupt:{dot:"bg-purple-600",text:"text-purple-700",border:"border-purple-600",bg:"bg-purple-50",badge:"bg-purple-100 text-purple-800"}
 };
 
-// Abre sempre no dia correspondente à data atual do usuário.
-// Se a data atual estiver fora de ANO_VIGENTE (único ano com dados),
-// cai no limite mais próximo do ano (1º de janeiro ou 31 de dezembro).
+// Abre sempre no dia correspondente à data atual do usuário, se o ano
+// atual tiver dados cadastrados. Fora do intervalo ANO_MIN–ANO_MAX (ou
+// num "buraco" sem cadastro dentro dele), cai no limite mais próximo com
+// dados (1º de janeiro do ano mais antigo, ou 31 de dezembro do mais novo).
 function getInitialDate(){
   const today = new Date();
   const year = today.getFullYear();
-  if (year < ANO_VIGENTE) return new Date(ANO_VIGENTE,0,1);
-  if (year > ANO_VIGENTE) return new Date(ANO_VIGENTE,11,31);
-  return new Date(ANO_VIGENTE, today.getMonth(), today.getDate());
+  if (year < ANO_MIN || !CALENDARIOS_POR_ANO[year]) {
+    if (year > ANO_MAX) return new Date(ANO_MAX,11,31);
+    return new Date(ANO_MIN,0,1);
+  }
+  if (year > ANO_MAX) return new Date(ANO_MAX,11,31);
+  return new Date(year, today.getMonth(), today.getDate());
 }
 
 let currentMonth = getInitialDate();
@@ -3882,10 +4071,10 @@ function nisDigitIndex(){
   return n === 0 ? 9 : n - 1;
 }
 
-function paydayForMonth(monthIdx){
+function paydayForMonth(monthIdx, ano){
   const idx = nisDigitIndex();
   if (idx === null) return null;
-  const arr = paymentCalendar[monthIdx];
+  const arr = dadosDoAno(ano).paymentCalendar[monthIdx];
   return arr ? arr[idx] : null;
 }
 
@@ -3895,12 +4084,13 @@ function render(){
   grid.innerHTML = '';
   const monthIdx = currentMonth.getMonth();
   const year = currentMonth.getFullYear();
+  const dadosAno = dadosDoAno(year);
 
   document.getElementById('currentMonthLabel').innerText =
     new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(currentMonth);
 
-  const monthData = monthHighlights[monthIdx] || [];
-  const payday = paydayForMonth(monthIdx);
+  const monthData = dadosAno.monthHighlights[monthIdx] || [];
+  const payday = paydayForMonth(monthIdx, year);
   let summaryHtml = '';
   if (payday) {
     summaryHtml += `<div class="border-l-2 pl-3" style="border-color:var(--amarelo)">
@@ -3931,7 +4121,7 @@ function render(){
     const date = new Date(year,monthIdx,day);
     const dateKey = formatDate(date);
     const isSelected = formatDate(selectedDay) === dateKey;
-    const events = officialEvents[dateKey] || [];
+    const events = dadosAno.officialEvents[dateKey] || [];
     const noteObj = getNoteObj(notes, dateKey);
     const hasNote = !!(noteObj && noteObj.text);
     const isPayday = payday === day;
@@ -3985,9 +4175,10 @@ function render(){
 
 function updateDetails(){
   const key = formatDate(selectedDay);
-  const events = officialEvents[key] || [];
+  const ano = selectedDay.getFullYear();
+  const events = dadosDoAno(ano).officialEvents[key] || [];
   const monthIdx = selectedDay.getMonth();
-  const payday = paydayForMonth(monthIdx);
+  const payday = paydayForMonth(monthIdx, ano);
   const isPayday = payday === selectedDay.getDate();
   const notes = window.__getNotes ? window.__getNotes() : {};
   const noteObj = getNoteObj(notes, key);
@@ -4007,7 +4198,7 @@ function updateDetails(){
   html += events.map(e=>`
     <div class="p-3 rounded-xl border-l-4 ${eventStyles[e.type].border} ${eventStyles[e.type].bg}">
       <h4 class="text-xs font-black ${eventStyles[e.type].text} uppercase">${e.title}</h4>
-      <p class="text-[10px] text-slate-600 mt-1">${e.desc || `Prazo oficial do calendário ${ANO_VIGENTE}.`}</p>
+      <p class="text-[10px] text-slate-600 mt-1">${e.desc || `Prazo oficial do calendário ${ano}.`}</p>
     </div>`).join('');
   list.innerHTML = html || `<p class="text-slate-400 text-xs italic">Nenhum prazo específico neste dia.</p>`;
 
@@ -4019,12 +4210,15 @@ function updateDetails(){
 function changeMonth(offset){
   const newM = new Date(currentMonth);
   newM.setMonth(newM.getMonth()+offset);
-  if (newM.getFullYear() === ANO_VIGENTE) { currentMonth = newM; render(); }
+  const ano = newM.getFullYear();
+  if (ano >= ANO_MIN && ano <= ANO_MAX && CALENDARIOS_POR_ANO[ano]) { currentMonth = newM; render(); }
 }
 
 function updateNav(){
-  document.getElementById('btnPrev').disabled = currentMonth.getMonth() === 0;
-  document.getElementById('btnNext').disabled = currentMonth.getMonth() === 11;
+  const ano = currentMonth.getFullYear();
+  const mes = currentMonth.getMonth();
+  document.getElementById('btnPrev').disabled = (ano === ANO_MIN && mes === 0);
+  document.getElementById('btnNext').disabled = (ano === ANO_MAX && mes === 11);
 }
 
 async function saveNote(){
@@ -4069,9 +4263,15 @@ async function exportNotesPDF(){
     return;
   }
 
+  // Anos que aparecem nas anotações exportadas (podem ser vários agora
+  // que o calendário cobre mais de um ano) — usado só para o texto e o
+  // nome do arquivo do PDF ficarem corretos, sem fixar um ano só.
+  const anosNotas = [...new Set(keys.map(k => k.split('-')[0]))].sort();
+  const anoTextoNotas = anosNotas.length > 1 ? `${anosNotas[0]}–${anosNotas[anosNotas.length-1]}` : (anosNotas[0] || ANO_VIGENTE);
+
   const subtitleText = filterVal === 'all'
-    ? `Anona · ${ANO_VIGENTE} · Calendário & Notas`
-    : `Anona · ${ANO_VIGENTE} · Anotações de ${monthNames[parseInt(filterVal,10)]}`;
+    ? `Anona · ${anoTextoNotas} · Calendário & Notas`
+    : `Anona · ${anoTextoNotas} · Anotações de ${monthNames[parseInt(filterVal,10)]}`;
 
   const docPdf = new jsPDF({ unit:'pt', format:'a4' });
   const pageW = docPdf.internal.pageSize.getWidth();
@@ -4172,8 +4372,8 @@ async function exportNotesPDF(){
   }
 
   docPdf.save(filterVal === 'all'
-    ? `minhas-anotacoes-condicionalidades-${ANO_VIGENTE}.pdf`
-    : `minhas-anotacoes-${monthNames[parseInt(filterVal,10)].toLowerCase()}-${ANO_VIGENTE}.pdf`);
+    ? `minhas-anotacoes-condicionalidades-${anoTextoNotas}.pdf`
+    : `minhas-anotacoes-${monthNames[parseInt(filterVal,10)].toLowerCase()}-${anoTextoNotas}.pdf`);
 }
 
 document.getElementById('nisInput').addEventListener('input', (e) => {
