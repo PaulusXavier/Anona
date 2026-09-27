@@ -17,7 +17,15 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v18";
+const CACHE_NAME = "pbf-app-shell-v21";
+
+// Tempo máximo (ms) que a busca da página mais nova pode levar antes do
+// service worker desistir de esperar e mostrar a cópia guardada. Sem isso,
+// numa conexão muito lenta (não necessariamente offline) a pessoa fica
+// olhando pra tela em branco até o navegador desistir sozinho, em vez de
+// ver a cópia guardada quase na hora. A busca da versão nova continua
+// acontecendo em segundo plano e atualiza o cache se/quando terminar.
+const PAGE_NETWORK_TIMEOUT_MS = 4000;
 
 // Arquivos do próprio site que são ESSENCIAIS: sem eles o app não tem como
 // funcionar offline, então se algum faltar o install falha mesmo (são
@@ -133,17 +141,28 @@ self.addEventListener("fetch", (event) => {
   if (isPageRequest) {
     // NETWORK-FIRST: sempre tenta buscar a página mais nova primeiro. Isso
     // é o que faz o app se atualizar sozinho quando você publica uma
-    // mudança. Sem internet, cai para a cópia guardada.
-    event.respondWith(
-      fetch(req, { cache: "no-store" })
-        .then((response) => {
+    // mudança. Sem internet (ou numa conexão muito lenta), cai para a
+    // cópia guardada.
+    const cachedFallback = caches.match(req).then((cached) => cached || caches.match("./index.html"));
+    const networkFetch = fetch(req, { cache: "no-store" })
+      .then((response) => {
+        // Só guarda em cache respostas de verdade (200 OK). Uma resposta de
+        // erro (404/500, ex.: durante um deploy no GitHub Pages) NÃO
+        // substitui a cópia boa já guardada — senão, na próxima vez sem
+        // internet, a pessoa veria essa página de erro em vez do app.
+        if (response.ok) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          return response;
-        })
-        .catch(() =>
-          caches.match(req).then((cached) => cached || caches.match("./index.html"))
-        )
+        }
+        return response;
+      });
+    event.respondWith(
+      Promise.race([
+        networkFetch,
+        new Promise((resolve) => setTimeout(() => cachedFallback.then(resolve), PAGE_NETWORK_TIMEOUT_MS))
+      ])
+        .then((response) => (response && response.ok ? response : cachedFallback))
+        .catch(() => cachedFallback)
     );
     return;
   }
@@ -155,8 +174,15 @@ self.addEventListener("fetch", (event) => {
     caches.match(req).then((cached) => {
       const network = fetch(req, isSameOrigin ? {} : { mode: "no-cors" })
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          // Requisições de outra origem em modo "no-cors" sempre voltam
+          // "opacas" (não dá pra ler o status) — essas continuam sendo
+          // guardadas como antes. Já as do próprio site, só entram no cache
+          // se a resposta for realmente 200 OK, para não guardar por engano
+          // uma página de erro no lugar de um ícone/arquivo válido.
+          if (!isSameOrigin || response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          }
           return response;
         })
         .catch(() => cached);
