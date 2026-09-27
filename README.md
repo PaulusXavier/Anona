@@ -17,6 +17,7 @@ Não precisa de servidor: você hospeda no próprio GitHub (GitHub Pages) e o Fi
 index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
+anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas)
 icon-192.png                    -> ícone do app (ilustração própria, sem uso de marca de terceiros)
 icon-512.png                    -> ícone do app (versão maior)
 firestore.rules                 -> regras de segurança (cole no console do Firebase)
@@ -69,7 +70,7 @@ Pronto — o Firebase está configurado. Isso é 100% grátis para uso pessoal (
 
 ## 3. Publicar no GitHub Pages
 
-1. Crie um repositório no GitHub (pode ser público ou privado) e suba todos os arquivos deste projeto (`index.html`, `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`, `logo-bolsa-familia.png`, `firestore.rules`) soltos na raiz do repositório.
+1. Crie um repositório no GitHub (pode ser público ou privado) e suba todos os arquivos deste projeto (`index.html`, `manifest.json`, `sw.js`, `anona-mascot.js`, `icon-192.png`, `icon-512.png`, `firestore.rules`) soltos na raiz do repositório.
 2. No repositório, vá em **Settings > Pages**.
 3. Em "Source", escolha a branch `main` (ou `master`) e a pasta `/ (root)`.
 4. Salve. Depois de 1–2 minutos, o GitHub mostra o link do seu site, algo como:
@@ -132,11 +133,15 @@ Na barra lateral do app, novo bloco **"Repercussão de Condicionalidades"**:
 
 - Todo mês ímpar, quando o MDS mandar a planilha, clique em **"Enviar planilha (.xlsx)"** e selecione o arquivo.
 - O app tenta identificar sozinho o mês e o ano pelo nome do arquivo (ex: `Repercussão_Setembro_de_2026...`); se não conseguir, ele pergunta.
-- O arquivo fica guardado (sincronizado na nuvem, se você estiver logado — ou só neste aparelho, se não estiver) e aparece na lista, organizado por ano.
+- O arquivo fica guardado **só neste navegador/aparelho** (no `localStorage`) e aparece na lista, organizado por ano. **Diferente das anotações do calendário, as planilhas de Repercussão NÃO são sincronizadas na nuvem/entre aparelhos** — se você limpar os dados do navegador, trocar de aparelho ou reinstalar o app, elas se perdem. Guarde também o arquivo baixado (o app já baixa uma cópia automaticamente ao enviar) em outro lugar seguro.
 - A qualquer momento, clique no ícone de **download** para baixar o arquivo original de volta, ou no ícone de **lixeira** para apagá-lo.
 - Use o filtro **"Todos os anos"** para ver só os arquivos de um ano específico.
 
-**Limite:** por ser guardado no Firestore (plano gratuito), cada planilha precisa ter até ~900 KB. As planilhas de Repercussão normalmente ficam bem abaixo disso.
+**Limite:** por ficar guardado no `localStorage` do navegador, cada planilha enviada precisa ter até **5 MB**. As planilhas de Repercussão normalmente ficam bem abaixo disso.
+
+**Backup:** já que essas planilhas não têm nenhuma cópia de segurança automática, o bloco tem dois botões extras:
+- **"Baixar backup (.json)"** — baixa um arquivo único com todas as planilhas guardadas neste aparelho. Baixe esse arquivo de vez em quando e guarde num lugar seguro (pen drive, e-mail para você mesmo, nuvem pessoal).
+- **"Restaurar backup"** — envie de volta um `.json` gerado por esse mesmo botão (por exemplo, depois de limpar os dados do navegador ou trocar de aparelho). Ele só *adiciona* as planilhas que ainda não estão na lista; não apaga nem duplica o que já existe.
 
 ## 8.1 Divisão do Território Volante por técnico
 
