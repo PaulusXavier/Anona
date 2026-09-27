@@ -17,7 +17,7 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v17";
+const CACHE_NAME = "pbf-app-shell-v18";
 
 // Arquivos do próprio site que são ESSENCIAIS: sem eles o app não tem como
 // funcionar offline, então se algum faltar o install falha mesmo (são
@@ -38,7 +38,8 @@ const SHELL_FILES = [
 // imagem específica não aparece.
 const SHELL_IMAGES = [
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./apple-touch-icon.png"
 ];
 
 // Bibliotecas externas usadas pelo app — sem elas o app perde estilo,
