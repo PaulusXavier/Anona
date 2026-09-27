@@ -11,10 +11,22 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@0.469.0"></script>
-<script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<!-- Estas três bibliotecas só são usadas quando a pessoa gera um PDF/planilha
+     (Repercussão, Território Volante, Unificar Folhas, Exportar anotações) —
+     não são necessárias para mostrar o calendário. Juntas somam ~2 MB, então
+     "defer" evita que elas atrasem a primeira tela (o calendário aparece
+     mais rápido, especialmente em conexão de celular). Continuam sendo
+     baixadas em paralelo e ficam prontas bem antes de alguém conseguir
+     clicar em qualquer botão de gerar PDF/planilha; o service worker
+     (sw.js) também já baixa as três de antemão para funcionarem offline. -->
+<script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://www.gstatic.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -1055,14 +1067,15 @@
 
 <!-- FIREBASE -->
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import {
     getAuth, onAuthStateChanged, createUserWithEmailAndPassword,
     signInWithEmailAndPassword, signOut, sendPasswordResetEmail
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
-    getFirestore, doc, getDoc, setDoc, enableIndexedDbPersistence
-  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    getFirestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager,
+    doc, getDoc, setDoc
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   // Nota: só usamos doc/getDoc/setDoc (para as anotações, em users/{uid}).
   // As planilhas de Repercussão NÃO usam Firestore — ficam só no
   // localStorage do navegador (ver loadReports()/__handleReportUpload).
@@ -1081,8 +1094,20 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
-  enableIndexedDbPersistence(db).catch(() => {});
+  // Cache local persistente (IndexedDB) via API atual do Firestore — antes
+  // usava enableIndexedDbPersistence(), que foi descontinuada pelo próprio
+  // Firebase. Se por algum motivo não puder ser criado assim (ex.: mais de
+  // uma aba do app aberta ao mesmo tempo, navegador incompatível), cai para
+  // o Firestore padrão (ainda funciona, só sem cache offline em IndexedDB).
+  let db;
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentSingleTabManager() })
+    });
+  } catch (e) {
+    console.warn('Cache local do Firestore indisponível, usando padrão sem persistência em IndexedDB:', e);
+    db = getFirestore(app);
+  }
 
   let currentUser = null;
   let notes = {};
@@ -1258,6 +1283,16 @@
       successEl.textContent = 'Enviamos um link de redefinição de senha para o seu e-mail.';
       successEl.classList.remove('hidden');
     } catch (e) {
+      // 'auth/user-not-found' É TRATADO COMO SUCESSO DE PROPÓSITO: mostrar
+      // uma mensagem diferente para "e-mail sem conta" revelaria quais
+      // e-mails têm conta no Anona (enumeração de contas) só usando o
+      // "Esqueci minha senha". Outros erros (e-mail inválido, sem conexão,
+      // muitas tentativas) continuam mostrando o aviso de verdade.
+      if (e && e.code === 'auth/user-not-found') {
+        successEl.textContent = 'Se este e-mail tiver uma conta no Anona, enviamos um link de redefinição de senha para ele.';
+        successEl.classList.remove('hidden');
+        return;
+      }
       showAuthError(e);
     }
   };
@@ -1272,9 +1307,15 @@
       'auth/invalid-email': 'E-mail inválido.',
       'auth/weak-password': 'Senha muito fraca — use ao menos 8 caracteres.',
       'auth/email-already-in-use': 'Este e-mail já tem uma conta — tente Entrar.',
+      // 'auth/user-not-found' e 'auth/wrong-password' usam a MESMA mensagem
+      // genérica de 'auth/invalid-credential' de propósito: se a conta não
+      // existe e se a senha está errada mostrassem mensagens diferentes,
+      // dava para descobrir quais e-mails têm conta no Anona só tentando
+      // entrar com eles (enumeração de contas) — o app não revela essa
+      // diferença.
       'auth/invalid-credential': 'E-mail ou senha incorretos.',
-      'auth/user-not-found': 'Conta não encontrada — tente Criar conta.',
-      'auth/wrong-password': 'Senha incorreta.',
+      'auth/user-not-found': 'E-mail ou senha incorretos.',
+      'auth/wrong-password': 'E-mail ou senha incorretos.',
       'auth/too-many-requests': 'Muitas tentativas seguidas. Aguarde um pouco e tente de novo.',
       'auth/network-request-failed': 'Falha de conexão. Confira sua internet e tente de novo.',
       'auth/missing-password': 'Digite sua senha.'
@@ -4322,7 +4363,13 @@ function render(){
   const daysInMonth = new Date(year,monthIdx+1,0).getDate();
   const notes = window.__getNotes ? window.__getNotes() : {};
 
-  for (let i=0;i<firstDay;i++) grid.innerHTML += `<div class="day-cell empty"></div>`;
+  const emptyCellsFrag = document.createDocumentFragment();
+  for (let i=0;i<firstDay;i++) {
+    const emptyCell = document.createElement('div');
+    emptyCell.className = 'day-cell empty';
+    emptyCellsFrag.appendChild(emptyCell);
+  }
+  grid.appendChild(emptyCellsFrag);
 
   for (let day=1; day<=daysInMonth; day++){
     const date = new Date(year,monthIdx,day);
@@ -4448,6 +4495,14 @@ async function saveNote(){
 }
 
 async function exportNotesPDF(){
+  // A biblioteca de PDF carrega em paralelo com o resto da página (ver
+  // comentário no <head>) para não atrasar a primeira tela; nos raríssimos
+  // casos de conexão muito lenta em que a pessoa clique aqui antes dela
+  // terminar de carregar, mostramos um aviso claro em vez de travar.
+  if (!window.jspdf) {
+    alert('A biblioteca de PDF ainda está carregando — aguarde um instante e tente novamente.');
+    return;
+  }
   const { jsPDF } = window.jspdf;
   const notes = window.__getNotes ? window.__getNotes() : {};
   const filterVal = document.getElementById('pdfMonthFilter').value; // "all" ou "0".."11"
