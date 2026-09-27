@@ -195,20 +195,27 @@ Na barra lateral, bloco **"Unificar Folhas de Família — Abrigos (Operação A
 
 ## 10. Atualização anual (todo início de ano)
 
-O app foi organizado para essa atualização ser rápida. Tudo o que muda de ano para ano fica junto, no topo do segundo bloco de código (`<!-- APP -->`) dentro do `index.html`. Abra o arquivo, procure por `ANO_VIGENTE` e siga os passos:
+O app agora guarda o calendário oficial de **todos os anos já cadastrados**, não só o mais recente — ou seja, quando o ano novo chegar, você **adiciona** os dados dele, sem apagar os anos anteriores. Assim, quem quiser conferir um prazo ou uma data de pagamento de um ano passado ainda consegue navegar até lá pelo calendário.
 
-1. **Troque o número do ano**
+Tudo o que muda de ano para ano fica junto, no topo do segundo bloco de código (`<!-- APP -->`) dentro do `index.html`, dentro da constante `CALENDARIOS_POR_ANO`. Abra o arquivo, procure por `CALENDARIOS_POR_ANO` e siga os passos:
+
+1. **Adicione uma nova chave com o ano novo**, dentro de `CALENDARIOS_POR_ANO` (procure o comentário `EDITAR TODO INÍCIO DE ANO`). Por exemplo, para cadastrar 2027 mantendo 2026:
    ```js
-   const ANO_VIGENTE = 2026;
+   const CALENDARIOS_POR_ANO = {
+     2026: { monthHighlights: {...}, officialEvents: {...}, paymentCalendar: {...} },
+     2027: { monthHighlights: {...}, officialEvents: {...}, paymentCalendar: {...} }
+   };
    ```
-   Troque `2026` pelo novo ano (ex: `2027`). Isso já atualiza sozinho: o título da aba, a tela de senha, o cabeçalho, o rodapé, o nome/título do PDF exportado e o limite de navegação do calendário (o app só deixa passear pelos meses do ano vigente).
+   **Não apague a chave do ano anterior** — é ela que mantém o calendário daquele ano acessível. Cadastre os anos em sequência, sem pular nenhum (2026, depois 2027, depois 2028...), porque é isso que diz ao app até onde a navegação pode ir para trás e para frente.
 
-2. **Troque os três blocos de dados oficiais**, logo abaixo do `ANO_VIGENTE` (estão marcados com um comentário `EDITAR TODO INÍCIO DE ANO`). Pegue os dados novos no calendário oficial MDS/Caixa e nos comunicados de Condicionalidades do ano novo, e substitua:
+2. **Dentro da chave do ano novo**, preencha os três blocos de dados oficiais, no mesmo formato dos anos já cadastrados. Pegue os dados no calendário oficial MDS/Caixa e nos comunicados de Condicionalidades do ano novo:
    - **`monthHighlights`** — os destaques de cada mês (saúde, educação, SICON, interrupção) que aparecem no resumo do mês.
    - **`officialEvents`** — os prazos específicos por data (formato `"AAAA-MM-DD"`), de saúde/educação/SICON/interrupção.
    - **`paymentCalendar`** — as datas de pagamento por final do NIS. Cada mês (0=Janeiro a 11=Dezembro) tem uma lista de **10 números**, na ordem: NIS final **1, 2, 3, 4, 5, 6, 7, 8, 9, 0** — nessa ordem exata.
 
-   Dica: é mais fácil apagar o conteúdo de dentro das chaves `{ }` de cada um desses três blocos e colar o novo, mantendo o mesmo formato de quem já está lá.
+   Dica: copie a chave do ano anterior inteira (com as chaves `{ }` e tudo), cole logo abaixo como uma nova entrada com o ano novo, e só troque os valores de dentro.
+
+   O ano mais recente cadastrado em `CALENDARIOS_POR_ANO` vira automaticamente o "ano vigente" do app: título da aba, tela de senha, cabeçalho e rodapé passam a mostrar esse ano sozinhos, sem precisar trocar nada a mais.
 
 3. **Confira se os valores dos benefícios mudaram** (seção "Valores" na barra lateral, perto da linha 175 do `index.html`): o mínimo garantido (hoje R$ 600), o Benefício Primeira Infância (hoje + R$ 150) e o Benefício Variável Familiar (hoje + R$ 50). Se o governo reajustar esses valores, edite o texto diretamente ali.
 
