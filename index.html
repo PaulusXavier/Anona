@@ -547,7 +547,7 @@
       <div class="lg:border-l lg:pl-10" style="border-color:var(--line)">
       <div class="tool-step" data-step="4">
         <h3><i data-lucide="file-text" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatório Individual</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros, um gráfico da quantidade de efeitos e uma rota de visita sugerida.</p>
+        <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros, um gráfico da quantidade de efeitos e uma rota de visita sugerida. Se a planilha já vier <strong>dividida por técnico</strong> (uma aba por pessoa, como a gerada em "Divisão por técnico" do Território Volante), o app gera automaticamente um PDF separado para cada um.</p>
 
         <div class="rounded-xl px-3 py-2.5 mb-3" style="background:var(--line-soft)">
           <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer">
@@ -636,14 +636,9 @@
         <p id="abrigoStatusGeral" class="text-[11px] font-semibold text-slate-500 mb-3">0/60 arquivos · 0,0 MB de 80 MB</p>
 
         <div class="mb-3">
-          <label class="text-[11px] font-bold text-slate-600 block mb-1">Mês de repercussão (cronograma 2026)</label>
+          <label id="abrigoMesRepercussaoLabel" class="text-[11px] font-bold text-slate-600 block mb-1">Mês de repercussão</label>
           <select id="abrigoMesRepercussao" class="w-full text-xs border rounded-lg px-2 py-1.5" style="border-color:var(--line)">
             <option value="">Selecione o mês de repercussão…</option>
-            <option value="0">Março/2026</option>
-            <option value="1">Maio/2026</option>
-            <option value="2">Julho/2026</option>
-            <option value="3">Setembro/2026</option>
-            <option value="4">Novembro/2026</option>
           </select>
         </div>
 
@@ -1009,11 +1004,11 @@
   </div>
 </section>
 
-<!-- CRONOGRAMA DE REPERCUSSÃO 2026 — datas de referência e prazo de recurso por mês de repercussão -->
+<!-- CRONOGRAMA DE REPERCUSSÃO — datas de referência e prazo de recurso por mês de repercussão; preenchido por JS a partir de CRONOGRAMAS_REPERCUSSAO_POR_ANO (ano mais recente cadastrado) -->
 <section class="max-w-7xl mx-auto px-4 pb-8">
   <div class="panel-tool p-5">
     <h2 class="eyebrow mb-3">
-      <span class="chip"><i data-lucide="calendar-clock" class="w-4 h-4" style="color:var(--azul)"></i></span> Cronograma de Repercussão 2026
+      <span class="chip"><i data-lucide="calendar-clock" class="w-4 h-4" style="color:var(--azul)"></i></span> <span id="cronogramaRepercussaoTitulo">Cronograma de Repercussão</span>
     </h2>
     <div class="overflow-x-auto">
       <table class="w-full text-xs text-left border-collapse">
@@ -1025,38 +1020,7 @@
             <th class="py-2 pr-3 font-bold">Data limite recurso</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr>
-            <td class="py-2 pr-3 font-bold text-slate-700">Março</td>
-            <td class="py-2 pr-3 text-slate-600">Out/Nov-25</td>
-            <td class="py-2 pr-3 text-slate-600">2º Semestre-25</td>
-            <td class="py-2 pr-3 font-bold" style="color:var(--amarelo-text)">23/04/26</td>
-          </tr>
-          <tr>
-            <td class="py-2 pr-3 font-bold text-slate-700">Maio</td>
-            <td class="py-2 pr-3 text-slate-600">Fev/Mar-26</td>
-            <td class="py-2 pr-3 text-slate-400">-</td>
-            <td class="py-2 pr-3 font-bold" style="color:var(--amarelo-text)">25/06/26</td>
-          </tr>
-          <tr>
-            <td class="py-2 pr-3 font-bold text-slate-700">Julho</td>
-            <td class="py-2 pr-3 text-slate-600">Abr/Mai-26</td>
-            <td class="py-2 pr-3 text-slate-400">-</td>
-            <td class="py-2 pr-3 font-bold" style="color:var(--amarelo-text)">27/08/26</td>
-          </tr>
-          <tr>
-            <td class="py-2 pr-3 font-bold text-slate-700">Setembro</td>
-            <td class="py-2 pr-3 text-slate-600">Jun/Jul-26</td>
-            <td class="py-2 pr-3 text-slate-600">1º Semestre-26</td>
-            <td class="py-2 pr-3 font-bold" style="color:var(--amarelo-text)">29/10/26</td>
-          </tr>
-          <tr>
-            <td class="py-2 pr-3 font-bold text-slate-700">Novembro</td>
-            <td class="py-2 pr-3 text-slate-600">Ago/Set-26</td>
-            <td class="py-2 pr-3 text-slate-400">-</td>
-            <td class="py-2 pr-3 font-bold" style="color:var(--amarelo-text)">31/01/27</td>
-          </tr>
-        </tbody>
+        <tbody id="cronogramaRepercussaoTbody" class="divide-y divide-slate-100"></tbody>
       </table>
     </div>
     <p class="text-[10px] text-slate-400 mt-3 italic">Fonte: MDS. Prazos de recurso no Sicon referentes a cada mês de repercussão de condicionalidades.</p>
@@ -2984,18 +2948,80 @@
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
       if (!window.jspdf) throw new Error('Biblioteca de PDF não carregada.');
       const base64 = await fileToBase64(file);
-      const dados = relatorioIndividualExtrairDados(base64);
-      if (!dados) throw new Error('Não encontrei a coluna "Efeito" em nenhuma aba desta planilha.');
-      const { usouIA, avisos } = await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey);
-      input.value = '';
-      if (usarIA && avisos && avisos.length) {
-        alert(
-          (usouIA
+      const wb = XLSX.read(bytesFromBase64(base64), {type:'array'});
+
+      // Verifica, aba por aba (ignorando abas de "resumo"), quais têm dados
+      // válidos (coluna "Efeito" detectável). Se houver 2 ou mais abas
+      // válidas, entende que a planilha já veio DIVIDIDA POR TÉCNICO (uma
+      // aba = uma pessoa, como a gerada em "Divisão por técnico" do
+      // Território Volante) e gera um PDF separado para cada uma — em vez
+      // de só um relatório combinado (comportamento antigo, que sempre
+      // saía no nome de uma única pessoa).
+      const nomesAbas = wb.SheetNames.filter(nome => !normalizeText(nome).startsWith('resumo'));
+      const abasValidas = nomesAbas
+        .map(nome => ({ nome, dados: relatorioIndividualExtrairDadosDoWorkbook(wb, [nome]) }))
+        .filter(item => item.dados && item.dados.rows.length);
+
+      if (!abasValidas.length) throw new Error('Não encontrei a coluna "Efeito" em nenhuma aba desta planilha.');
+
+      if (abasValidas.length >= 2) {
+        let gerados = 0;
+        const avisosGerais = [];
+        const falharam = []; // { nome, erro } — um técnico falhar não deve travar os outros
+        let usouIAAlguma = false;
+        for (let i = 0; i < abasValidas.length; i++) {
+          const { nome: nomeAba, dados } = abasValidas[i];
+          // O nome da aba vem como "Fulano - Formação"; separa nome e
+          // formação para exibir corretamente no cabeçalho do PDF.
+          const partes = nomeAba.split(' - ');
+          const nomeTecnico = partes[0].trim();
+          const formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : (dados.formacao || '');
+          if (labelTexto) labelTexto.textContent = `Gerando relatório ${i + 1} de ${abasValidas.length} (${nomeTecnico})…`;
+          try {
+            const { usouIA: usouIAEsta, avisos: avisosEsta } = await relatorioIndividualGerarPDF(
+              dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey, '', { nome: nomeTecnico, formacao }
+            );
+            if (usouIAEsta) usouIAAlguma = true;
+            if (avisosEsta && avisosEsta.length) avisosGerais.push(...avisosEsta.map(a => `${nomeTecnico}: ${a}`));
+            gerados++;
+          } catch (eTecnico) {
+            // Continua tentando os demais técnicos mesmo se um falhar — sem
+            // isso, um único problema (ex.: planilha com dado inesperado
+            // numa das abas) cancelava até os relatórios que já tinham dado
+            // certo e ainda nem tinham sido baixados.
+            console.error(`Falha ao gerar o relatório de ${nomeTecnico}:`, eTecnico);
+            falharam.push({ nome: nomeTecnico, erro: eTecnico && eTecnico.message ? eTecnico.message : 'erro desconhecido' });
+          }
+          await new Promise(r => setTimeout(r, 400));
+        }
+        input.value = '';
+        if (!gerados) throw new Error('Nenhum dos técnicos da planilha teve relatório gerado. ' + falharam.map(f => `${f.nome}: ${f.erro}`).join(' | '));
+        let msg = `${gerados} de ${abasValidas.length} relatório(s) individual(is) gerado(s) e baixado(s), um para cada técnico da planilha.`;
+        if (falharam.length) {
+          msg += `\n\nNão consegui gerar o relatório de: ${falharam.map(f => `${f.nome} (${f.erro})`).join(', ')}.`;
+        }
+        if (usarIA && avisosGerais.length) {
+          msg += '\n\n' + (usouIAAlguma
             ? 'A rota foi otimizada com o Gemini na maior parte, mas em pelo menos um bairro não deu certo, então usei a ordenação normal por proximidade nele:\n\n'
-            : 'Não consegui otimizar a rota com o Gemini agora, então o relatório foi gerado com a ordenação normal por proximidade (bairro/rua):\n\n') +
-          avisos.join('\n') +
-          '\n\nO PDF foi gerado normalmente.'
-        );
+            : 'Não consegui otimizar a rota com o Gemini agora, então os relatórios foram gerados com a ordenação normal por proximidade (bairro/rua):\n\n')
+            + avisosGerais.join('\n');
+        }
+        alert(msg);
+      } else {
+        // Só 1 aba válida: comportamento original — um único relatório
+        // combinado, sem nome de técnico no cabeçalho/arquivo.
+        const dados = abasValidas[0].dados;
+        const { usouIA, avisos } = await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey);
+        input.value = '';
+        if (usarIA && avisos && avisos.length) {
+          alert(
+            (usouIA
+              ? 'A rota foi otimizada com o Gemini na maior parte, mas em pelo menos um bairro não deu certo, então usei a ordenação normal por proximidade nele:\n\n'
+              : 'Não consegui otimizar a rota com o Gemini agora, então o relatório foi gerado com a ordenação normal por proximidade (bairro/rua):\n\n') +
+            avisos.join('\n') +
+            '\n\nO PDF foi gerado normalmente.'
+          );
+        }
       }
     } catch (e) {
       console.error(e);
@@ -3321,18 +3347,63 @@
   // =====================================================================
   const ABRIGO_UNIFICAR_ABRIGOS = ['Rondon 1', 'Rondon 5', 'PRA', 'Tuaronoko'];
   const ABRIGO_UNIFICAR_EFEITOS = ['Famílias em Alerta', 'Famílias em Bloqueio', 'Famílias Suspensas'];
-  // Cronograma de Repercussão 2026: para cada mês de repercussão, os meses
-  // de referência de Educação e Saúde considerados na frequência e a data
-  // limite para o beneficiário entrar com recurso daquele mês. Usado na
-  // capa do relatório de cada abrigo. Para atualizar o cronograma em anos
-  // seguintes, edite só esta lista.
-  const CRONOGRAMA_REPERCUSSAO_2026 = [
-    { mes: 'Março',     educacaoRef: 'Outubro/Novembro de 2025', saudeRef: '2º Semestre de 2025', dataLimite: '23/04/2026' },
-    { mes: 'Maio',      educacaoRef: 'Fevereiro/Março de 2026',  saudeRef: '—',                    dataLimite: '25/06/2026' },
-    { mes: 'Julho',     educacaoRef: 'Abril/Maio de 2026',       saudeRef: '—',                    dataLimite: '27/08/2026' },
-    { mes: 'Setembro',  educacaoRef: 'Junho/Julho de 2026',      saudeRef: '1º Semestre de 2026',  dataLimite: '29/10/2026' },
-    { mes: 'Novembro',  educacaoRef: 'Agosto/Setembro de 2026',  saudeRef: '—',                    dataLimite: '31/01/2027' }
-  ];
+  // Cronograma de Repercussão POR ANO: para cada mês de repercussão, os
+  // meses de referência de Educação e Saúde considerados na frequência e a
+  // data limite para o beneficiário entrar com recurso daquele mês. Usado
+  // na capa do relatório de cada abrigo, no menu "Mês de repercussão" e na
+  // tabela "Cronograma de Repercussão" mostrada na tela.
+  //
+  // TODO INÍCIO DE ANO, ADICIONE (não substitua) uma nova chave aqui com o
+  // ano novo (ex.: 2027) e a lista de meses de repercussão daquele ano,
+  // copiando o formato do ano de 2026 já cadastrado — pegue os dados na
+  // portaria/comunicado de Condicionalidades do ano novo. O ano mais
+  // recente cadastrado aqui é usado automaticamente no menu, na tabela e
+  // nos relatórios (nada mais precisa ser editado à mão); anos anteriores
+  // continuam guardados aqui como histórico.
+  const CRONOGRAMAS_REPERCUSSAO_POR_ANO = {
+    2026: [
+      { mes: 'Março',     educacaoRef: 'Outubro/Novembro de 2025', saudeRef: '2º Semestre de 2025', dataLimite: '23/04/2026' },
+      { mes: 'Maio',      educacaoRef: 'Fevereiro/Março de 2026',  saudeRef: '—',                    dataLimite: '25/06/2026' },
+      { mes: 'Julho',     educacaoRef: 'Abril/Maio de 2026',       saudeRef: '—',                    dataLimite: '27/08/2026' },
+      { mes: 'Setembro',  educacaoRef: 'Junho/Julho de 2026',      saudeRef: '1º Semestre de 2026',  dataLimite: '29/10/2026' },
+      { mes: 'Novembro',  educacaoRef: 'Agosto/Setembro de 2026',  saudeRef: '—',                    dataLimite: '31/01/2027' }
+    ]
+  };
+  const ANOS_REPERCUSSAO_DISPONIVEIS = Object.keys(CRONOGRAMAS_REPERCUSSAO_POR_ANO).map(Number).sort((a,b) => a - b);
+  const ANO_REPERCUSSAO_VIGENTE = ANOS_REPERCUSSAO_DISPONIVEIS[ANOS_REPERCUSSAO_DISPONIVEIS.length - 1];
+  const CRONOGRAMA_REPERCUSSAO_ATUAL = CRONOGRAMAS_REPERCUSSAO_POR_ANO[ANO_REPERCUSSAO_VIGENTE];
+
+  // Preenche o menu "Mês de repercussão" e a tabela "Cronograma de
+  // Repercussão" da tela a partir do ano mais recente cadastrado acima —
+  // assim os dois só precisam do cronograma novo colado lá em cima, sem
+  // editar mais nada aqui embaixo quando o ano virar.
+  (function preencherCronogramaRepercussaoUI() {
+    const select = document.getElementById('abrigoMesRepercussao');
+    if (select) {
+      CRONOGRAMA_REPERCUSSAO_ATUAL.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `${c.mes}/${ANO_REPERCUSSAO_VIGENTE}`;
+        select.appendChild(opt);
+      });
+    }
+    const labelSelect = document.getElementById('abrigoMesRepercussaoLabel');
+    if (labelSelect) labelSelect.textContent = `Mês de repercussão (cronograma ${ANO_REPERCUSSAO_VIGENTE})`;
+
+    const tabelaTitulo = document.getElementById('cronogramaRepercussaoTitulo');
+    if (tabelaTitulo) tabelaTitulo.textContent = `Cronograma de Repercussão ${ANO_REPERCUSSAO_VIGENTE}`;
+    const tbody = document.getElementById('cronogramaRepercussaoTbody');
+    if (tbody) {
+      tbody.innerHTML = CRONOGRAMA_REPERCUSSAO_ATUAL.map(c => `
+        <tr>
+          <td class="py-2 pr-3 font-bold text-slate-700">${c.mes}</td>
+          <td class="py-2 pr-3 text-slate-600">${c.educacaoRef}</td>
+          <td class="py-2 pr-3 ${c.saudeRef === '—' ? 'text-slate-400' : 'text-slate-600'}">${c.saudeRef}</td>
+          <td class="py-2 pr-3 font-bold" style="color:var(--amarelo-text)">${c.dataLimite}</td>
+        </tr>
+      `).join('');
+    }
+  })();
   // Lista "achatada" com um item por combinação abrigo+efeito, na ordem em
   // que aparecem no HTML (índice = abrigoIndex * 3 + efeitoIndex).
   const ABRIGO_UNIFICAR_GRUPOS = [];
@@ -3441,10 +3512,10 @@
     const selectEl = document.getElementById('abrigoMesRepercussao');
     const mesSel = selectEl ? selectEl.value : '';
     if (mesSel === '') {
-      alert('Selecione o mês de repercussão (cronograma 2026) antes de gerar o relatório.');
+      alert(`Selecione o mês de repercussão (cronograma ${ANO_REPERCUSSAO_VIGENTE}) antes de gerar o relatório.`);
       return;
     }
-    const cronograma = CRONOGRAMA_REPERCUSSAO_2026[parseInt(mesSel, 10)];
+    const cronograma = CRONOGRAMA_REPERCUSSAO_ATUAL[parseInt(mesSel, 10)];
 
     const inicio = abrigoIdx * ABRIGO_UNIFICAR_EFEITOS.length;
     const contagens = ABRIGO_UNIFICAR_EFEITOS.map((_, efeitoIdx) => abrigoUnificarListas[inicio + efeitoIdx].length);
@@ -3475,7 +3546,7 @@
         { texto: `Relatório de Repercussão — Abrigo ${abrigo}`, tamanho: 16, bold: true, cor: azul },
         { texto: 'Informações para a equipe de proteção social do abrigo', tamanho: 10 },
         { texto: ' ', tamanho: 5 },
-        { texto: `Mês de repercussão: ${cronograma.mes}/2026`, tamanho: 11, bold: true },
+        { texto: `Mês de repercussão: ${cronograma.mes}/${ANO_REPERCUSSAO_VIGENTE}`, tamanho: 11, bold: true },
         { texto: `Frequência de Educação considerada (referência): ${cronograma.educacaoRef}`, tamanho: 10.5 },
         { texto: `Frequência de Saúde considerada (referência): ${cronograma.saudeRef}`, tamanho: 10.5 },
         { texto: `Data limite para recurso deste mês de referência: ${cronograma.dataLimite}`, tamanho: 11, bold: true, cor: vermelho },
