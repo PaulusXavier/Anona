@@ -11,16 +11,17 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/lucide@0.469.0"></script>
-<!-- Estas três bibliotecas só são usadas quando a pessoa gera um PDF/planilha
+<!-- Estas quatro bibliotecas só são usadas quando a pessoa gera um PDF/planilha
      (Repercussão, Território Volante, Unificar Folhas, Exportar anotações) —
      não são necessárias para mostrar o calendário. Juntas somam ~2 MB, então
      "defer" evita que elas atrasem a primeira tela (o calendário aparece
      mais rápido, especialmente em conexão de celular). Continuam sendo
      baixadas em paralelo e ficam prontas bem antes de alguém conseguir
      clicar em qualquer botão de gerar PDF/planilha; o service worker
-     (sw.js) também já baixa as três de antemão para funcionarem offline. -->
+     (sw.js) também já baixa as quatro de antemão para funcionarem offline. -->
 <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1814,6 +1815,7 @@
 
       let gerados = 0;
       const semRegistros = [];
+      const arquivosGerados = [];
       for (const nomeTecnico of tecnicos) {
         const dados = relatorioIndividualExtrairDadosDoWorkbook(wb, [nomeTecnico]);
         if (!dados || !dados.rows.length) { semRegistros.push(nomeTecnico); continue; }
@@ -1822,9 +1824,15 @@
         const partes = nomeTecnico.split(' - ');
         const nome = partes[0].trim();
         const formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : (dados.formacao || '');
-        await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome, formacao });
+        const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
+          dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome, formacao }, { retornarBytes: true }
+        );
+        arquivosGerados.push({ nomeArquivo, bytes });
         gerados++;
-        await new Promise(r => setTimeout(r, 400));
+      }
+      if (gerados) {
+        const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+        await baixarPdfsComoZip(arquivosGerados, `Relatorios Individuais - Equipe Volante - ${dataArquivo}.zip`);
       }
 
       if (!gerados) throw new Error('Nenhum dos três técnicos tinha registros com a coluna "Efeito" para gerar relatório.');
@@ -2564,7 +2572,7 @@
   }
 
 
-  async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo, tecnicoInfo) {
+  async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo, tecnicoInfo, opcoes) {
     const { jsPDF } = window.jspdf;
     const idxEfeito = headers.findIndex(h => normalizeText(h) === 'efeito');
     const idxNome = headers.findIndex(h => normalizeText(h).includes('nome') && normalizeText(h).includes('responsavel'));
@@ -2582,7 +2590,15 @@
       if (ia < 0) return 1; if (ib < 0) return -1; return ia - ib;
     });
     const totalRegistros = dataRows.length;
-    const totalFamilias = idxNome >= 0 ? new Set(dataRows.map(r => String(r[idxNome] || '').trim()).filter(Boolean)).size : totalRegistros;
+    // Conta famílias distintas pelo número já calculado na coluna "Família"
+    // (que identifica a família por NIS/CPF/nome do responsável, o mesmo
+    // critério usado para numerar a tabela) — não pelo nome do responsável
+    // sozinho, que pode repetir entre famílias diferentes ou variar em
+    // maiúsculas/acentos para a mesma família e deixar esse número
+    // inconsistente com a coluna "Família" que aparece no próprio relatório.
+    const totalFamilias = idxFamilia >= 0
+      ? new Set(dataRows.map(r => String(r[idxFamilia] ?? '').trim()).filter(v => v !== '')).size
+      : (idxNome >= 0 ? new Set(dataRows.map(r => String(r[idxNome] || '').trim()).filter(Boolean)).size : totalRegistros);
     mesTexto = mesTexto || '—';
 
     // Ordena as famílias pela melhor rota de visita (bloco por bairro, na
@@ -2749,16 +2765,28 @@
     // (a palavra não tem espaço no meio) e o texto acaba estourando por
     // cima da coluna vizinha — foi exatamente o defeito visto no relatório
     // (NIS colado no CPF, nome colado no endereço, etc.).
+    // Palavras ÚNICAS de cada coluna — independem do tamanho da fonte, então
+    // são levantadas uma única vez aqui embaixo. Em planilhas grandes o
+    // mesmo valor se repete em muitas linhas (ex.: "Bloqueio", códigos de
+    // motivo, nomes de bairro): medir cada palavra distinta uma vez só, em
+    // vez de uma vez por linha onde ela aparece, evita remedir o mesmo
+    // texto centenas de vezes sem mudar o resultado (o maior valor entre as
+    // palavras únicas é sempre igual ao maior valor entre todas as linhas).
+    const palavrasUnicasPorColuna = headers.map((_, i) => {
+      const vistas = new Set();
+      dataRows.forEach(r => {
+        String(r[i] ?? '').split(/\s+/).forEach(palavra => { if (palavra) vistas.add(palavra); });
+      });
+      return [...vistas];
+    });
+
     function calcularMinWordWidths(tamanhoFonte) {
       docPdf.setFont('helvetica','bold'); docPdf.setFontSize(tamanhoFonte);
-      return headers.map((_, i) => {
+      return palavrasUnicasPorColuna.map(palavras => {
         let maior = 0;
-        dataRows.forEach(r => {
-          String(r[i] ?? '').split(/\s+/).forEach(palavra => {
-            if (!palavra) return;
-            const w = docPdf.getTextWidth(palavra);
-            if (w > maior) maior = w;
-          });
+        palavras.forEach(palavra => {
+          const w = docPdf.getTextWidth(palavra);
+          if (w > maior) maior = w;
         });
         return Math.max(minColW, maior + cellPad*2 + gutter + 2);
       });
@@ -2800,10 +2828,27 @@
     // abaixo do mínimo necessário, pois foi isso que causou o texto de uma
     // coluna invadir a coluna vizinha no relatório anterior. Vai reduzindo
     // em passos pequenos até caber, ou até bater no tamanho mínimo legível.
+    // A largura de um texto no PDF é proporcional ao tamanho da fonte —
+    // então, em vez de ir reduzindo de 0,2 em 0,2 pt e refazendo a varredura
+    // de TODAS as linhas/colunas a cada passo (lento em planilhas grandes),
+    // calcula uma vez no tamanho inicial e, se não couber, já estima
+    // diretamente o tamanho de fonte necessário por regra de três. Só
+    // recalcula de novo (no tamanho estimado) para confirmar, e o laço
+    // abaixo — que antes fazia todo o trabalho — vira só uma rede de
+    // segurança para arredondamentos.
+    const fontDataInicial = fontData;
     let minWordWidths = calcularMinWordWidths(fontData);
-    while (minWordWidths.reduce((a,b)=>a+b,0) > usableWidth && fontData > FONT_DATA_MIN) {
+    let somaMinima = minWordWidths.reduce((a,b)=>a+b,0);
+    if (somaMinima > usableWidth && fontData > FONT_DATA_MIN) {
+      const escala = usableWidth / somaMinima;
+      fontData = Math.max(FONT_DATA_MIN, Math.floor((fontDataInicial * escala) / 0.2) * 0.2);
+      minWordWidths = calcularMinWordWidths(fontData);
+      somaMinima = minWordWidths.reduce((a,b)=>a+b,0);
+    }
+    while (somaMinima > usableWidth && fontData > FONT_DATA_MIN) {
       fontData = Math.max(FONT_DATA_MIN, +(fontData - 0.2).toFixed(2));
       minWordWidths = calcularMinWordWidths(fontData);
+      somaMinima = minWordWidths.reduce((a,b)=>a+b,0);
     }
     // fonte do cabeçalho e altura de linha acompanham a redução, mantendo a
     // mesma proporção que tinham no tamanho original
@@ -2943,8 +2988,44 @@
 
     const sufixoTecnico = (tecnicoInfo && tecnicoInfo.nome) ? ` - ${tecnicoInfo.nome}` : '';
     const nomeArquivo = `Relatorio Repercussao Individual${sufixoTecnico} - ${mesTexto.replace(/\//g,'-')}.pdf`;
+    // Quando quem chamou pede os bytes (opcoes.retornarBytes) — usado para
+    // juntar vários relatórios num único ZIP em vez de disparar um download
+    // por técnico — devolve o PDF pronto sem baixar sozinho. Sem essa opção,
+    // mantém o comportamento de sempre: baixa este PDF na hora.
+    if (opcoes && opcoes.retornarBytes) {
+      return { usouIA, avisos, nomeArquivo, bytes: docPdf.output('arraybuffer') };
+    }
     docPdf.save(nomeArquivo);
     return { usouIA, avisos };
+  }
+
+  // Junta vários PDFs já gerados (bytes em memória) num único arquivo .zip
+  // e baixa esse ZIP de uma vez — usado nos relatórios em lote (por
+  // técnico), no lugar de disparar um download por técnico. Isso elimina
+  // as pausas artificiais que existiam entre um download e outro (só
+  // necessárias para o navegador não bloquear vários downloads seguidos) e
+  // entrega tudo num único arquivo, mais fácil de encontrar e compartilhar.
+  async function baixarPdfsComoZip(arquivos, nomeZip) {
+    if (!window.JSZip) throw new Error('Biblioteca de ZIP não carregada. Verifique sua internet e tente novamente.');
+    const zip = new JSZip();
+    const usados = new Set();
+    arquivos.forEach(({ nomeArquivo, bytes }) => {
+      // Evita dois arquivos com o mesmo nome dentro do ZIP (ex.: dois
+      // técnicos com nomes que geram o mesmo nome de arquivo).
+      let nome = nomeArquivo, n = 2;
+      while (usados.has(nome)) {
+        nome = nomeArquivo.replace(/\.pdf$/i, ` (${n++}).pdf`);
+      }
+      usados.add(nome);
+      zip.file(nome, bytes);
+    });
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nomeZip;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
   window.__handleRelatorioIndividualUpload = async (input) => {
@@ -3005,6 +3086,7 @@
         const avisosGerais = [];
         const falharam = []; // { nome, erro } — um técnico falhar não deve travar os outros
         let usouIAAlguma = false;
+        const arquivosGerados = [];
         for (let i = 0; i < abasValidas.length; i++) {
           const { nome: nomeAba, dados } = abasValidas[i];
           // O nome da aba vem como "Fulano - Formação"; separa nome e
@@ -3014,9 +3096,10 @@
           const formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : (dados.formacao || '');
           if (labelTexto) labelTexto.textContent = `Gerando relatório ${i + 1} de ${abasValidas.length} (${nomeTecnico})…`;
           try {
-            const { usouIA: usouIAEsta, avisos: avisosEsta } = await relatorioIndividualGerarPDF(
-              dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey, '', { nome: nomeTecnico, formacao }
+            const { usouIA: usouIAEsta, avisos: avisosEsta, nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
+              dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey, '', { nome: nomeTecnico, formacao }, { retornarBytes: true }
             );
+            arquivosGerados.push({ nomeArquivo, bytes });
             if (usouIAEsta) usouIAAlguma = true;
             if (avisosEsta && avisosEsta.length) avisosGerais.push(...avisosEsta.map(a => `${nomeTecnico}: ${a}`));
             gerados++;
@@ -3024,15 +3107,16 @@
             // Continua tentando os demais técnicos mesmo se um falhar — sem
             // isso, um único problema (ex.: planilha com dado inesperado
             // numa das abas) cancelava até os relatórios que já tinham dado
-            // certo e ainda nem tinham sido baixados.
+            // certo.
             console.error(`Falha ao gerar o relatório de ${nomeTecnico}:`, eTecnico);
             falharam.push({ nome: nomeTecnico, erro: eTecnico && eTecnico.message ? eTecnico.message : 'erro desconhecido' });
           }
-          await new Promise(r => setTimeout(r, 400));
         }
         input.value = '';
         if (!gerados) throw new Error('Nenhum dos técnicos da planilha teve relatório gerado. ' + falharam.map(f => `${f.nome}: ${f.erro}`).join(' | '));
-        let msg = `${gerados} de ${abasValidas.length} relatório(s) individual(is) gerado(s) e baixado(s), um para cada técnico da planilha.`;
+        const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+        await baixarPdfsComoZip(arquivosGerados, `Relatorios Individuais - ${dataArquivo}.zip`);
+        let msg = `${gerados} de ${abasValidas.length} relatório(s) individual(is) gerado(s) e baixado(s) num único ZIP, um PDF para cada técnico da planilha.`;
         if (falharam.length) {
           msg += `\n\nNão consegui gerar o relatório de: ${falharam.map(f => `${f.nome} (${f.erro})`).join(', ')}.`;
         }
@@ -3336,14 +3420,21 @@
           { texto: UNIFICAR_BLOCOS[bloco].label, tamanho: 15, bold: true, cor: window.PDFLib.rgb(0x0B/255,0x2F/255,0x7A/255) },
           { texto: `${lista.length} família${lista.length === 1 ? '' : 's'}, na ordem de visita`, tamanho: 10.5 }
         ]);
-        for (const item of lista) {
-          let bytes, srcDoc;
+        // Lê e abre todos os PDFs deste bloco em PARALELO — a leitura e a
+        // interpretação de cada arquivo são independentes umas das outras,
+        // então não faz sentido esperar uma terminar para começar a
+        // próxima (isso é o que mais demora quando há muitos arquivos, até
+        // 30 por bloco). Só a cópia das páginas para o PDF final continua
+        // acontecendo uma de cada vez, na ordem certa da lista.
+        const srcDocs = await Promise.all(lista.map(async item => {
           try {
-            bytes = await item.file.arrayBuffer();
-            srcDoc = await PDFDocument.load(bytes);
+            const bytes = await item.file.arrayBuffer();
+            return await PDFDocument.load(bytes);
           } catch (e) {
             throw new Error(`Não consegui abrir o arquivo "${item.file.name}". Confirme se é um PDF válido e tente enviá-lo de novo.`);
           }
+        }));
+        for (const srcDoc of srcDocs) {
           const paginas = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
           paginas.forEach(p => outDoc.addPage(p));
         }
@@ -3662,14 +3753,18 @@
           { texto: `${lista.length} família${lista.length === 1 ? '' : 's'}`, tamanho: 10.5 }
         ]);
 
-        for (const item of lista) {
-          let bytes, srcDoc;
+        // Mesma otimização do PDF unificado da rota de visita: lê e abre
+        // todos os PDFs deste efeito em paralelo, e só copia as páginas
+        // para o PDF final uma de cada vez, na ordem certa.
+        const srcDocs = await Promise.all(lista.map(async item => {
           try {
-            bytes = await item.file.arrayBuffer();
-            srcDoc = await PDFDocument.load(bytes);
+            const bytes = await item.file.arrayBuffer();
+            return await PDFDocument.load(bytes);
           } catch (e) {
             throw new Error(`Não consegui abrir o arquivo "${item.file.name}" (${abrigo} · ${efeito}). Confirme se é um PDF válido e tente enviá-lo de novo.`);
           }
+        }));
+        for (const srcDoc of srcDocs) {
           const paginas = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
           paginas.forEach(p => outDoc.addPage(p));
         }
@@ -3979,14 +4074,19 @@
 
       let gerados = 0;
       const semRegistros = [];
+      const arquivosGerados = [];
       for (const nomeTecnico of tecnicos) {
         const dados = relatorioIndividualExtrairDadosDoWorkbook(wb, [nomeTecnico]);
         if (!dados || !dados.rows.length) { semRegistros.push(nomeTecnico); continue; }
-        await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome: nomeTecnico, formacao: dados.formacao });
+        const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
+          dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome: nomeTecnico, formacao: dados.formacao }, { retornarBytes: true }
+        );
+        arquivosGerados.push({ nomeArquivo, bytes });
         gerados++;
-        // Pequena pausa entre um PDF e outro para o navegador não bloquear
-        // downloads múltiplos disparados muito rápido em sequência.
-        await new Promise(r => setTimeout(r, 400));
+      }
+      if (gerados) {
+        const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
+        await baixarPdfsComoZip(arquivosGerados, `Relatorios Individuais por Tecnico - ${dataArquivo}.zip`);
       }
 
       if (!gerados) throw new Error('Nenhum técnico desta planilha tinha registros com a coluna "Efeito" para gerar relatório.');
