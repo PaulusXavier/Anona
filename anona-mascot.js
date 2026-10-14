@@ -9,6 +9,8 @@
 //   AnonaMascot.falar("mensagem", { duracao: 6000 })  -> mostra um balão de fala
 //   AnonaMascot.acenar()                               -> só faz o aceno, sem falar
 //   AnonaMascot.esconder() / AnonaMascot.mostrar()      -> some/aparece de vez
+//   AnonaMascot.aoClicar(fn)                           -> fn() roda no toque; se devolver true, a dica
+//                                                          aleatória não aparece (usado pelo Paulus)
 //
 // O mascote nunca aparece por cima de modais (confirmModalOverlay etc.) nem
 // atrapalha cliques no resto da página — só a área do próprio cartãozinho
@@ -29,6 +31,7 @@
   ];
 
   var LS_KEY = "anonaMascotVisto";
+  var gancho = null;
   var estaAcordado = false;
   var raiz, balao, cartao, textoBalao, escondeTimer;
 
@@ -98,6 +101,11 @@
     cartao.setAttribute("aria-label", "Anona, o mascote do app — toque para uma dica");
     cartao.innerHTML = SVG_CARTAO;
     cartao.addEventListener("click", function () {
+      if (gancho) {
+        var tratou = false;
+        try { tratou = gancho() === true; } catch (e) {}
+        if (tratou) return;
+      }
       var dica = DICAS[Math.floor(Math.random() * DICAS.length)];
       falar(dica);
     });
@@ -139,7 +147,9 @@
     raiz.classList.remove("anona-escondido");
   }
 
-  window.AnonaMascot = { falar: falar, acenar: acenar, esconder: esconder, mostrar: mostrar };
+  function aoClicar(fn) { gancho = typeof fn === "function" ? fn : null; }
+
+  window.AnonaMascot = { falar: falar, acenar: acenar, esconder: esconder, mostrar: mostrar, aoClicar: aoClicar };
 
   function iniciar() {
     montar();
