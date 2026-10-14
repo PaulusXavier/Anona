@@ -17,7 +17,7 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v22";
+const CACHE_NAME = "pbf-app-shell-v23";
 
 // Tempo máximo (ms) que a busca da página mais nova pode levar antes do
 // service worker desistir de esperar e mostrar a cópia guardada. Sem isso,
@@ -35,7 +35,9 @@ const SHELL_FILES = [
   "./index.html",
   "./manifest.json",
   "./styles.css",
-  "./anona-mascot.js"
+  "./anona-mascot.js",
+  "./paulus-anona.js",
+  "./paulus.v1.js"
 ];
 
 // Imagens do próprio site: importantes para a aparência do app (ícone da
@@ -44,7 +46,9 @@ const SHELL_FILES = [
 // às bibliotecas externas. Assim, se um ícone estiver com o nome errado ou
 // faltando no repositório, isso não derruba o app offline inteiro; só essa
 // imagem específica não aparece.
+// Base de normas do Paulus (~0,4 MB): melhor esforço, como as imagens. Sem ela, só a IA online responde normas.
 const SHELL_IMAGES = [
+  "./conhecimento.json",
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png"
