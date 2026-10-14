@@ -4220,6 +4220,8 @@
 
   async function runAuthUI(user) {
     currentUser = user;
+    // Avisa o assistente (paulus-anona.js): ao sair da conta, ele apaga a conversa e fecha o painel.
+    try { window.dispatchEvent(new CustomEvent('anona:auth', { detail: { logado: !!user } })); } catch (e) {}
     if (user) {
       const lockScreen = document.getElementById('lockScreen');
       const appContent = document.getElementById('appContent');
@@ -5038,6 +5040,8 @@ if ('serviceWorker' in navigator) {
      atrás de qualquer modal. Carregado por último e sem bloquear o resto
      da página (defer). -->
 <script src="anona-mascot.js" defer></script>
+<script src="paulus.v1.js" defer></script>
+<script src="paulus-anona.js" defer></script>
 
 </div><!-- fim #appContent -->
 </body>
