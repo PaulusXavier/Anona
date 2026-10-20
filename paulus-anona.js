@@ -8,7 +8,10 @@
 //  - A resposta é sempre inserida com textContent (nunca innerHTML).
 //  - Ao sair da conta, a conversa é apagada e o painel some.
 //
-// Carregue DEPOIS de paulus.v1.js e anona-mascot.js (os dois com defer, nesta ordem).
+// Carregue DEPOIS de paulus.v1.js, anona-mascot.js e anona-presenca.js (todos com defer, nesta ordem).
+//
+// Cálculo de presença: frases sobre faltas/dias letivos são resolvidas localmente por anona-presenca.js (nada vai
+// ao Worker). Só o botão "Explicar com a IA" envia ao Paulus um texto montado pelo app com NÚMEROS (sem nome).
 (function () {
   "use strict";
 
@@ -151,7 +154,7 @@
     campo.type = "text";
     campo.maxLength = 1200;
     campo.autocomplete = "off";
-    campo.placeholder = "Pergunte sobre o app ou o programa…";
+    campo.placeholder = "Pergunte ou diga as faltas: 3 faltas em março…";
     campo.setAttribute("aria-label", "Sua pergunta");
     enviar = el("button", null, "Enviar");
     enviar.id = "paulusAnonaEnviar";
@@ -199,7 +202,14 @@
     lista.textContent = "";
     var sk = window.Paulus && window.Paulus.skin("anona");
     mensagem("ele", sk ? sk.saudacao : "Oi! Eu sou o Anona.");
-    mostrarSugestoes(sk ? sk.sugestoes : []);
+    var sau = window.AnonaPresenca && window.AnonaPresenca.saudacaoCalculo();
+    if (sau) {
+      var bs = mensagem("ele", sau.texto);
+      barraLocal(bs, sau.acoes);
+      sugestoesEl.textContent = "";
+    } else {
+      mostrarSugestoes(["Calcular frequência: 3 faltas em março, 22 dias letivos"].concat(sk ? sk.sugestoes : []));
+    }
     status.textContent = "";
     conversando = false;
     enviar.disabled = false;
@@ -276,10 +286,44 @@
   }
 
   // ---------------------------------------------------------------- pergunta
-  function perguntar(texto) {
+  // Barra de ações das respostas locais do cálculo de presença (chips: simular, copiar, explicar com a IA, limpar).
+  function barraLocal(bolha, acoes) {
+    if (!acoes || !acoes.length) return;
+    var barra = el("div", "pa-barra");
+    acoes.forEach(function (a) {
+      var b = el("button", null, a.rotulo);
+      b.type = "button";
+      b.addEventListener("click", function () {
+        if (conversando) return;
+        if (a.tipo === "pergunta") perguntar(a.texto);
+        else if (a.tipo === "ia") perguntar(a.prompt, { ia: true, mostrar: a.mostrar });
+        else if (window.AnonaPresenca) window.AnonaPresenca.executar(a);
+      });
+      barra.appendChild(b);
+    });
+    bolha.parentNode.insertBefore(barra, bolha.nextSibling);
+    lista.scrollTop = lista.scrollHeight;
+  }
+
+  // opcoes.ia = true: pergunta montada pelo app só com números (vai ao Paulus); opcoes.mostrar = o que aparece na bolha.
+  function perguntar(texto, opcoes) {
     var P = window.Paulus;
+    opcoes = opcoes || {};
+    // Conta de presença: resolvida AQUI, no aparelho, sem IA e sem enviar nada (o painel só mostra).
+    if (!opcoes.ia && window.AnonaPresenca) {
+      var local = null;
+      try { local = window.AnonaPresenca.tratar(texto); } catch (e) { local = null; }
+      if (local) {
+        mensagem("eu", texto);
+        sugestoesEl.textContent = "";
+        var bl = mensagem("ele", local.texto);
+        barraLocal(bl, local.acoes);
+        if (local.copiarAgora && typeof window.cfCopiarResumo === "function") window.cfCopiarResumo();
+        return;
+      }
+    }
     ultimaPergunta = texto;
-    mensagem("eu", texto);
+    mensagem("eu", opcoes.mostrar || texto);
     sugestoesEl.textContent = "";
     var bolha = mensagem("ele", "…");
     conversando = true;
@@ -369,5 +413,12 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ligarMascote);
   else ligarMascote();
 
-  window.PaulusAnona = { abrir: abrir, fechar: fechar };
+  // Abre o painel e já faz a pergunta (o campo "Preencher falando com o Anona" usa isto para dúvidas que não são conta).
+  function abrirEPerguntar(texto, opcoes) {
+    abrir();
+    if (!painel || conversando) return;
+    perguntar(texto, opcoes);
+  }
+
+  window.PaulusAnona = { abrir: abrir, fechar: fechar, perguntar: abrirEPerguntar };
 })();
