@@ -5,6 +5,7 @@
 App simples (site estático) com:
 - Calendário oficial de pagamentos do Bolsa Família 2026 por final do NIS;
 - Prazos de saúde, educação, SICON e interrupção temporária;
+- **Calculadora de Faltas e Frequência Escolar**: calcula a frequência mês a mês, como no Sistema Presença (MEC), nos 5 períodos de acompanhamento (ligados aos meses de repercussão: março, maio, julho, setembro e novembro, com a data limite de recurso do Cronograma de Repercussão), ou por bimestre/ano letivo, conforme o calendário da rede municipal (Boa Vista) ou estadual (Roraima), com mínimo de 75% (6 a 18 anos) ou 60% (4 a 5 anos). Os calendários ficam em `CALENDARIOS_ESCOLARES_POR_ANO` no `index.html` — todo ano, **adicione** (não substitua) o ano novo;
 - Bloco de anotações por dia, **sincronizado entre todos os seus dispositivos** via Firebase (Google), de graça.
 
 Não precisa de servidor: você hospeda no próprio GitHub (GitHub Pages) e o Firebase cuida só do login e da sincronização das notas.
