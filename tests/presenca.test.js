@@ -21,3 +21,12 @@ for (const q of ['qual a frequência mínima do bolsa família?', 'o que é recu
   const x = f(q); assert.ok(!x.fatos.length && !x.margem && !x.simula && !x.situacao && !x.limpar, q);
 }
 console.log('ok');
+// formas naturais
+let q = interpretar('faltou 5 de 22 dias em março');
+assert.deepStrictEqual(q.fatos, [{ kind: 'faltas', n: 5, mes: 3 }, { kind: 'dias', n: 22, mes: 3 }]);
+q = interpretar('compareceu 18 de 22 dias');
+assert.deepStrictEqual(q.fatos.map(x => [x.kind, x.n]), [['faltas', 4], ['dias', 22]]);
+q = interpretar('18 presenças em 22 dias letivos');
+assert.deepStrictEqual(q.fatos.map(x => [x.kind, x.n]), [['presencas', 18], ['dias', 22]]);
+assert.ok(interpretar('desfazer').desfazer);
+console.log('ok 2');
