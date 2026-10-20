@@ -1047,8 +1047,10 @@
       <label class="block flex-1 text-[11px] font-bold text-slate-600">Preencher falando com o Anona
         <input id="cfAssistCampo" type="text" maxlength="300" placeholder="Ex.: 3 faltas em março, 22 dias letivos · quantas faltas ainda posso ter? · e se faltar mais 2?" aria-label="Descreva as faltas em uma frase" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
       </label>
+      <button type="button" id="cfAssistMic" hidden aria-label="Falar em vez de digitar" title="Falar em vez de digitar (o navegador pode enviar o áudio ao serviço de voz dele; não diga o nome do estudante)" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700">🎤 Falar</button>
       <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold text-white" style="background:var(--verde)">Calcular</button>
     </form>
+    <div id="cfAssistExemplos" class="flex flex-wrap gap-2 mb-3 -mt-2" aria-label="Exemplos"></div>
     <p id="cfAssistResp" role="status" aria-live="polite" class="hidden text-xs rounded-lg px-3 py-2 mb-3 whitespace-pre-wrap" style="background:#F2FBF5;border:1px solid #CDEBD8;color:#14532D"></p>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
@@ -5458,7 +5460,22 @@ function cfAplicar(cmd){
   cfCalcular();
   return true;
 }
+function cfSnapshot(){
+  const ids = ['cfModo','cfPeriodo','cfFaixa','cfDiasM0','cfFaltasM0','cfDiasM1','cfFaltasM1','cfDias','cfFaltas'];
+  const o = {}; ids.forEach(id => { o[id] = cfEl(id).value; }); o.__manual = __cfDiasManual; return o;
+}
+function cfRestaurar(o){
+  if (!o) return false;
+  cfEl('cfModo').value = o.cfModo; cfMudouModo();
+  cfEl('cfPeriodo').value = o.cfPeriodo; cfMudouPeriodo();
+  cfEl('cfFaixa').value = o.cfFaixa;
+  ['cfDiasM0','cfFaltasM0','cfDiasM1','cfFaltasM1','cfDias','cfFaltas'].forEach(id => { cfEl(id).value = o[id]; });
+  __cfDiasManual = !!o.__manual;
+  cfCalcular();
+  return true;
+}
 window.AnonaFrequencia = {
+  snapshot: cfSnapshot, restaurar: cfRestaurar,
   ler: cfLerEstado, aplicar: cfAplicar, avaliar: cfAvaliar, limpar: cfLimpar, resumo: () => __cfResumo,
   periodoDoMes: m => PRESENCA_PERIODOS.findIndex(p => p.meses.includes(m)),
   meses: CF_MESES, repercussao: i => cfRepercussaoDoPeriodo(i)
