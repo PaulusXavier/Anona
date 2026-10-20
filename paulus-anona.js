@@ -20,7 +20,7 @@
   var CONHECIMENTO = "conhecimento.json"; // pacote "geral" (leve), cópia local do Paulus
 
   var painel = null, lista = null, campo = null, enviar = null, status = null, sugestoesEl = null;
-  var conversando = false, aborto = null, iniciado = false, ultimaPergunta = "";
+  var conversando = false, aborto = null, iniciado = false, ultimaPergunta = "", ultimasOpcoes = null;
 
   function el(tag, cls, texto) {
     var e = document.createElement(tag);
@@ -259,7 +259,7 @@
         // tira a tentativa que falhou (pergunta + resposta) e repete
         var msgs = lista.querySelectorAll(".pa-msg");
         if (msgs.length >= 2) { lista.removeChild(msgs[msgs.length - 1]); lista.removeChild(msgs[msgs.length - 2]); }
-        perguntar(ultimaPergunta);
+        perguntar(ultimaPergunta, ultimasOpcoes);
       });
     } else {
       botao("Copiar", "Copiar resposta", function (b) {
@@ -323,6 +323,7 @@
       }
     }
     ultimaPergunta = texto;
+    ultimasOpcoes = opcoes;
     mensagem("eu", opcoes.mostrar || texto);
     sugestoesEl.textContent = "";
     var bolha = mensagem("ele", "…");
@@ -366,6 +367,16 @@
         }
       } else if (r.tipo !== "ia") {
         bolha.textContent = r.texto || "Não consegui responder agora.";
+      }
+      // Pedido da calculadora (só números): confere a resposta da IA ou, se ela falhou, mostra o resumo local.
+      if (opcoes.ia && window.AnonaPresenca) {
+        if (r.tipo === "ia") {
+          var fora = window.AnonaPresenca.percentuaisForaDoCalculo(texto, bolha.firstChild ? bolha.firstChild.textContent : "");
+          if (fora.length) mensagem("aviso", "Atenção: a IA citou " + fora.map(function (v) { return String(v).replace(".", ",") + "%"; }).join(", ") + ", que não veio do cálculo. Confie nos números da calculadora e confira a regra no normativo vigente.");
+        } else if (r.tipo === "erro" || r.tipo === "sem_resposta") {
+          var local2 = window.AnonaPresenca.explicacaoLocal();
+          if (local2) bolha.textContent = "A IA não respondeu agora. Este é o resumo feito aqui no aparelho:\n" + local2;
+        }
       }
       if (r.fontes && r.fontes.length) {
         var f = el("div", "pa-fontes", "Fontes: " + r.fontes.map(function (x) {
