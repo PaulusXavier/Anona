@@ -30,3 +30,9 @@ q = interpretar('18 presenças em 22 dias letivos');
 assert.deepStrictEqual(q.fatos.map(x => [x.kind, x.n]), [['presencas', 18], ['dias', 22]]);
 assert.ok(interpretar('desfazer').desfazer);
 console.log('ok 2');
+// verificação de percentuais da IA
+const { percentuaisForaDoCalculo } = require('../anona-presenca.js');
+assert.deepStrictEqual(percentuaisForaDoCalculo('Abril = 45,0% (mínimo de 75%)', 'Com 45% e mínimo de 75% é baixa.'), []);
+assert.deepStrictEqual(percentuaisForaDoCalculo('Abril = 45,0%', 'Há uns 62% de risco e 62% de novo.'), [62]);
+assert.deepStrictEqual(percentuaisForaDoCalculo('x', 'frequência integral (99%)'), []);
+console.log('ok 3');
