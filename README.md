@@ -304,7 +304,9 @@ Para ganhar tempo na **Calculadora de Faltas e Frequência Escolar**, em vez de 
   - `3 faltas em março, 22 dias letivos` · `faltou 4 dias em abril e 2 em maio` · `tem 8 anos` · `período abr/mai`
   - `quantas faltas ainda posso ter?` (limite de faltas por mês e margem que sobra)
   - `e se faltar mais 2 dias?` (simula sem alterar a calculadora)
-  - `copiar resumo` · `limpar` (próximo estudante)
+  - `faltou 5 de 22 dias` · `compareceu 18 de 22 dias` · `18 presenças em 22 dias letivos` (ele converte presenças em faltas)
+  - `desfazer` (volta ao estado anterior, até 15 passos) · `copiar resumo` · `limpar` (próximo estudante)
+- **Atalhos:** sob o campo há exemplos clicáveis e, nos navegadores que suportam, o botão **🎤 Falar** (ditado em português). Atenção: o navegador pode enviar o áudio ao serviço de voz dele; não diga o nome do estudante.
 - **A conta é feita no aparelho**, com a mesma regra da calculadora (nunca pela IA, que erra aritmética) e **sem enviar nada**.
 - **O mascote comenta** o resultado quando você mexe na calculadora (ex.: "Abril: 55,0% — abaixo do mínimo de 75%") e, ao tocar nele, o painel já abre com o resultado e atalhos.
 - **A IA do Paulus explica o resultado** (o que significa para o benefício, próximos passos) só quando você toca em **"Explicar com a IA"**. O que vai ao Worker é um texto montado pelo app **só com números** (presenças, dias letivos, percentuais). Nunca o nome do estudante, notas ou NIS. Perguntas que não são conta ("o que é recurso on-line?") seguem direto para o Paulus, com o filtro de dados pessoais de sempre.
