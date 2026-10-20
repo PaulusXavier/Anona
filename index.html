@@ -1035,6 +1035,117 @@
   </div>
 </section>
 
+<!-- CALCULADORA DE FALTAS — segue o método do Sistema Presença (MEC): apuração mensal, registro a cada 2 meses; dados em CALENDARIOS_ESCOLARES_POR_ANO -->
+<section class="max-w-7xl mx-auto px-4 pb-8">
+  <div class="panel-tool p-5">
+    <h2 class="eyebrow mb-3">
+      <span class="chip"><i data-lucide="calculator" class="w-4 h-4" style="color:var(--verde)"></i></span> Calculadora de Faltas e Frequência Escolar
+    </h2>
+    <p class="text-xs text-slate-500 mb-4">Funciona como o <strong>Sistema Presença</strong> (MEC): a frequência é apurada <strong>mês a mês</strong> — <em>dias frequentados × 100 ÷ dias letivos do mês</em> — e registrada a cada dois meses, em 5 períodos (Fev/Mar, Abr/Mai, Jun/Jul, Ago/Set, Out/Nov). Mês abaixo do mínimo = baixa frequência, que exige o código de motivo.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+      <label class="block text-[11px] font-bold text-slate-600">Ano letivo
+        <select id="cfAno" onchange="cfMudouAno()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white"></select>
+      </label>
+      <label class="block text-[11px] font-bold text-slate-600">Rede de ensino
+        <select id="cfRede" onchange="cfMudouRede()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white"></select>
+      </label>
+      <label class="block text-[11px] font-bold text-slate-600">Modalidade
+        <select id="cfModalidade" onchange="cfMudouModalidade()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white"></select>
+      </label>
+      <label class="block text-[11px] font-bold text-slate-600">Forma de cálculo
+        <select id="cfModo" onchange="cfMudouModo()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white">
+          <option value="presenca">Como no Sistema Presença (mês a mês)</option>
+          <option value="bimestre">Bimestre escolar ou ano letivo (total)</option>
+        </select>
+      </label>
+    </div>
+
+    <p id="cfAnoAviso" class="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+      <label class="block text-[11px] font-bold text-slate-600"><span id="cfPeriodoLabel">Período de acompanhamento</span>
+        <select id="cfPeriodo" onchange="cfMudouPeriodo()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white"></select>
+      </label>
+      <label id="cfRepercWrap" class="block text-[11px] font-bold text-slate-600">Ou escolha pelo mês de repercussão
+        <select id="cfRepercussao" onchange="cfMudouRepercussao()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white"></select>
+      </label>
+      <label class="block text-[11px] font-bold text-slate-600">Faixa etária do estudante (frequência mínima)
+        <select id="cfFaixa" onchange="cfCalcular()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white">
+          <option value="60">4 a 5 anos — mínimo 60%</option>
+          <option value="75">6 a 15 anos — mínimo 75%</option>
+          <option value="75j">16 e 17 anos — mínimo 75% (afeta só o BVA do adolescente)</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Modo Presença: um bloco por mês do período -->
+    <div id="cfBlocoPresenca" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <div class="rounded-xl border border-slate-200 p-3">
+        <p id="cfMesNome0" class="text-xs font-bold text-slate-700 mb-2"></p>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block text-[11px] font-bold text-slate-600">Dias letivos
+            <input id="cfDiasM0" type="number" min="1" step="1" inputmode="numeric" oninput="cfCalcular()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+          </label>
+          <label class="block text-[11px] font-bold text-slate-600">Faltas no mês
+            <input id="cfFaltasM0" type="number" min="0" step="1" inputmode="numeric" placeholder="0" oninput="cfCalcular()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+          </label>
+        </div>
+        <span id="cfDiasHintM0" class="block text-[10px] text-slate-500 mt-1"></span>
+      </div>
+      <div class="rounded-xl border border-slate-200 p-3">
+        <p id="cfMesNome1" class="text-xs font-bold text-slate-700 mb-2"></p>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block text-[11px] font-bold text-slate-600">Dias letivos
+            <input id="cfDiasM1" type="number" min="1" step="1" inputmode="numeric" oninput="cfCalcular()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+          </label>
+          <label class="block text-[11px] font-bold text-slate-600">Faltas no mês
+            <input id="cfFaltasM1" type="number" min="0" step="1" inputmode="numeric" placeholder="0" oninput="cfCalcular()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+          </label>
+        </div>
+        <span id="cfDiasHintM1" class="block text-[10px] text-slate-500 mt-1"></span>
+      </div>
+    </div>
+
+    <!-- Modo bimestre/ano: um único bloco -->
+    <div id="cfBlocoBimestre" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 hidden">
+      <label class="block text-[11px] font-bold text-slate-600">Dias letivos do período
+        <input id="cfDias" type="number" min="1" step="1" inputmode="numeric" oninput="cfDiasEditado()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+        <span id="cfDiasHint" class="block text-[10px] font-normal text-slate-500 mt-1"></span>
+      </label>
+      <label class="block text-[11px] font-bold text-slate-600">Número de faltas
+        <input id="cfFaltas" type="number" min="0" step="1" inputmode="numeric" placeholder="0" oninput="cfCalcular()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+      </label>
+    </div>
+
+    <div id="cfResultado" role="status" aria-live="polite" class="rounded-xl border border-slate-200 p-4 mb-3 text-xs text-slate-500">Informe as faltas para ver o resultado.</div>
+    <div class="flex flex-col sm:flex-row gap-2 mb-3">
+      <input id="cfNome" type="text" maxlength="80" autocomplete="off" placeholder="Estudante (opcional — vai só no resumo copiado, não é salvo)" aria-label="Nome do estudante (opcional, não é salvo)" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+      <button type="button" id="cfBtnCopiar" onclick="cfCopiarResumo()" class="px-4 py-2 rounded-xl text-xs font-bold text-white" style="background:var(--verde)">Copiar resumo</button>
+      <button type="button" onclick="cfLimpar()" class="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Limpar (outro estudante)</button>
+    </div>
+    <div id="cfRepercInfo" class="rounded-xl border p-3 mb-3 text-xs" style="border-color:var(--amarelo-soft);background:#FFF9EB;color:var(--amarelo-text)"></div>
+    <p id="cfAviso" class="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-3 hidden"></p>
+
+    <details class="rounded-lg border border-slate-200">
+      <summary class="text-[11px] font-bold text-slate-600 px-3 py-2 cursor-pointer select-none hover:bg-slate-50 rounded-lg">Ver calendário letivo desta rede (dias letivos)</summary>
+      <div class="px-3 pb-3 overflow-x-auto">
+        <table class="w-full text-xs text-left border-collapse mt-2">
+          <thead>
+            <tr id="cfTabelaHead" class="text-slate-500 uppercase text-[10px] tracking-wide border-b border-slate-200"></tr>
+          </thead>
+          <tbody id="cfTabela" class="divide-y divide-slate-100"></tbody>
+        </table>
+        <p id="cfFonte" class="text-[10px] text-slate-400 mt-2 italic"></p>
+      </div>
+    </details>
+
+    <div class="text-[10px] text-slate-500 mt-3 space-y-1">
+      <p><strong>Como o Presença trata os casos especiais:</strong> quem atingiu o mínimo pode ser registrado com frequência integral (99%); quem ficou abaixo precisa de <strong>código de motivo</strong> (veja a Legenda de Motivos abaixo). Greve, falta de professor, calamidade e reforma da escola são <em>situações coletivas</em> e não contam como baixa frequência. Em meses com recesso, se o recesso for ≥ 50% dos dias letivos do mês, a frequência é integral; se for menor, vale a fórmula do formulário — confira no formulário da escola (esta calculadora não aplica essa regra).</p>
+      <p class="italic">Estimativa para orientação: vale sempre o registro oficial da escola no Sistema Presença. Se a escola conta por aulas/horas, informe aulas/horas no lugar de dias.</p>
+    </div>
+  </div>
+</section>
+
 <!-- RECURSO ON-LINE E LEGENDA DE MOTIVOS — apoio para ler os relatórios de condicionalidades -->
 <section class="max-w-7xl mx-auto px-4 pb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div class="panel-tool p-5">
@@ -3499,6 +3610,9 @@
   const ANOS_REPERCUSSAO_DISPONIVEIS = Object.keys(CRONOGRAMAS_REPERCUSSAO_POR_ANO).map(Number).sort((a,b) => a - b);
   const ANO_REPERCUSSAO_VIGENTE = ANOS_REPERCUSSAO_DISPONIVEIS[ANOS_REPERCUSSAO_DISPONIVEIS.length - 1];
   const CRONOGRAMA_REPERCUSSAO_ATUAL = CRONOGRAMAS_REPERCUSSAO_POR_ANO[ANO_REPERCUSSAO_VIGENTE];
+  // Expõe o cronograma para a Calculadora de Faltas (script comum, que roda antes deste módulo).
+  window.CRONOGRAMAS_REPERCUSSAO_POR_ANO = CRONOGRAMAS_REPERCUSSAO_POR_ANO;
+  document.dispatchEvent(new Event('cronogramaRepercussaoPronto'));
 
   // Preenche o menu "Mês de repercussão" e a tabela "Cronograma de
   // Repercussão" da tela a partir do ano mais recente cadastrado acima —
@@ -4922,9 +5036,396 @@ function renderMotivos(){
 }
 window.renderMotivos = renderMotivos;
 
+
+/* ======================================================================
+   CALENDÁRIO ESCOLAR POR ANO (Calculadora de Faltas) — TODO INÍCIO DE ANO,
+   ADICIONE (não substitua) uma nova chave com o ano novo (ex.: 2027),
+   copiando o formato de 2026. Os anos anteriores continuam guardados.
+
+   Cada rede tem:
+   - modalidades.<regular|eja>.periodos: bimestres/semestres (nome, ini/fim
+     só para exibição, dias = dias letivos oficiais);
+   - mensal: dias letivos OFICIAIS de cada mês (chave = número do mês, 1–12),
+     usados no cálculo "como no Sistema Presença". Se o calendário da rede
+     não publicar dias letivos por mês, deixe mensal: null e preencha
+     mensalRef com uma ESTIMATIVA (dias úteis menos feriados/dias não
+     letivos) — ela só aparece como referência, o campo fica para a pessoa
+     digitar o número da escola.
+
+   Fontes de 2026: SEMEC Boa Vista (Diário Oficial do Município nº 6483,
+   28/11/2025) e SEED/RR (Portaria Normativa nº 43/SEED/GAB, Diário Oficial
+   do Estado nº 5066, 12/12/2025). Método de cálculo: Sistema Presença/MEC
+   (Guia de Registro de Frequência) e Portaria MDS nº 1.058/2025.
+   ====================================================================== */
+const CALENDARIOS_ESCOLARES_POR_ANO = {
+  2026: {
+    municipal: {
+      nome: "Municipal (Boa Vista)",
+      fonte: "SEMEC Boa Vista — Calendário Escolar 2026 (Diário Oficial do Município nº 6483, 28/11/2025).",
+      mensal: { 2:17, 3:22, 4:20, 5:20, 6:20, 7:12, 8:21, 9:21, 10:18, 11:19, 12:13 },
+      mensalRef: null,
+      modalidades: {
+        regular: { nome: "Ensino regular (Infantil e Fundamental)", periodos: [
+          { nome: "1º bimestre", ini: "02/02", fim: "16/04", dias: 50 },
+          { nome: "2º bimestre", ini: "17/04", fim: "03/07", dias: 52 },
+          { nome: "3º bimestre", ini: "21/07", fim: "30/09", dias: 51 },
+          { nome: "4º bimestre", ini: "01/10", fim: "18/12", dias: 50 },
+          { nome: "Ano letivo inteiro", ini: "02/02", fim: "18/12", dias: 203, total: true }
+        ]},
+        eja: { nome: "EJA", periodos: [
+          { nome: "2026.1 — 1º bimestre", ini: "02/02", fim: "16/04", dias: 50 },
+          { nome: "2026.1 — 2º bimestre", ini: "17/04", fim: "02/07", dias: 51 },
+          { nome: "2026.1 — semestre inteiro", ini: "02/02", fim: "02/07", dias: 101, total: true },
+          { nome: "2026.2 — 1º bimestre", ini: "21/07", fim: "30/09", dias: 51 },
+          { nome: "2026.2 — 2º bimestre", ini: "01/10", fim: "18/12", dias: 50 },
+          { nome: "2026.2 — semestre inteiro", ini: "21/07", fim: "18/12", dias: 101, total: true }
+        ]}
+      }
+    },
+    estadual: {
+      nome: "Estadual (Roraima)",
+      fonte: "SEED/RR — Calendário Escolar da Rede Pública Estadual 2026 (Portaria Normativa nº 43/SEED/GAB, Diário Oficial do Estado nº 5066, 12/12/2025).",
+      mensal: null,
+      mensalRef: { 2:17, 3:22, 4:20, 5:20, 6:20, 7:12, 8:21, 9:21, 10:18, 11:19 },
+      modalidades: {
+        regular: { nome: "Ensino regular", periodos: [
+          { nome: "1º bimestre", ini: "29/01", fim: "10/04", dias: 51,
+            aviso: "No calendário estadual, o 1º bimestre aparece com 51 dias letivos (quadro-resumo, 29/01 a 10/04) e também com 54 dias (evento de 08/04). Usamos 51; se a escola informar outro número, ajuste o campo “Dias letivos”." },
+          { nome: "2º bimestre", ini: "13/04", fim: "02/07", dias: 55 },
+          { nome: "3º bimestre", ini: "20/07", fim: "30/09", dias: 52 },
+          { nome: "4º bimestre", ini: "01/10", fim: "18/12", dias: 50 },
+          { nome: "Ano letivo inteiro", ini: "29/01", fim: "18/12", dias: 208, total: true }
+        ]},
+        eja: { nome: "EJA", periodos: [
+          { nome: "1º semestre", ini: "29/01", fim: "26/06", dias: 103 },
+          { nome: "2º semestre", ini: "20/07", fim: "18/12", dias: 102 }
+        ]}
+      }
+    }
+  }
+  // 2027: { municipal: {...}, estadual: {...} },
+};
+
+// Os 5 períodos de acompanhamento do Sistema Presença (Portaria MDS nº 1.058/2025, art. 8º).
+const PRESENCA_PERIODOS = [
+  { nome: "1º período — Fevereiro/Março", meses: [2, 3] },
+  { nome: "2º período — Abril/Maio",      meses: [4, 5] },
+  { nome: "3º período — Junho/Julho",     meses: [6, 7] },
+  { nome: "4º período — Agosto/Setembro", meses: [8, 9] },
+  { nome: "5º período — Outubro/Novembro", meses: [10, 11] }
+];
+// Em que mês de repercussão cada período do Presença entra (Portaria MDS nº 1.058/2025, art. 19:
+// efeitos aplicados em março, maio, julho, setembro e novembro). anoMais = 1 → março do ano seguinte.
+const REPERC_POR_PERIODO = [
+  { mes: "Maio",     anoMais: 0 },  // Fev/Mar
+  { mes: "Julho",    anoMais: 0 },  // Abr/Mai
+  { mes: "Setembro", anoMais: 0 },  // Jun/Jul
+  { mes: "Novembro", anoMais: 0 },  // Ago/Set
+  { mes: "Março",    anoMais: 1 }   // Out/Nov
+];
+const PRESENCA_CURTO = ["Fev/Mar", "Abr/Mai", "Jun/Jul", "Ago/Set", "Out/Nov"];
+const CF_MESES = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+let __cfDiasOficial = 0, __cfDiasManual = false, __cfResumo = '';
+const CF_FAIXAS = { '60': '4 a 5 anos', '75': '6 a 15 anos', '75j': '16 e 17 anos' };
+
+// Lembra só as escolhas de uso (rede, modalidade, forma de cálculo) neste aparelho; nada do estudante é salvo.
+let __cfPrefs = {};
+try { __cfPrefs = JSON.parse(localStorage.getItem('anona.cf.prefs') || '{}') || {}; } catch (e) { __cfPrefs = {}; }
+function cfSalvarPrefs(){
+  try { localStorage.setItem('anona.cf.prefs', JSON.stringify({ rede: cfEl('cfRede').value, modalidade: cfEl('cfModalidade').value, modo: cfEl('cfModo').value })); } catch (e) {}
+}
+
+function cfEl(id){ return document.getElementById(id); }
+function cfCalendarioAtual(){
+  const ano = cfEl('cfAno').value, rede = cfEl('cfRede').value;
+  return (CALENDARIOS_ESCOLARES_POR_ANO[ano] || {})[rede] || null;
+}
+function cfModalidadeAtual(){
+  const cal = cfCalendarioAtual();
+  return cal ? cal.modalidades[cfEl('cfModalidade').value] : null;
+}
+function cfModoPresenca(){ return cfEl('cfModo').value === 'presenca'; }
+function cfPeriodoAtual(){
+  const i = Number(cfEl('cfPeriodo').value);
+  if (cfModoPresenca()) return PRESENCA_PERIODOS[i] || null;
+  const mod = cfModalidadeAtual();
+  return mod ? mod.periodos[i] || null : null;
+}
+function cfOpcoes(sel, itens, valorAtual){
+  sel.innerHTML = itens.map(([v,t]) => `<option value="${escapeHtml(String(v))}">${escapeHtml(t)}</option>`).join('');
+  if (valorAtual != null && itens.some(([v]) => String(v) === String(valorAtual))) sel.value = valorAtual;
+}
+
+function cfIniciar(){
+  const anos = Object.keys(CALENDARIOS_ESCOLARES_POR_ANO).map(Number).sort((a,b) => b - a);
+  if (!anos.length || !cfEl('cfAno')) return;
+  // Abre no ano vigente (ano do aparelho). Se ele ainda não foi cadastrado, abre no mais recente
+  // cadastrado e avisa, para ninguém usar um calendário antigo sem perceber.
+  const anoHoje = new Date().getFullYear();
+  const anoInicial = anos.includes(anoHoje) ? anoHoje : anos[0];
+  cfOpcoes(cfEl('cfAno'), anos.map(a => [a, String(a)]), anoInicial);
+  if (__cfPrefs.modo === 'presenca' || __cfPrefs.modo === 'bimestre') cfEl('cfModo').value = __cfPrefs.modo;
+  const av = cfEl('cfAnoAviso');
+  if (av) {
+    if (anoInicial !== anoHoje) { av.textContent = `O calendário escolar de ${anoHoje} ainda não foi cadastrado; mostrando ${anoInicial}. Os dias letivos de ${anoInicial} não valem para ${anoHoje}: confira com a escola ou cadastre ${anoHoje} em CALENDARIOS_ESCOLARES_POR_ANO.`; av.classList.remove('hidden'); }
+    else av.classList.add('hidden');
+  }
+  cfMudouAno();
+}
+function cfMudouAno(){
+  const cals = CALENDARIOS_ESCOLARES_POR_ANO[cfEl('cfAno').value] || {};
+  cfOpcoes(cfEl('cfRede'), Object.keys(cals).map(k => [k, cals[k].nome]), cfEl('cfRede').value || __cfPrefs.rede);
+  cfMudouRede();
+}
+function cfMudouRede(){
+  const cal = cfCalendarioAtual();
+  if (!cal) return;
+  cfOpcoes(cfEl('cfModalidade'), Object.keys(cal.modalidades).map(k => [k, cal.modalidades[k].nome]), cfEl('cfModalidade').value || __cfPrefs.modalidade);
+  cfMudouModalidade();
+}
+function cfMudouModalidade(){ cfMudouModo(); }
+function cfMudouModo(){
+  const presenca = cfModoPresenca();
+  cfSalvarPrefs();
+  cfEl('cfBlocoPresenca').classList.toggle('hidden', !presenca);
+  cfEl('cfBlocoBimestre').classList.toggle('hidden', presenca);
+  cfEl('cfRepercWrap').classList.toggle('hidden', !presenca);
+  cfEl('cfRepercInfo').classList.toggle('hidden', !presenca);
+  cfEl('cfPeriodoLabel').textContent = presenca ? 'Período de acompanhamento (Sistema Presença)' : 'Período escolar';
+  if (presenca) {
+    const ano = Number(cfEl('cfAno').value);
+    cfOpcoes(cfEl('cfPeriodo'), PRESENCA_PERIODOS.map((p,i) => [i, `${p.nome} → repercussão em ${REPERC_POR_PERIODO[i].mes}/${ano + REPERC_POR_PERIODO[i].anoMais}`]), cfEl('cfPeriodo').value);
+    // Menu por mês de repercussão (março, maio, julho, setembro, novembro), na ordem do calendário.
+    cfOpcoes(cfEl('cfRepercussao'), [4,0,1,2,3].map(i => [i, `${REPERC_POR_PERIODO[i].mes}/${ano + REPERC_POR_PERIODO[i].anoMais} — apura ${PRESENCA_CURTO[i]} ${ano}`]), cfEl('cfPeriodo').value);
+  } else {
+    const mod = cfModalidadeAtual();
+    if (!mod) return;
+    cfOpcoes(cfEl('cfPeriodo'), mod.periodos.map((p,i) => [i, p.nome]), 0);
+  }
+  cfMudouPeriodo();
+}
+function cfMudouPeriodo(){
+  const per = cfPeriodoAtual();
+  const cal = cfCalendarioAtual();
+  if (!per || !cal) return;
+  if (cfModoPresenca()) {
+    cfEl('cfRepercussao').value = cfEl('cfPeriodo').value;
+    per.meses.forEach((m, k) => {
+      cfEl('cfMesNome' + k).textContent = CF_MESES[m];
+      const oficial = cal.mensal && cal.mensal[m];
+      const ref = cal.mensalRef && cal.mensalRef[m];
+      cfEl('cfFaltasM' + k).value = '';
+      const inp = cfEl('cfDiasM' + k);
+      inp.value = oficial || '';
+      inp.placeholder = (!oficial && ref) ? String(ref) : '';
+      cfEl('cfDiasHintM' + k).textContent = oficial
+        ? `Calendário oficial: ${oficial} dias letivos em ${CF_MESES[m]}.`
+        : (ref ? `O calendário desta rede não traz dias letivos por mês. Referência estimada: ${ref} (dias úteis menos feriados) — confirme com a escola e digite.` : 'Informe os dias letivos do mês (a escola fornece no formulário do Presença).');
+    });
+  } else {
+    __cfDiasManual = false;
+    __cfDiasOficial = per.dias;
+    cfEl('cfDias').value = __cfDiasOficial || '';
+  }
+  cfRenderTabela();
+  cfRenderRepercussao();
+  cfCalcular();
+}
+function cfMudouRepercussao(){
+  cfEl('cfPeriodo').value = cfEl('cfRepercussao').value;
+  cfMudouPeriodo();
+}
+// Data limite de recurso vem do Cronograma de Repercussão da tela (CRONOGRAMAS_REPERCUSSAO_POR_ANO).
+function cfRepercussaoDoPeriodo(i){
+  const r = REPERC_POR_PERIODO[i], ano = Number(cfEl('cfAno').value) + r.anoMais;
+  const lista = (window.CRONOGRAMAS_REPERCUSSAO_POR_ANO || {})[ano];
+  const c = lista ? lista.find(x => x.mes === r.mes) : null;
+  return { mes: r.mes, ano, dataLimite: c ? c.dataLimite : null, cadastrado: !!lista };
+}
+function cfRenderRepercussao(){
+  const box = cfEl('cfRepercInfo');
+  if (!box || !cfModoPresenca()) return;
+  const i = Number(cfEl('cfPeriodo').value), ano = Number(cfEl('cfAno').value);
+  const rp = cfRepercussaoDoPeriodo(i);
+  const prazo = rp.dataLimite ? `Data limite para recurso no Sicon: <strong>${escapeHtml(rp.dataLimite)}</strong>.`
+    : (window.CRONOGRAMAS_REPERCUSSAO_POR_ANO ? `Data limite de recurso: ainda não cadastrada no Cronograma de Repercussão de ${rp.ano}.` : 'Data limite de recurso: carregando o Cronograma de Repercussão…');
+  box.innerHTML = `<p class="font-bold mb-1">Repercussão de ${escapeHtml(rp.mes)}/${rp.ano}</p>
+    <p>O período <strong>${PRESENCA_CURTO[i]} de ${ano}</strong> é considerado na repercussão de <strong>${escapeHtml(rp.mes)}/${rp.ano}</strong>. ${prazo}</p>
+    <p class="mt-1 text-[11px]">Efeitos graduais (Portaria MDS nº 1.058/2025, art. 15): 1º registro de descumprimento = alerta (não afeta o benefício); 2º = bloqueio por 1 mês; 3º em diante = suspensão por 2 meses; a progressão considera 6 meses de validade de cada efeito. Dependendo do motivo registrado no Presença, o descumprimento não gera efeito (art. 18).</p>`;
+}
+document.addEventListener('cronogramaRepercussaoPronto', () => { if (cfEl('cfAno') && cfEl('cfPeriodo').value !== '') { cfRenderRepercussao(); } });
+function cfDiasEditado(){
+  __cfDiasManual = Number(cfEl('cfDias').value) !== __cfDiasOficial;
+  cfCalcular();
+}
+function cfRestaurarDias(){
+  __cfDiasManual = false;
+  cfEl('cfDias').value = __cfDiasOficial;
+  cfCalcular();
+}
+function cfRenderTabela(){
+  const cal = cfCalendarioAtual(), mod = cfModalidadeAtual();
+  if (!cal || !mod) return;
+  const th = t => `<th class="py-2 pr-3 font-bold">${t}</th>`;
+  if (cfModoPresenca()) {
+    cfEl('cfTabelaHead').innerHTML = th('Mês') + th('Dias letivos') + th('Situação');
+    const linhas = [];
+    for (let m = 1; m <= 12; m++) {
+      const of = cal.mensal && cal.mensal[m], ref = cal.mensalRef && cal.mensalRef[m];
+      if (!of && !ref) continue;
+      linhas.push(`<tr class="text-slate-600"><td class="py-1.5 pr-3">${CF_MESES[m]}</td><td class="py-1.5 pr-3">${of || ref}</td><td class="py-1.5 pr-3">${of ? 'oficial' : 'estimativa (confirmar com a escola)'}</td></tr>`);
+    }
+    cfEl('cfTabela').innerHTML = linhas.join('');
+  } else {
+    cfEl('cfTabelaHead').innerHTML = th('Período') + th('Início') + th('Término') + th('Dias letivos');
+    cfEl('cfTabela').innerHTML = mod.periodos.map(p =>
+      `<tr class="${p.total ? 'font-bold text-slate-700' : 'text-slate-600'}"><td class="py-1.5 pr-3">${escapeHtml(p.nome)}</td><td class="py-1.5 pr-3">${escapeHtml(p.ini)}</td><td class="py-1.5 pr-3">${escapeHtml(p.fim)}</td><td class="py-1.5 pr-3">${p.dias}</td></tr>`
+    ).join('');
+  }
+  cfEl('cfFonte').textContent = 'Fonte: ' + cal.fonte;
+}
+
+// Avalia um mês/período: dias letivos + faltas → percentuais e situação.
+function cfAvaliar(dias, faltasTxt, lim){
+  const faltas = String(faltasTxt).trim() === '' ? NaN : parseInt(faltasTxt, 10);
+  if (!(dias > 0)) return { estado: 'sem-dias' };
+  if (isNaN(faltas) || faltas < 0) return { estado: 'vazio' };
+  if (faltas > dias) return { estado: 'erro', faltas, dias };
+  const presencas = dias - faltas;
+  const minPresencas = Math.ceil(lim * dias / 100);
+  return {
+    estado: 'ok', dias, faltas, presencas,
+    pctFaltas: faltas / dias * 100, pctFreq: presencas / dias * 100,
+    minPresencas, faltasMax: dias - minPresencas, cumpriu: presencas >= minPresencas
+  };
+}
+const cfFmt = n => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+function cfCalcular(){
+  const box = cfEl('cfResultado'), aviso = cfEl('cfAviso');
+  if (!box) return;
+  const faixa = cfEl('cfFaixa').value;
+  const jovem = faixa === '75j';
+  const lim = parseInt(faixa, 10);
+  const neutro = 'rounded-xl border border-slate-200 p-4 mb-3 text-xs text-slate-500';
+  __cfResumo = '';
+  const cal = cfCalendarioAtual(), mod = cfModalidadeAtual(), anoSel = cfEl('cfAno').value;
+  const cabecalho = `Rede: ${cal ? cal.nome : ''} · ${mod ? mod.nome : ''} · ${anoSel}`;
+
+  if (cfModoPresenca()) {
+    aviso.classList.add('hidden');
+    const per = cfPeriodoAtual();
+    if (!per) return;
+    const meses = per.meses.map((m, k) => ({ m, k, r: cfAvaliar(parseInt(cfEl('cfDiasM' + k).value, 10), cfEl('cfFaltasM' + k).value, lim) }));
+    const erro = meses.find(x => x.r.estado === 'erro');
+    if (erro) { box.className = 'rounded-xl border border-red-200 bg-red-50 p-4 mb-3 text-xs text-red-700 font-semibold'; box.textContent = `Em ${CF_MESES[erro.m]}, o número de faltas (${erro.r.faltas}) é maior que os dias letivos (${erro.r.dias}). Confira os valores.`; return; }
+    if (!meses.some(x => x.r.estado === 'ok')) { box.className = neutro; box.textContent = meses.some(x => x.r.estado === 'sem-dias') ? 'Informe os dias letivos de cada mês.' : 'Informe as faltas de cada mês para ver o resultado.'; return; }
+
+    const cartoes = meses.map(({ m, r }) => {
+      if (r.estado !== 'ok') return `<div class="rounded-xl border border-slate-200 p-3 text-xs text-slate-500"><p class="font-bold text-slate-700 mb-1">${CF_MESES[m]}</p>Preencha dias letivos e faltas.</div>`;
+      const c = r.cumpriu ? { b:'border-emerald-200', f:'bg-emerald-50', t:'text-emerald-800', ic:'check-circle-2', hex:'var(--verde)', sit:'Frequência regular' }
+                          : { b:'border-red-200', f:'bg-red-50', t:'text-red-700', ic:'alert-triangle', hex:'#DC2626', sit:'Baixa frequência' };
+      const margem = r.cumpriu ? (r.faltasMax - r.faltas === 0 ? 'sem margem: mais 1 falta = baixa frequência' : `pode faltar mais ${r.faltasMax - r.faltas} dia(s)`) : `${r.faltas - r.faltasMax} falta(s) além do limite`;
+      return `<div class="rounded-xl border ${c.b} ${c.f} p-3">
+        <p class="text-xs font-bold ${c.t} flex items-center gap-1.5 mb-1"><i data-lucide="${c.ic}" class="w-4 h-4" style="color:${c.hex}"></i> ${CF_MESES[m]} — ${c.sit}</p>
+        <p class="text-2xl font-extrabold ${c.t}">${cfFmt(r.pctFreq)}%</p>
+        <p class="text-[11px] text-slate-600">${r.dias - r.faltas} dias frequentados × 100 ÷ ${r.dias} dias letivos · faltas: ${cfFmt(r.pctFaltas)}% (${r.faltas})</p>
+        <p class="text-[11px] text-slate-600">Máx. de faltas (${lim}%): ${r.faltasMax} — ${margem}.</p>
+      </div>`;
+    }).join('');
+
+    const prontos = meses.filter(x => x.r.estado === 'ok');
+    const baixos = prontos.filter(x => !x.r.cumpriu).map(x => CF_MESES[x.m]);
+    let resumo;
+    if (prontos.length < meses.length) resumo = baixos.length ? `Baixa frequência em ${baixos.join(' e ')}. Preencha o outro mês para fechar o período.` : 'Preencha o outro mês para fechar o período.';
+    else if (baixos.length) resumo = `Baixa frequência em ${baixos.join(' e ')}: no Presença, registre o percentual do mês e o <strong>código de motivo</strong> (veja a Legenda de Motivos abaixo).`;
+    else resumo = 'Mínimo atingido nos dois meses: no Presença, o estudante pode ser registrado com frequência integral (99%).';
+    const rpi = cfRepercussaoDoPeriodo(Number(cfEl('cfPeriodo').value));
+    const repercTxt = baixos.length ? `<p class="text-[11px] font-semibold text-slate-600 mt-2">Sem motivo que dispense o efeito, este período entra na repercussão de <strong>${escapeHtml(rpi.mes)}/${rpi.ano}</strong>${rpi.dataLimite ? ` (recurso até ${escapeHtml(rpi.dataLimite)})` : ''}.</p>` : '';
+    const alerta = repercTxt + ((baixos.length && jovem) ? '<p class="text-[11px] font-semibold text-slate-600 mt-2">Adolescente de 16 e 17 anos: o descumprimento repercute exclusivamente no Benefício Variável Familiar ao Adolescente (BVA) dele, não no restante do benefício da família (Portaria MDS nº 1.058/2025, art. 17, §2º). Vale para o adolescente que recebe o BVA.</p>' : '');
+    __cfResumo = [cabecalho, `Período: ${per.nome} (faixa ${CF_FAIXAS[faixa]}, mínimo ${lim}%)`,
+      ...prontos.map(({ m, r }) => `${CF_MESES[m]}: ${r.presencas} presenças em ${r.dias} dias letivos = ${cfFmt(r.pctFreq)}% de frequência (${cfFmt(r.pctFaltas)}% de faltas, ${r.faltas} falta(s)) — ${r.cumpriu ? 'frequência regular' : 'baixa frequência'}`),
+      'Situação: ' + resumo.replace(/<[^>]+>/g, '') + (baixos.length ? ` Entra na repercussão de ${rpi.mes}/${rpi.ano}${rpi.dataLimite ? ` (recurso até ${rpi.dataLimite})` : ''}.` : '') + ((baixos.length && jovem) ? ' Adolescente de 16 e 17 anos: efeito apenas no BVA.' : '')
+    ].join('\n');
+    box.className = 'rounded-xl border border-slate-200 p-4 mb-3';
+    box.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">${cartoes}</div><p class="text-xs text-slate-700">${resumo}</p>${alerta}`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  // ---- Modo bimestre / ano letivo (total) ----
+  const per = cfPeriodoAtual(), hint = cfEl('cfDiasHint');
+  if (!per) return;
+  hint.innerHTML = __cfDiasManual
+    ? `Valor ajustado (calendário oficial: ${__cfDiasOficial}). <a href="#" onclick="cfRestaurarDias();return false;" class="underline font-semibold" style="color:var(--azul)">Restaurar</a>`
+    : `Calendário oficial: ${__cfDiasOficial} dias (${escapeHtml(per.ini)} a ${escapeHtml(per.fim)}).`;
+  if (per.aviso && !__cfDiasManual) { aviso.textContent = per.aviso; aviso.classList.remove('hidden'); }
+  else { aviso.classList.add('hidden'); }
+
+  const r = cfAvaliar(parseInt(cfEl('cfDias').value, 10), cfEl('cfFaltas').value, lim);
+  if (r.estado === 'sem-dias') { box.className = neutro; box.textContent = 'Informe os dias letivos do período.'; return; }
+  if (r.estado === 'vazio') { box.className = neutro; box.textContent = 'Informe o número de faltas para ver o resultado.'; return; }
+  if (r.estado === 'erro') { box.className = 'rounded-xl border border-red-200 bg-red-50 p-4 mb-3 text-xs text-red-700 font-semibold'; box.textContent = `O número de faltas (${r.faltas}) é maior que os dias letivos (${r.dias}). Confira os valores.`; return; }
+  __cfResumo = [cabecalho, `Período: ${per.nome} (faixa ${CF_FAIXAS[faixa]}, mínimo ${lim}%)`,
+    `${r.presencas} presenças em ${r.dias} dias letivos = ${cfFmt(r.pctFreq)}% de frequência (${cfFmt(r.pctFaltas)}% de faltas, ${r.faltas} falta(s))`,
+    r.cumpriu ? 'Situação: frequência mínima cumprida.' : `Situação: abaixo do mínimo (máx. de ${r.faltasMax} faltas).`].join('\n');
+  const c = r.cumpriu ? { b:'border-emerald-200', f:'bg-emerald-50', t:'text-emerald-800', ic:'check-circle-2', hex:'var(--verde)' }
+                      : { b:'border-red-200', f:'bg-red-50', t:'text-red-700', ic:'alert-triangle', hex:'#DC2626' };
+  const margem = r.cumpriu ? (r.faltasMax - r.faltas === 0 ? 'Não há margem: mais uma falta já resulta em baixa frequência.' : `Ainda pode faltar mais ${r.faltasMax - r.faltas} dia(s) sem descumprir.`) : `Faltou ${r.faltas - r.faltasMax} dia(s) além do limite (máximo de ${r.faltasMax} faltas).`;
+  box.className = `rounded-xl border ${c.b} ${c.f} p-4 mb-3`;
+  box.innerHTML = `
+    <p class="text-xs font-bold ${c.t} flex items-center gap-1.5 mb-3"><i data-lucide="${c.ic}" class="w-4 h-4" style="color:${c.hex}"></i> ${r.cumpriu ? `Cumpriu a frequência mínima de ${lim}%.` : `Abaixo da frequência mínima de ${lim}% (baixa frequência).`}</p>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div><p class="text-[10px] uppercase tracking-wide text-slate-500 font-bold">% de faltas</p><p class="text-2xl font-extrabold ${c.t}">${cfFmt(r.pctFaltas)}%</p></div>
+      <div><p class="text-[10px] uppercase tracking-wide text-slate-500 font-bold">% de frequência</p><p class="text-2xl font-extrabold ${c.t}">${cfFmt(r.pctFreq)}%</p></div>
+      <div><p class="text-[10px] uppercase tracking-wide text-slate-500 font-bold">Presenças</p><p class="text-2xl font-extrabold text-slate-700">${r.presencas}<span class="text-xs font-semibold text-slate-500"> / ${r.dias}</span></p></div>
+      <div><p class="text-[10px] uppercase tracking-wide text-slate-500 font-bold">Máx. de faltas (${lim}%)</p><p class="text-2xl font-extrabold text-slate-700">${r.faltasMax}</p></div>
+    </div>
+    <p class="text-xs text-slate-600">${escapeHtml(margem)}</p>
+    ${(!r.cumpriu && jovem) ? '<p class="text-[11px] font-semibold text-slate-600 mt-2">Adolescente de 16 e 17 anos: o descumprimento repercute exclusivamente no BVA dele, não no restante do benefício da família (Portaria MDS nº 1.058/2025, art. 17, §2º).</p>' : ''}
+    <p class="text-[10px] text-slate-500 mt-2">Esta forma de cálculo é uma visão geral do bimestre/ano; o Presença apura mês a mês (use a outra forma de cálculo para registrar).</p>`;
+  if (window.lucide) lucide.createIcons();
+}
+async function cfCopiarResumo(){
+  const btn = cfEl('cfBtnCopiar'), original = 'Copiar resumo';
+  const flash = t => { btn.textContent = t; setTimeout(() => { btn.textContent = original; }, 2000); };
+  if (!__cfResumo) { flash('Preencha as faltas primeiro'); return; }
+  const nome = cfEl('cfNome').value.trim();
+  const texto = 'Frequência escolar — Bolsa Família (cálculo de orientação, método do Sistema Presença)\n'
+    + (nome ? `Estudante: ${nome}\n` : '') + __cfResumo + '\nConferir no Sistema Presença.';
+  try {
+    await navigator.clipboard.writeText(texto);
+    flash('Copiado!');
+  } catch (e) {
+    try {
+      const ta = document.createElement('textarea'); ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      flash('Copiado!');
+    } catch (e2) { flash('Não foi possível copiar'); }
+  }
+}
+function cfLimpar(){
+  cfEl('cfNome').value = '';
+  ['cfFaltasM0', 'cfFaltasM1', 'cfFaltas'].forEach(id => { cfEl(id).value = ''; });
+  cfCalcular();
+}
+window.cfCopiarResumo = cfCopiarResumo;
+window.cfLimpar = cfLimpar;
+window.cfMudouAno = cfMudouAno;
+window.cfMudouRede = cfMudouRede;
+window.cfMudouModalidade = cfMudouModalidade;
+window.cfMudouModo = cfMudouModo;
+window.cfMudouRepercussao = cfMudouRepercussao;
+window.cfMudouPeriodo = cfMudouPeriodo;
+window.cfDiasEditado = cfDiasEditado;
+window.cfRestaurarDias = cfRestaurarDias;
+window.cfCalcular = cfCalcular;
+
 if (window.lucide) lucide.createIcons();
 render();
 renderMotivos();
+cfIniciar();
 
 // PWA — registro do service worker + atualização automática do app
 if ('serviceWorker' in navigator) {
