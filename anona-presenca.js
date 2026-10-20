@@ -203,16 +203,51 @@
     return t;
   }
 
-  // Texto neutro para a IA: só números. Nenhum nome, nenhuma nota.
-  function promptIA(est) {
+  // Texto para a IA: só NÚMEROS e regras do programa. Nenhum nome, nenhuma nota, nenhum NIS.
+  // tipo: "explicar" (padrão) | "lembrete" (texto pronto para a equipe) | "recurso" (se houver baixa frequência)
+  function promptIA(est, tipo) {
+    if (!est) return "";
     var itens = est.itens.filter(itemPronto);
-    if (!est || !itens.length) return "";
+    if (!itens.length) return "";
+    var baixos = itens.filter(function (x) { return !x.r.cumpriu; });
+    var rp = null;
+    try { rp = est.modo === "presenca" ? calc().repercussao(est.periodoIdx) : null; } catch (e) { rp = null; }
     var linhas = itens.map(function (it) {
-      return it.rotulo + ": " + it.r.presencas + " presenças em " + it.r.dias + " dias letivos, " + fmt(it.r.pctFreq) + "% de frequência (" + (it.r.cumpriu ? "regular" : "baixa frequência") + ")";
+      var r = it.r;
+      return it.rotulo + ": " + r.presencas + " presenças em " + r.dias + " dias letivos = " + fmt(r.pctFreq) + "% (" + (r.cumpriu ? "regular" : "baixa frequência") +
+        "; máximo de " + r.faltasMax + " faltas, tem " + r.faltas + (r.cumpriu ? ", margem de " + (r.faltasMax - r.faltas) : ", " + (r.faltas - r.faltasMax) + " além do limite") + ")";
     });
-    return "Fiz o cálculo de frequência escolar do Bolsa Família (" + est.periodoNome + " de " + est.ano + "; faixa de " + est.faixaNome + ", mínimo " + est.minimo + "%). " +
-      linhas.join("; ") + ". Explique em poucas linhas o que esse resultado significa para o benefício da família e quais são os próximos passos do(a) profissional do CRAS. " +
-      "Não informe nem peça nome ou dados da família.";
+    var base = "Resultado de um cálculo de frequência escolar do Bolsa Família, já feito pelo app (não recalcule): " +
+      (est.modo === "presenca" ? "período " + est.periodoNome + " de " + est.ano : est.periodoNome + " de " + est.ano + " (visão geral, não é o registro do Presença)") +
+      "; faixa de " + est.faixaNome + ", mínimo de " + est.minimo + "%. " + linhas.join(". ") + ". " +
+      (baixos.length && rp ? "Este período entra na repercussão de " + rp.mes + "/" + rp.ano + (rp.dataLimite ? ", com recurso no Sicon até " + rp.dataLimite : "") + ". " : "") +
+      (baixos.length && est.faixa === "75j" ? "O estudante tem 16 ou 17 anos (efeito só no BVA). " : "");
+    var fim = " Não informe nem peça nome ou dados da família.";
+    if (tipo === "lembrete") {
+      return base + "Escreva um lembrete curto para a equipe do CRAS (até 6 linhas) com a situação, a prioridade e o que fazer primeiro, usando [ESTUDANTE], [ESCOLA] e [DATA] no lugar de dados reais." + fim;
+    }
+    if (tipo === "recurso") {
+      return base + "Me ajude a avaliar se cabe recurso: que motivos e documentos costumam valer, quem pede, o prazo e como montar o relato com fatos, sem expor a criança." + fim;
+    }
+    return base + "Explique em poucas linhas o que isso significa para o benefício da família e quais são os próximos passos do(a) profissional do CRAS." + fim;
+  }
+
+  // Resumo feito no aparelho, para quando a IA não responde (sem internet, cota esgotada, erro).
+  function explicacaoLocal() {
+    var C = calc(), est = C && C.ler();
+    if (!est || !est.itens.some(itemPronto)) return "";
+    var linhas = est.itens.filter(itemPronto).map(function (x) { return descreverItem(x, est.minimo); });
+    var passo = proximoPasso(est);
+    if (!passo) passo = "Frequência regular: nada a registrar como descumprimento. Se a margem de faltas estiver curta, vale avisar a escola e a família cedo. Uma falta isolada não gera efeito: conta a frequência do período.";
+    return linhas.join("\n") + "\n" + passo + "\nA análise do caso é da equipe; vale o registro oficial do Sistema Presença e do Sicon.";
+  }
+
+  // A IA não deve inventar percentual. Compara os "NN%" da resposta com os do pedido (+ regras fixas do programa).
+  function percentuaisForaDoCalculo(prompt, resposta) {
+    function lista(t) { var o = [], re = /(\d{1,3}(?:[.,]\d+)?)\s*%/g, m; while ((m = re.exec(String(t)))) o.push(parseFloat(m[1].replace(",", "."))); return o; }
+    var ok = lista(prompt).concat([60, 75, 99, 100, 50]);
+    return lista(resposta).filter(function (v) { return !ok.some(function (a) { return Math.abs(a - v) < 0.051; }); })
+      .filter(function (v, i, arr) { return arr.indexOf(v) === i; });
   }
 
   function acoesPadrao(est, temDados) {
@@ -221,7 +256,12 @@
       a.push({ rotulo: "Quantas faltas ainda posso ter?", tipo: "pergunta", texto: "Quantas faltas ainda posso ter?" });
       a.push({ rotulo: "E se faltar mais 1 dia?", tipo: "pergunta", texto: "E se faltar mais 1 dia?" });
       var ia = promptIA(est);
-      if (ia) a.push({ rotulo: "Explicar com a IA (envia só números)", tipo: "ia", prompt: ia, mostrar: "Explicar o resultado (enviando só os números, sem nome)" });
+      if (ia) {
+        a.push({ rotulo: "Explicar com a IA (envia só números)", tipo: "ia", prompt: ia, mostrar: "Explicar o resultado (enviando só os números, sem nome)" });
+        a.push({ rotulo: "Lembrete para a equipe", tipo: "ia", prompt: promptIA(est, "lembrete"), mostrar: "Escrever um lembrete para a equipe (só números, sem nome)" });
+        if (est.itens.some(function (x) { return itemPronto(x) && !x.r.cumpriu; }))
+          a.push({ rotulo: "Cabe recurso?", tipo: "ia", prompt: promptIA(est, "recurso"), mostrar: "Avaliar se cabe recurso (só números, sem nome)" });
+      }
       a.push({ rotulo: "Copiar resumo", tipo: "copiar" });
     }
     if (pilha.length) a.push({ rotulo: "↩ Desfazer", tipo: "pergunta", texto: "desfazer" });
@@ -234,6 +274,7 @@
   function tratar(texto) {
     var C = calc();
     if (!C || !C.ler()) return null;
+    if (/^resultado de um calculo de frequencia escolar/.test(sem(texto))) return null; // prompt montado pelo app para a IA, nunca é lançamento
     var it = interpretar(texto);
     var temFato = it.fatos.length > 0 || !!it.faixa || it.periodo != null;
     var quer = it.desfazer || it.limpar || it.copiar || it.margem || it.situacao || !!it.simula || temFato;
@@ -496,7 +537,7 @@
     });
   }
 
-  var API = { interpretar: interpretar, tratar: tratar, executar: executar, saudacaoCalculo: saudacaoCalculo, promptIA: promptIA };
+  var API = { explicacaoLocal: explicacaoLocal, percentuaisForaDoCalculo: percentuaisForaDoCalculo, interpretar: interpretar, tratar: tratar, executar: executar, saudacaoCalculo: saudacaoCalculo, promptIA: promptIA };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   if (raiz && raiz.document) {
     raiz.AnonaPresenca = API;
