@@ -19,6 +19,7 @@ index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
 anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas)
+anona-presenca.js               -> assistente de presença: entende frases ("3 faltas em março, 22 dias letivos"), preenche a calculadora, simula faltas e faz o mascote comentar o resultado
 icon-192.png                    -> ícone do app para Android/desktop (cantos transparentes; ilustração própria, sem uso de marca de terceiros)
 icon-512.png                    -> ícone do app (versão maior, mesmo arquivo de cantos transparentes)
 apple-touch-icon.png            -> mesmo ícone, mas com cantos na cor da marca (opacos) em vez de transparentes — usado só no iPhone/iPad, porque o iOS pinta de preto qualquer canto transparente do ícone da tela de início
@@ -292,3 +293,23 @@ O app foi revisado e alguns pontos foram corrigidos diretamente no código. Resu
   1. No **Google Cloud Console** (console.cloud.google.com) → **APIs e Serviços > Credenciais**, abrir essa chave de API e restringir "Restrições de aplicativo" para aceitar apenas o domínio do seu GitHub Pages (`https://SEU-USUARIO.github.io/*`). Isso impede que alguém copie sua chave e a use em outro site.
   2. Ativar **2 fatores (2FA)** na conta Google usada no Firebase — essa conta é o verdadeiro "cofre" de tudo: quem tiver acesso a ela, acessa o console e os dados de todo mundo que criou conta.
 - **Como as notas podem conter dados sensíveis de famílias atendidas**, vale reforçar: use uma senha forte e exclusiva na sua conta de login, não compartilhe suas credenciais com ninguém, e sempre use "Sair da conta" ao terminar de usar num computador que não é só seu (biblioteca, órgão público etc.).
+
+---
+
+## Assistente de presença (mascote + IA + calculadora)
+
+Para ganhar tempo na **Calculadora de Faltas e Frequência Escolar**, em vez de preencher campo por campo:
+
+- **Campo "Preencher falando com o Anona"** (topo da calculadora) e o **painel do mascote** entendem frases em português:
+  - `3 faltas em março, 22 dias letivos` · `faltou 4 dias em abril e 2 em maio` · `tem 8 anos` · `período abr/mai`
+  - `quantas faltas ainda posso ter?` (limite de faltas por mês e margem que sobra)
+  - `e se faltar mais 2 dias?` (simula sem alterar a calculadora)
+  - `copiar resumo` · `limpar` (próximo estudante)
+- **A conta é feita no aparelho**, com a mesma regra da calculadora (nunca pela IA, que erra aritmética) e **sem enviar nada**.
+- **O mascote comenta** o resultado quando você mexe na calculadora (ex.: "Abril: 55,0% — abaixo do mínimo de 75%") e, ao tocar nele, o painel já abre com o resultado e atalhos.
+- **A IA do Paulus explica o resultado** (o que significa para o benefício, próximos passos) só quando você toca em **"Explicar com a IA"**. O que vai ao Worker é um texto montado pelo app **só com números** (presenças, dias letivos, percentuais). Nunca o nome do estudante, notas ou NIS. Perguntas que não são conta ("o que é recurso on-line?") seguem direto para o Paulus, com o filtro de dados pessoais de sempre.
+- Se a faixa etária não for informada, o assistente usa o padrão da calculadora (4 a 5 anos, 60%) e avisa uma vez.
+
+Arquivos: `anona-presenca.js` (novo), `paulus-anona.js` (desvio local antes de enviar ao Paulus), `index.html` (API `window.AnonaFrequencia` e o campo de texto). O `sw.js` já inclui o arquivo novo no cache offline.
+
+**Para a IA saber da calculadora**, publique de novo o Worker do Paulus com o `worker/apps.mjs` atualizado (bloco do Anona). Sem isso tudo continua funcionando; a explicação da IA só fica menos específica.
