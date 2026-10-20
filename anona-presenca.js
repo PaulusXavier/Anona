@@ -49,11 +49,12 @@
   //  { fatos:[{kind:'faltas'|'dias', n, mes|null}], faixa, periodo, intent, simula:{n, mes}, limpar, avisos:[] }
   function interpretar(texto) {
     var t = numerosPorExtenso(sem(texto)).replace(/\s+/g, " ").trim();
-    var r = { fatos: [], faixa: null, periodo: null, margem: false, simula: null, limpar: false, copiar: false, situacao: false, explicar: false, avisos: [], meses: [] };
+    var r = { fatos: [], faixa: null, periodo: null, margem: false, simula: null, limpar: false, desfazer: false, copiar: false, situacao: false, explicar: false, avisos: [], meses: [] };
     if (!t) return r;
 
     // limpar / outro estudante
     if (/\b(limpar|zerar|recomecar|novo estudante|outro estudante|outra crianca|outro aluno|nova conta)\b/.test(t)) r.limpar = true;
+    if (/\b(desfazer|desfaz|desfaca|voltar|volta atras|errei|cancela isso)\b/.test(t)) r.desfazer = true;
     if (/\bcopi(ar|e|a)\b/.test(t) && /(resumo|resultado|calculo)/.test(t)) r.copiar = true;
 
     // simulação: "e se faltar mais 2 dias em abril?" — o número daqui NÃO é fato, é hipótese
@@ -99,9 +100,20 @@
     for (var i = 0; i < trechos.length; i++) {
       var c = trechos[i], mes = mesNoTrecho(c), reNum = /\d+/g, m;
       if (mes) mesesDeclarados[mes] = true;
+      // "faltou 5 de 22 dias" / "compareceu 18 de 22": duas quantidades de uma vez
+      var par = /(\d+)\s+de\s+(\d+)(?:\s+dias?(?:\s+letivos?)?)?/.exec(c);
+      if (par && parseInt(par[2], 10) >= parseInt(par[1], 10)) {
+        var antesPar = c.slice(0, par.index), presente = /(compareceu|compareci|foi|fui|veio|vim|presen\w*|assistiu|assisti)\W*$/.test(antesPar);
+        var a = parseInt(par[1], 10), bb = parseInt(par[2], 10);
+        achados.push({ kind: "faltas", n: presente ? bb - a : a, mes: mes });
+        achados.push({ kind: "dias", n: bb, mes: mes });
+        ultimoTipo = "faltas";
+        c = c.slice(0, par.index) + " " + c.slice(par.index + par[0].length);
+      }
       while ((m = reNum.exec(c))) {
         var n = parseInt(m[0], 10), antes = c.slice(0, m.index), depois = c.slice(m.index + m[0].length), tipo = null;
-        if (/^\s*(?:dias?\s+)?letivos?\b|^\s*dias?\s+de\s+aula|^\s*aulas?\b/.test(depois)) tipo = "dias";
+        if (/^\s*(?:presencas?|dias?\s+presentes?|dias?\s+de\s+presenca|dias?\s+(?:que\s+)?(?:foi|veio|compareceu))/.test(depois) || /(?:compareceu|compareci|presencas?)\W*(?:de|:|foram)?\W*$/.test(antes)) tipo = "presencas";
+        else if (/^\s*(?:dias?\s+)?letivos?\b|^\s*dias?\s+de\s+aula|^\s*aulas?\b/.test(depois)) tipo = "dias";
         else if (/^\s*(?:faltas?|ausencias?|dias?\s+de\s+falta|vez(?:es)?|dias?\s+(?:sem\s+ir|ausente))/.test(depois)) tipo = "faltas";
         else if (/letivos?\W*(?:foram|sao|de|total|totalizam)?\W*$/.test(antes)) tipo = "dias";
         else if (/(?:falt\w*|ausen\w*)\W*(?:foram|foi|de|total)?\W*$/.test(antes)) tipo = "faltas";
@@ -127,6 +139,7 @@
   function faltasMaximas(lim, dias) { return dias - minPresencas(lim, dias); }
 
   // ------------------------------------------------------------------ ponte com a calculadora
+  var pilha = []; // estados anteriores da calculadora (para "desfazer")
   var ultimoMes = null; // último mês mexido (para "22 dias letivos" soltos)
   var faixaConfirmada = false, faixaAvisada = false; // a calculadora abre em "4 a 5 anos, 60%"; avisamos UMA vez se a pessoa não escolheu
   var silencioAte = 0;  // enquanto o assistente mexe na calculadora, o mascote não comenta por conta própria
@@ -211,6 +224,7 @@
       if (ia) a.push({ rotulo: "Explicar com a IA (envia só números)", tipo: "ia", prompt: ia, mostrar: "Explicar o resultado (enviando só os números, sem nome)" });
       a.push({ rotulo: "Copiar resumo", tipo: "copiar" });
     }
+    if (pilha.length) a.push({ rotulo: "↩ Desfazer", tipo: "pergunta", texto: "desfazer" });
     a.push({ rotulo: "Limpar", tipo: "limpar" });
     return a;
   }
@@ -222,13 +236,21 @@
     if (!C || !C.ler()) return null;
     var it = interpretar(texto);
     var temFato = it.fatos.length > 0 || !!it.faixa || it.periodo != null;
-    var quer = it.limpar || it.copiar || it.margem || it.situacao || !!it.simula || temFato;
+    var quer = it.desfazer || it.limpar || it.copiar || it.margem || it.situacao || !!it.simula || temFato;
     if (!quer) return null;
     // "explique" sozinho, sem número e sem pedido de cálculo: deixa o Paulus (e ele pega o contexto se houver)
     var linhas = [];
     silencioAte = Date.now() + 2600;
 
+    if (it.desfazer) {
+      var antes = pilha.pop();
+      if (!antes) return { texto: "Não tenho nada para desfazer.", acoes: [] };
+      C.restaurar(antes); ultimoMes = null;
+      return { texto: "Desfeito: voltei a calculadora ao que estava antes do último lançamento.", acoes: acoesPadrao(C.ler(), C.ler().itens.some(itemPronto)) };
+    }
+    if (temFato || it.faixa || it.periodo != null) { pilha.push(C.snapshot()); if (pilha.length > 15) pilha.shift(); }
     if (it.limpar) {
+      pilha.push(C.snapshot());
       C.limpar(); ultimoMes = null;
       return { texto: "Pronto, calculadora limpa. Pode informar o próximo estudante — por exemplo: \"3 faltas em março, 22 dias letivos\".", acoes: [] };
     }
@@ -261,6 +283,18 @@
 
     // 3) fatos → itens
     var ok = true, aplicados = [];
+    // presenças → faltas (precisa dos dias letivos: da frase ou da calculadora)
+    it.fatos = it.fatos.map(function (f) {
+      if (f.kind !== "presencas") return f;
+      var d = null;
+      it.fatos.forEach(function (g) { if (g.kind === "dias" && (g.mes === f.mes || g.mes == null || f.mes == null)) d = g.n; });
+      if (d == null) {
+        var cand = est.itens.filter(function (x) { return (f.mes == null || x.mes === f.mes) && x.r && x.r.dias; })[0];
+        if (cand) d = cand.r.dias;
+      }
+      if (d == null || f.n > d) { linhas.push(d == null ? "Para usar as presenças preciso dos dias letivos. Diga: \"" + f.n + " presenças em 22 dias letivos\"." : "As presenças (" + f.n + ") passam dos dias letivos (" + d + ")."); return null; }
+      return { kind: "faltas", n: d - f.n, mes: f.mes, deP: f.n };
+    }).filter(Boolean);
     it.fatos.forEach(function (f) {
       var alvo = null;
       if (pres) {
@@ -423,8 +457,37 @@
     return { texto: "Vi que você está calculando " + est.periodoNome + " (mínimo " + est.minimo + "%): " + resumo + ". Quer saber a margem de faltas, simular ou ter uma explicação?", acoes: acoesPadrao(est, true) };
   }
 
+  function ligarExemplosEVoz() {
+    var campo = document.getElementById("cfAssistCampo"), ex = document.getElementById("cfAssistExemplos");
+    if (ex && campo) {
+      ["3 faltas em março, 22 dias letivos", "faltou 5 de 22 dias", "quantas faltas ainda posso ter?", "e se faltar mais 2 dias?", "desfazer"].forEach(function (t) {
+        var b = document.createElement("button");
+        b.type = "button"; b.textContent = t;
+        b.className = "px-3 py-1 rounded-full text-[11px] font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50";
+        b.addEventListener("click", function () { campo.value = t; campo.focus(); });
+        ex.appendChild(b);
+      });
+    }
+    var mic = document.getElementById("cfAssistMic"), SR = raiz.SpeechRecognition || raiz.webkitSpeechRecognition;
+    if (mic && campo && SR) {
+      mic.hidden = false;
+      var rec = null, ouvindo = false;
+      mic.addEventListener("click", function () {
+        if (ouvindo && rec) { try { rec.stop(); } catch (e) {} return; }
+        try {
+          rec = new SR(); rec.lang = "pt-BR"; rec.interimResults = false; rec.maxAlternatives = 1;
+          rec.onresult = function (ev) { var t = ev.results[0][0].transcript; campo.value = t; var f = document.getElementById("cfAssistForm"); if (f.requestSubmit) f.requestSubmit(); };
+          rec.onend = function () { ouvindo = false; mic.textContent = "🎤 Falar"; };
+          rec.onerror = function () { ouvindo = false; mic.textContent = "🎤 Falar"; };
+          rec.start(); ouvindo = true; mic.textContent = "● Ouvindo… toque para parar";
+        } catch (e) { ouvindo = false; mic.textContent = "🎤 Falar"; }
+      });
+    }
+  }
+
   function iniciar() {
     ligarFormulario();
+    ligarExemplosEVoz();
     var sel = document.getElementById("cfFaixa");
     if (sel) sel.addEventListener("change", function () { faixaConfirmada = true; });
     document.addEventListener("anona:frequencia", function () {
