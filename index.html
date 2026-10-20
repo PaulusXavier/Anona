@@ -1043,6 +1043,14 @@
     </h2>
     <p class="text-xs text-slate-500 mb-4">Funciona como o <strong>Sistema Presença</strong> (MEC): a frequência é apurada <strong>mês a mês</strong> — <em>dias frequentados × 100 ÷ dias letivos do mês</em> — e registrada a cada dois meses, em 5 períodos (Fev/Mar, Abr/Mai, Jun/Jul, Ago/Set, Out/Nov). Mês abaixo do mínimo = baixa frequência, que exige o código de motivo.</p>
 
+    <form id="cfAssistForm" class="rounded-xl border p-3 mb-4 flex flex-col sm:flex-row gap-2 sm:items-end" style="border-color:var(--verde);background:#F2FBF5" autocomplete="off">
+      <label class="block flex-1 text-[11px] font-bold text-slate-600">Preencher falando com o Anona
+        <input id="cfAssistCampo" type="text" maxlength="300" placeholder="Ex.: 3 faltas em março, 22 dias letivos · quantas faltas ainda posso ter? · e se faltar mais 2?" aria-label="Descreva as faltas em uma frase" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
+      </label>
+      <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold text-white" style="background:var(--verde)">Calcular</button>
+    </form>
+    <p id="cfAssistResp" role="status" aria-live="polite" class="hidden text-xs rounded-lg px-3 py-2 mb-3 whitespace-pre-wrap" style="background:#F2FBF5;border:1px solid #CDEBD8;color:#14532D"></p>
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
       <label class="block text-[11px] font-bold text-slate-600">Ano letivo
         <select id="cfAno" onchange="cfMudouAno()" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold bg-white"></select>
@@ -5302,7 +5310,7 @@ function cfAvaliar(dias, faltasTxt, lim){
 }
 const cfFmt = n => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-function cfCalcular(){
+function cfCalcularNucleo(){
   const box = cfEl('cfResultado'), aviso = cfEl('cfAviso');
   if (!box) return;
   const faixa = cfEl('cfFaixa').value;
@@ -5410,6 +5418,52 @@ function cfLimpar(){
   ['cfFaltasM0', 'cfFaltasM1', 'cfFaltas'].forEach(id => { cfEl(id).value = ''; });
   cfCalcular();
 }
+
+/* ---- API para o assistente de presença (anona-presenca.js): só números, nunca nome de estudante ---- */
+function cfCalcular(){
+  cfCalcularNucleo();
+  try { document.dispatchEvent(new CustomEvent('anona:frequencia')); } catch (e) {}
+}
+function cfLerEstado(){
+  if (!cfEl('cfAno')) return null;
+  const faixa = cfEl('cfFaixa').value, lim = parseInt(faixa, 10), presenca = cfModoPresenca(), per = cfPeriodoAtual();
+  const est = { modo: presenca ? 'presenca' : 'bimestre', faixa, minimo: lim, faixaNome: CF_FAIXAS[faixa],
+                periodoIdx: Number(cfEl('cfPeriodo').value), periodoNome: per ? per.nome : '', ano: Number(cfEl('cfAno').value), itens: [] };
+  if (!per) return est;
+  if (presenca) {
+    per.meses.forEach((m, k) => est.itens.push({ rotulo: CF_MESES[m], mes: m, k, r: cfAvaliar(parseInt(cfEl('cfDiasM' + k).value, 10), cfEl('cfFaltasM' + k).value, lim) }));
+  } else {
+    est.itens.push({ rotulo: per.nome, mes: null, k: -1, r: cfAvaliar(parseInt(cfEl('cfDias').value, 10), cfEl('cfFaltas').value, lim) });
+  }
+  return est;
+}
+// Muda só os campos da calculadora (nada é salvo). cmd: { modo, periodo, faixa, itens:[{mes, faltas, dias}] }
+function cfAplicar(cmd){
+  if (!cfEl('cfAno')) return false;
+  cmd = cmd || {};
+  if (cmd.modo && cmd.modo !== cfEl('cfModo').value) { cfEl('cfModo').value = cmd.modo; cfMudouModo(); }
+  if (cmd.faixa && ['60', '75', '75j'].includes(String(cmd.faixa))) cfEl('cfFaixa').value = String(cmd.faixa);
+  if (cmd.periodo != null && String(cmd.periodo) !== cfEl('cfPeriodo').value) { cfEl('cfPeriodo').value = String(cmd.periodo); cfMudouPeriodo(); }
+  (cmd.itens || []).forEach(it => {
+    if (cfModoPresenca()) {
+      const per = cfPeriodoAtual(), k = per ? per.meses.indexOf(it.mes) : -1;
+      if (k < 0) return;
+      if (it.dias != null) cfEl('cfDiasM' + k).value = it.dias;
+      if (it.faltas != null) cfEl('cfFaltasM' + k).value = it.faltas;
+    } else {
+      if (it.dias != null) { cfEl('cfDias').value = it.dias; __cfDiasManual = Number(it.dias) !== __cfDiasOficial; }
+      if (it.faltas != null) cfEl('cfFaltas').value = it.faltas;
+    }
+  });
+  cfCalcular();
+  return true;
+}
+window.AnonaFrequencia = {
+  ler: cfLerEstado, aplicar: cfAplicar, avaliar: cfAvaliar, limpar: cfLimpar, resumo: () => __cfResumo,
+  periodoDoMes: m => PRESENCA_PERIODOS.findIndex(p => p.meses.includes(m)),
+  meses: CF_MESES, repercussao: i => cfRepercussaoDoPeriodo(i)
+};
+
 window.cfCopiarResumo = cfCopiarResumo;
 window.cfLimpar = cfLimpar;
 window.cfMudouAno = cfMudouAno;
@@ -5542,6 +5596,7 @@ if ('serviceWorker' in navigator) {
      da página (defer). -->
 <script src="anona-mascot.js" defer></script>
 <script src="paulus.v1.js" defer></script>
+<script src="anona-presenca.js" defer></script>
 <script src="paulus-anona.js" defer></script>
 
 </div><!-- fim #appContent -->
