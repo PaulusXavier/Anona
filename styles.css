@@ -117,13 +117,13 @@
      que antes, e cresce bastante em telas maiores para mostrar todos os
      dias com folga) */
   @media (min-width:640px){
-    .day-cell{ min-height:118px; padding:.65rem; }
+    .day-cell{ min-height:104px; padding:.6rem; }
   }
   @media (min-width:1024px){
-    .day-cell{ min-height:128px; padding:.75rem; }
+    .day-cell{ min-height:112px; padding:.65rem; }
   }
   @media (min-width:1280px){
-    .day-cell{ min-height:136px; padding:.8rem; }
+    .day-cell{ min-height:120px; padding:.7rem; }
   }
   .day-cell:hover{ background:#F7F9FC; }
   /* em telas com mouse (não touch), a célula "levanta" de leve ao passar o
