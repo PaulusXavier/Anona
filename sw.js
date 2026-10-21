@@ -17,7 +17,7 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v24";
+const CACHE_NAME = "pbf-app-shell-v26";
 
 // Tempo máximo (ms) que a busca da página mais nova pode levar antes do
 // service worker desistir de esperar e mostrar a cópia guardada. Sem isso,
