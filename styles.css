@@ -120,10 +120,10 @@
     .day-cell{ min-height:104px; padding:.6rem; }
   }
   @media (min-width:1024px){
-    .day-cell{ min-height:112px; padding:.65rem; }
+    .day-cell{ min-height:100px; padding:.6rem; }
   }
   @media (min-width:1280px){
-    .day-cell{ min-height:120px; padding:.7rem; }
+    .day-cell{ min-height:104px; padding:.65rem; }
   }
   .day-cell:hover{ background:#F7F9FC; }
   /* em telas com mouse (não touch), a célula "levanta" de leve ao passar o
@@ -545,4 +545,12 @@
 
   @media (prefers-reduced-motion: reduce){
     html{ scroll-behavior:auto; }
+  }
+
+
+  /* calendário acompanha a altura do painel ao lado: as semanas crescem
+     para preencher, sem sobrar vão embaixo do mês */
+  @media (min-width:1280px){
+    .cal-panel{ display:flex; flex-direction:column; }
+    .cal-panel .calendar-grid{ flex:1; grid-auto-rows:minmax(104px,1fr); }
   }
