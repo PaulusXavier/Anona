@@ -346,8 +346,10 @@
 
 <main class="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 py-5">
 
+  <!-- CALENDÁRIO + PAINEL DO DIA — lado a lado em telas largas: o espaço que sobrava à direita do calendário agora abriga a anotação do dia, a legenda e o NIS, sempre à vista. -->
+  <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_23.5rem] gap-6 items-start xl:items-stretch mb-6">
   <!-- CALENDÁRIO — o "documento principal", em destaque na largura toda -->
-    <div class="panel overflow-hidden mb-6">
+    <div class="panel overflow-hidden min-w-0 cal-panel">
       <div class="p-5 border-b flex items-center justify-between" style="border-color:var(--line)">
         <button onclick="changeMonth(-1)" id="btnPrev" aria-label="Mês anterior" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
           <i data-lucide="chevron-left" class="w-6 h-6 text-slate-600"></i>
@@ -362,12 +364,8 @@
       </div>
       <div id="calendarGrid" class="calendar-grid"></div>
     </div>
-
-  <!-- CARDS — em colunas equilibradas tipo mosaico (cada card entra na coluna
-       mais vazia no momento), para não sobrar um vão enorme de um lado só. -->
-  <div class="columns-1 md:columns-2 xl:columns-3 gap-6">
-
-    <div class="panel p-6 mb-6 break-inside-avoid">
+    <aside class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-6 items-stretch">
+    <div class="panel p-5 sm:p-6 md:col-span-2 xl:col-span-1">
       <div class="flex items-center gap-4 mb-4">
         <div id="selectedDayBox" class="display text-white w-14 h-14 flex items-center justify-center rounded-2xl font-semibold text-2xl shadow-lg" style="background:var(--azul)">01</div>
         <div>
@@ -394,7 +392,7 @@
       </div>
     </div>
 
-    <div class="panel-tool p-4 sm:p-5 mb-6 break-inside-avoid">
+    <div class="panel-tool p-4 sm:p-5">
       <h2 class="eyebrow mb-3">
         <span class="chip"><i data-lucide="palette" class="w-4 h-4" style="color:var(--azul)"></i></span> Legenda
       </h2>
@@ -409,7 +407,23 @@
       </div>
     </div>
 
-    <div class="panel-tool p-5 mb-6 break-inside-avoid">
+    <div class="id-card bg-white">
+      <div class="id-card-strip"></div>
+      <div class="p-5">
+        <h2 class="eyebrow mb-3">
+          <span class="chip" style="background:var(--amarelo-soft)"><i data-lucide="credit-card" class="w-4 h-4" style="color:var(--amarelo-text)"></i></span> Seu NIS
+        </h2>
+        <p class="text-xs text-slate-500 mb-3">Digite o <strong>último dígito</strong> do seu NIS para destacar seu dia de pagamento no calendário.</p>
+        <input id="nisInput" maxlength="1" inputmode="numeric" placeholder="Ex: 7"
+          class="display w-full text-center text-3xl font-semibold tracking-widest border-2 rounded-xl py-2 focus:outline-none focus:ring-2" style="border-color:var(--amarelo); color:var(--amarelo-text); --tw-ring-color:var(--amarelo)">
+      </div>
+    </div>
+    </aside>
+  </div>
+
+  <!-- FERRAMENTAS RÁPIDAS — três cartões lado a lado, sem vãos -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch mb-6">
+    <div class="panel-tool p-5">
       <h2 class="eyebrow mb-3">
         <span class="chip"><i data-lucide="file-down" class="w-4 h-4" style="color:var(--azul)"></i></span> Exportar
       </h2>
@@ -434,19 +448,7 @@
       </button>
     </div>
 
-    <div class="id-card bg-white mb-6 break-inside-avoid">
-      <div class="id-card-strip"></div>
-      <div class="p-5">
-        <h2 class="eyebrow mb-3">
-          <span class="chip" style="background:var(--amarelo-soft)"><i data-lucide="credit-card" class="w-4 h-4" style="color:var(--amarelo-text)"></i></span> Seu NIS
-        </h2>
-        <p class="text-xs text-slate-500 mb-3">Digite o <strong>último dígito</strong> do seu NIS para destacar seu dia de pagamento no calendário.</p>
-        <input id="nisInput" maxlength="1" inputmode="numeric" placeholder="Ex: 7"
-          class="display w-full text-center text-3xl font-semibold tracking-widest border-2 rounded-xl py-2 focus:outline-none focus:ring-2" style="border-color:var(--amarelo); color:var(--amarelo-text); --tw-ring-color:var(--amarelo)">
-      </div>
-    </div>
-
-    <div class="panel-tool p-5 mb-6 break-inside-avoid">
+    <div class="panel-tool p-5">
       <h2 class="eyebrow mb-3">
         <span class="chip"><i data-lucide="clipboard-check" class="w-4 h-4" style="color:var(--azul)"></i></span> Consulta ao SICON
       </h2>
@@ -458,14 +460,12 @@
       <p class="text-[10px] text-slate-400 mt-3 italic">Fonte: MDS/SENARC.</p>
     </div>
 
-
-    <div class="panel-tool p-5 mb-6 break-inside-avoid">
+    <div class="panel-tool p-5 md:col-span-2 xl:col-span-1">
       <h2 class="eyebrow mb-4">
         <span class="chip"><i data-lucide="info" class="w-4 h-4" style="color:var(--azul)"></i></span> Destaques do mês
       </h2>
       <div id="monthSummary" class="space-y-3"></div>
     </div>
-
   </div>
 
   <!-- PLANILHAS DO TERRITÓRIO VOLANTE — em destaque, fora do mosaico, com os
@@ -1159,7 +1159,7 @@
 </section>
 
 <!-- RECURSO ON-LINE E LEGENDA DE MOTIVOS — apoio para ler os relatórios de condicionalidades -->
-<section class="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+<section class="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 pb-6 grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
   <div class="panel-tool p-5">
     <h2 class="eyebrow mb-3">
       <span class="chip"><i data-lucide="scale" class="w-4 h-4" style="color:var(--azul)"></i></span> O que é o Recurso on-line
