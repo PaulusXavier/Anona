@@ -1151,6 +1151,32 @@
       </div>
     </details>
 
+
+    <details id="cfPanorama" class="rounded-lg border border-slate-200 mt-3">
+      <summary class="text-[11px] font-bold text-slate-600 px-3 py-2 cursor-pointer select-none hover:bg-slate-50 rounded-lg">Panorama do ano: todos os meses numa tabela (totais, repercussão e exportação)</summary>
+      <div class="px-3 pb-3">
+        <p class="text-[11px] text-slate-500 mt-2 mb-2">Lance as faltas de cada mês (fevereiro a novembro) e veja tudo de uma vez: % de faltas, % de frequência, quantas faltas ainda cabem, situação e em qual repercussão cada período entra. Os dias letivos vêm do calendário da rede escolhida acima e podem ser corrigidos. Nada é salvo.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border-collapse" aria-describedby="cfPanoramaResumo">
+            <thead><tr class="text-slate-500 uppercase text-[10px] tracking-wide border-b border-slate-200">
+              <th class="py-2 pr-2 font-bold">Mês</th><th class="py-2 pr-2 font-bold"><span id="cfpTitDias">Dias letivos</span></th><th class="py-2 pr-2 font-bold">Faltas</th>
+              <th class="py-2 pr-2 font-bold">% faltas</th><th class="py-2 pr-2 font-bold">% freq.</th><th class="py-2 pr-2 font-bold">Folga</th><th class="py-2 pr-2 font-bold">Situação</th><th class="py-2 pr-2 font-bold">Repercussão</th>
+            </tr></thead>
+            <tbody id="cfpCorpo" class="divide-y divide-slate-100"></tbody>
+            <tfoot id="cfpRodape" class="border-t-2 border-slate-300 font-bold text-slate-700"></tfoot>
+          </table>
+        </div>
+        <p id="cfPanoramaResumo" class="text-[11px] text-slate-600 mt-2" role="status" aria-live="polite"></p>
+        <p class="text-[10px] text-slate-500 mt-1">Folga = quantas faltas ainda cabem no mês sem baixa frequência (negativo = faltas além do limite). A linha de total é informativa: o Presença avalia cada mês separadamente.</p>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <button type="button" onclick="cfPanoramaExportar('xlsx')" class="px-3 py-2 rounded-xl text-xs font-bold text-white" style="background:var(--verde)">Baixar planilha (.xlsx)</button>
+          <button type="button" onclick="cfPanoramaExportar('csv')" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Baixar .csv</button>
+          <button type="button" id="cfpBtnCopiar" onclick="cfPanoramaCopiar()" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Copiar tabela</button>
+          <button type="button" onclick="cfPanoramaLimpar()" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Limpar faltas</button>
+        </div>
+      </div>
+    </details>
+
     <div class="text-[10px] text-slate-500 mt-3 space-y-1">
       <p><strong>Como o Presença trata os casos especiais:</strong> quem atingiu o mínimo pode ser registrado com frequência integral (99%); quem ficou abaixo precisa de <strong>código de motivo</strong> (veja a Legenda de Motivos abaixo). Greve, falta de professor, calamidade e reforma da escola são <em>situações coletivas</em> e não contam como baixa frequência. Em meses com recesso, se o recesso for ≥ 50% dos dias letivos do mês, a frequência é integral; se for menor, vale a fórmula do formulário — confira no formulário da escola (esta calculadora não aplica essa regra).</p>
       <p class="italic">Estimativa para orientação: vale sempre o registro oficial da escola no Sistema Presença. Se a escola conta por aulas/horas (como no calendário estadual), escolha “Aulas / horas-aula” em “Contar a frequência em” e informe aulas dadas e aulas perdidas.</p>
@@ -1785,73 +1811,15 @@
       XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(rows), p.sheetName);
     });
 
-    const bordaLeve = {
-      top:{style:'thin',color:{rgb:'D9D9D9'}}, bottom:{style:'thin',color:{rgb:'D9D9D9'}},
-      left:{style:'thin',color:{rgb:'D9D9D9'}}, right:{style:'thin',color:{rgb:'D9D9D9'}}
-    };
-    // Clareia uma cor hex misturando com branco (factor 0=cor original, 1=branco).
-    const clarear = (hex, factor) => {
-      const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-      const mix = (v) => Math.round(v + (255 - v) * factor).toString(16).padStart(2,'0').toUpperCase();
-      return mix(r) + mix(g) + mix(b);
-    };
     const corPorAba = name => (profissionais.find(p => p.sheetName === name) || {}).cor || '0B2F7A';
-
+    // Contagem de famílias do resumo = fórmula viva (recalcula se alguém mexer nas abas dos técnicos).
+    const colNome = XLSX.utils.encode_col(nameIdx);
+    profissionais.forEach((p, i) => {
+      const cel = XLSX.utils.encode_cell({ r: i + 1, c: 2 });
+      out.Sheets['Resumo da divisão'][cel] = AnonaTabelas.celulaFormula(`COUNTA('${p.sheetName.replace(/'/g, "''")}'!${colNome}:${colNome})-1`, p.rows.length);
+    });
     out.SheetNames.forEach(name => {
-      const ws = out.Sheets[name];
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      const corAba = corPorAba(name);
-      const zebraClara = clarear(corAba, 0.90);   // tom bem claro da cor da aba
-      const zebraEscura = clarear(corAba, 0.96);  // quase branco, mesma família de cor
-
-      const estiloCabecalho = {
-        font:{name:'Arial', sz:13, bold:true, color:{rgb:'FFFFFF'}},
-        fill:{patternType:'solid', fgColor:{rgb:corAba}},
-        alignment:{horizontal:'center', vertical:'center', wrapText:true},
-        border:{ top:{style:'thin',color:{rgb:corAba}}, bottom:{style:'medium',color:{rgb:corAba}},
-                 left:{style:'thin',color:{rgb:corAba}}, right:{style:'thin',color:{rgb:corAba}} }
-      };
-      const estiloCelula = { font:{name:'Arial', sz:12, color:{rgb:'1F2937'}}, alignment:{vertical:'center', wrapText:true}, border:bordaLeve };
-      const estiloCelulaAlternada = { ...estiloCelula, fill:{patternType:'solid', fgColor:{rgb:zebraClara}} };
-      const estiloCelulaBase = { ...estiloCelula, fill:{patternType:'solid', fgColor:{rgb:zebraEscura}} };
-      const estiloNome = fundo => ({
-        font:{name:'Arial', sz:12, bold:true, color:{rgb:'000000'}},
-        alignment:{vertical:'center', wrapText:true},
-        border:bordaLeve,
-        fill:{patternType:'solid', fgColor:{rgb:fundo}}
-      });
-
-      ws['!tabColor'] = { rgb: corAba };
-      ws['!rows'] = [];
-      for (let r = range.s.r; r <= range.e.r; r++) {
-        ws['!rows'][r] = { hpt: r === range.s.r ? 50 : 34 };
-        const linhaClara = r % 2 === 0;
-        for (let c = range.s.c; c <= range.e.c; c++) {
-          const address = XLSX.utils.encode_cell({r,c});
-          if (!ws[address]) ws[address] = { v:'', t:'s' };
-          if (r === range.s.r) {
-            ws[address].s = estiloCabecalho;
-          } else if (c === nameIdx) {
-            // Coluna do nome do responsável familiar em destaque (negrito, cor da aba).
-            ws[address].s = estiloNome(linhaClara ? zebraClara : zebraEscura);
-          } else {
-            ws[address].s = linhaClara ? estiloCelulaAlternada : estiloCelulaBase;
-          }
-        }
-      }
-      ws['!autofilter'] = { ref: ws['!ref'] };
-      ws['!freeze'] = { xSplit:0, ySplit:1 };
-      ws['!cols'] = [];
-      for (let c = range.s.c; c <= range.e.c; c++) {
-        let max = 12;
-        for (let r = range.s.r; r <= range.e.r; r++) {
-          const cell = ws[XLSX.utils.encode_cell({r,c})];
-          const value = cell && cell.v != null ? String(cell.v) : '';
-          max = Math.max(max, value.length);
-        }
-        ws['!cols'][c] = { wch: Math.min(max + 4, c === nameIdx ? 34 : 42) };
-      }
-      ws['!margins'] = { left:0.25, right:0.25, top:0.5, bottom:0.5, header:0.2, footer:0.2 };
+      AnonaTabelas.estilizar(out.Sheets[name], { cor: corPorAba(name), colunaNome: name === 'Resumo da divisão' ? -1 : nameIdx, tamFonte: 12, altCab: 50, altLinha: 34, larguraMax: 42 });
     });
     out.Workbook = out.Workbook || {};
     out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
@@ -2152,50 +2120,14 @@
       return coresTecnico[tecnico] || (tecnico === NAO_IDENTIFICADO ? '6B7280' : '0F766E');
     };
 
-    const bordaLeve = {
-      top:{style:'thin',color:{rgb:'D9D9D9'}}, bottom:{style:'thin',color:{rgb:'D9D9D9'}},
-      left:{style:'thin',color:{rgb:'D9D9D9'}}, right:{style:'thin',color:{rgb:'D9D9D9'}}
-    };
+    // Números do resumo viram fórmulas vivas (contam as linhas das abas de dados).
+    const wsRes = out.Sheets['Resumo'], contar = (aba, n) => AnonaTabelas.celulaFormula(`COUNTA('${aba.replace(/'/g, "''")}'!A:A)-1`, n);
+    wsRes['B3'] = contar('Todas as famílias', linhas.length);
+    wsRes['B4'] = linhasMudaram.length ? contar(ABA_MUDARAM, linhasMudaram.length) : wsRes['B4'];
+    tecnicosOrdenados.forEach((t, i) => { wsRes[XLSX.utils.encode_cell({ r: 6 + i, c: 1 })] = contar(abasTecnico.get(t), porTecnico.get(t).length); });
     out.SheetNames.forEach(name => {
-      const ws = out.Sheets[name];
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      const corAba = corPorAba(name);
-      const estiloCabecalho = {
-        font:{name:'Arial', sz:12, bold:true, color:{rgb:'FFFFFF'}},
-        fill:{patternType:'solid', fgColor:{rgb:corAba}},
-        alignment:{horizontal:'center', vertical:'center', wrapText:true},
-        border:{ top:{style:'thin',color:{rgb:corAba}}, bottom:{style:'medium',color:{rgb:corAba}},
-                 left:{style:'thin',color:{rgb:corAba}}, right:{style:'thin',color:{rgb:corAba}} }
-      };
-      const estiloCelula = { font:{name:'Arial', sz:11, color:{rgb:'1F2937'}}, alignment:{vertical:'center', wrapText:true}, border:bordaLeve };
-      const estiloCelulaAlternada = { ...estiloCelula, fill:{patternType:'solid', fgColor:{rgb:'FDF3E7'}} };
-      ws['!tabColor'] = { rgb: corAba };
-      ws['!rows'] = [];
-      for (let r = range.s.r; r <= range.e.r; r++) {
-        ws['!rows'][r] = { hpt: r === range.s.r ? 46 : 30 };
-        const linhaClara = r % 2 === 0;
-        for (let c = range.s.c; c <= range.e.c; c++) {
-          const address = XLSX.utils.encode_cell({r,c});
-          if (!ws[address]) ws[address] = { v:'', t:'s' };
-          ws[address].s = (name !== 'Resumo' && r === range.s.r) ? estiloCabecalho
-            : (linhaClara ? estiloCelulaAlternada : estiloCelula);
-        }
-      }
-      if (name !== 'Resumo') {
-        ws['!autofilter'] = { ref: ws['!ref'] };
-        ws['!freeze'] = { xSplit:0, ySplit:1 };
-      }
-      ws['!cols'] = [];
-      for (let c = range.s.c; c <= range.e.c; c++) {
-        let max = 12;
-        for (let r = range.s.r; r <= range.e.r; r++) {
-          const cell = ws[XLSX.utils.encode_cell({r,c})];
-          const value = cell && cell.v != null ? String(cell.v) : '';
-          max = Math.max(max, value.length);
-        }
-        ws['!cols'][c] = { wch: Math.min(max + 4, 42) };
-      }
-      ws['!margins'] = { left:0.25, right:0.25, top:0.5, bottom:0.5, header:0.2, footer:0.2 };
+      const ws = out.Sheets[name], resumo = name === 'Resumo';
+      AnonaTabelas.estilizar(ws, { cor: corPorAba(name), tamFonte: 11, altCab: 46, altLinha: 30, larguraMax: 42, filtro: !resumo, congelar: !resumo, semCabecalho: resumo });
     });
     out.Workbook = out.Workbook || {};
     out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
@@ -5506,9 +5438,112 @@ function cfLimpar(){
   cfCalcular();
 }
 
+
+/* ---- Panorama do ano (tabela mês a mês + exportação) — cálculo e planilha em anona-tabelas.js ---- */
+let __cfpAssinatura = '';
+function cfpMeses(){ return PRESENCA_PERIODOS.flatMap(p => p.meses); }
+function cfpDiasDoCalendario(m){
+  const cal = cfCalendarioAtual();
+  if (!cal || cfUn().aulas) return '';
+  return (cal.mensal && cal.mensal[m]) || (cal.mensalRef && cal.mensalRef[m]) || '';
+}
+function cfPanoramaMontar(){
+  const corpo = cfEl('cfpCorpo'); if (!corpo) return;
+  const ano = Number(cfEl('cfAno').value), guardado = {};
+  corpo.querySelectorAll('input[data-f]').forEach(i => { guardado[i.dataset.f] = i.value; });
+  cfEl('cfpTitDias').textContent = cfUn().aulas ? 'Aulas dadas' : 'Dias letivos';
+  const inp = (id, m, tipo, val, rot) => `<input id="${id}" data-${tipo}="${m}" type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(String(val))}" oninput="cfPanoramaCalcular()" aria-label="${rot} de ${CF_MESES[m]}" class="w-16 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">`;
+  corpo.innerHTML = PRESENCA_PERIODOS.map((p, pi) => p.meses.map((m, k) => {
+    const rp = cfRepercussaoDoPeriodo(pi);
+    const rep = k === 0 ? `<td rowspan="${p.meses.length}" class="py-1.5 pr-2 align-top text-[11px] text-slate-600 border-l border-slate-100 pl-2"><strong>${escapeHtml(rp.mes)}/${rp.ano}</strong><br>${PRESENCA_CURTO[pi]}${rp.dataLimite ? `<br>recurso até ${escapeHtml(rp.dataLimite)}` : ''}</td>` : '';
+    return `<tr id="cfpL${m}" class="${k === 0 && pi > 0 ? 'border-t-2 border-slate-200' : ''}"><td class="py-1.5 pr-2 font-semibold text-slate-700">${CF_MESES[m]}</td>
+      <td class="py-1.5 pr-2">${inp('cfpD' + m, m, 'd', cfpDiasDoCalendario(m), 'Dias')}</td>
+      <td class="py-1.5 pr-2">${inp('cfpF' + m, m, 'f', guardado[m] || '', 'Faltas')}</td>
+      <td id="cfpP${m}" class="py-1.5 pr-2 text-slate-600"></td><td id="cfpQ${m}" class="py-1.5 pr-2 text-slate-600"></td><td id="cfpM${m}" class="py-1.5 pr-2 text-slate-600"></td><td id="cfpS${m}" class="py-1.5 pr-2"></td>${rep}</tr>`;
+  }).join('')).join('');
+  __cfpAssinatura = [cfEl('cfAno').value, cfEl('cfRede').value, cfEl('cfModalidade').value, cfUn().aulas].join('|');
+}
+function cfPanoramaDados(){
+  const faixa = cfEl('cfFaixa').value, lim = parseInt(faixa, 10);
+  const linhas = cfpMeses().map(m => ({ mes: m, dias: cfEl('cfpD' + m).value, faltas: cfEl('cfpF' + m).value }));
+  const res = AnonaTabelas.panorama(linhas, PRESENCA_PERIODOS, lim);
+  return { res, lim, faixa, linhas };
+}
+function cfPanoramaCalcular(){
+  if (!window.AnonaTabelas || !cfEl('cfpCorpo')) return;
+  const assin = [cfEl('cfAno').value, cfEl('cfRede').value, cfEl('cfModalidade').value, cfUn().aulas].join('|');
+  if (assin !== __cfpAssinatura || !cfEl('cfpD2')) cfPanoramaMontar();
+  const { res, lim } = cfPanoramaDados(), T = AnonaTabelas, U = cfUn();
+  res.itens.forEach(({ mes, r }) => {
+    const set = (id, t, cls) => { const e = cfEl(id + mes); e.textContent = t; if (cls != null) e.className = cls; };
+    const base = 'py-1.5 pr-2 ';
+    if (r.estado === 'ok') {
+      set('cfpP', cfFmt(r.pctFaltas) + '%', base + 'text-slate-600'); set('cfpQ', cfFmt(r.pctFreq) + '%', base + 'text-slate-600');
+      set('cfpM', (r.folga > 0 ? '+' : '') + r.folga, base + (r.folga < 0 ? 'text-red-700 font-semibold' : 'text-slate-600'));
+      cfEl('cfpS' + mes).innerHTML = r.cumpriu ? '<span class="font-bold text-emerald-700">Regular</span>' : '<span class="font-bold text-red-700">Baixa frequência</span>';
+    } else {
+      ['cfpP', 'cfpQ', 'cfpM'].forEach(id => set(id, '', null));
+      cfEl('cfpS' + mes).innerHTML = r.estado === 'erro' ? '<span class="font-bold text-red-700">Faltas &gt; dias</span>' : '<span class="text-slate-400">—</span>';
+    }
+  });
+  const t = res.totais, g = t.geral;
+  cfEl('cfpRodape').innerHTML = g ? `<tr><td class="py-2 pr-2">Total</td><td class="py-2 pr-2">${t.dias}</td><td class="py-2 pr-2">${t.faltas}</td><td class="py-2 pr-2">${cfFmt(g.pctFaltas)}%</td><td class="py-2 pr-2">${cfFmt(g.pctFreq)}%</td><td class="py-2 pr-2"></td><td class="py-2 pr-2 text-[11px]">${t.mesesBaixa.length} mês(es) em baixa</td><td></td></tr>` : '';
+  const nomes = ms => ms.map(m => CF_MESES[m]).join(', ');
+  let txt = '';
+  if (res.erros.length) txt = `Confira ${nomes(res.erros)}: faltas maiores que ${U.letivos}.`;
+  else if (!t.mesesLancados) txt = 'Lance as faltas de algum mês para ver o panorama.';
+  else if (!t.mesesBaixa.length) txt = `${t.mesesLancados} mês(es) lançado(s), todos com a frequência mínima de ${lim}%.`;
+  else {
+    const reps = res.porPeriodo.filter(p => p.baixos.length).map(p => { const r = cfRepercussaoDoPeriodo(p.idx); return `${r.mes}/${r.ano} (${PRESENCA_CURTO[p.idx]})`; });
+    txt = `Baixa frequência em ${nomes(t.mesesBaixa)}. Sem motivo que dispense o efeito, entra na repercussão de: ${reps.join('; ')}.`;
+  }
+  cfEl('cfPanoramaResumo').textContent = txt;
+}
+function cfPanoramaContexto(){
+  const d = cfPanoramaDados(), cal = cfCalendarioAtual(), mod = cfModalidadeAtual(), ano = cfEl('cfAno').value;
+  const repercussao = {}, dias = {};
+  PRESENCA_PERIODOS.forEach((p, pi) => { const r = cfRepercussaoDoPeriodo(pi); p.meses.forEach(m => { repercussao[m] = `${r.mes}/${r.ano}` + (r.dataLimite ? ` (recurso até ${r.dataLimite})` : ''); }); });
+  d.linhas.forEach(l => { dias[l.mes] = l.dias; });
+  return { d, ano, nome: cfEl('cfNome').value.trim(), rede: `${cal ? cal.nome : ''} · ${mod ? mod.nome : ''}`, faixaTxt: CF_FAIXAS[d.faixa], repercussao, dias };
+}
+function cfPanoramaExportar(tipo){
+  const T = window.AnonaTabelas;
+  if (!T) { alert('O módulo de tabelas ainda não carregou. Tente de novo em instantes.'); return; }
+  const c = cfPanoramaContexto();
+  if (!c.d.res.totais.mesesLancados) { alert('Lance as faltas de pelo menos um mês antes de exportar.'); return; }
+  const nomeBase = T.nomeArquivoSeguro(`Panorama de frequência ${c.ano}` + (c.nome ? ` - ${c.nome}` : ''));
+  if (tipo === 'csv') {
+    const m = T.panoramaParaMatriz(c.d.res, { unidade: cfUn().aulas ? 'aulas' : 'dias', nomesMes: CF_MESES, repercussao: c.repercussao, dias: c.dias }, c.d.lim);
+    T.baixarBlob(T.csv(m), nomeBase + '.csv', 'text/csv;charset=utf-8');
+    return;
+  }
+  if (!window.XLSX) { alert('A biblioteca de planilhas ainda não carregou. Tente de novo em instantes.'); return; }
+  const wb = T.panoramaWorkbook({ nome: c.nome, rede: c.rede, ano: c.ano, faixaTxt: c.faixaTxt, lim: c.d.lim, unidade: cfUn().aulas ? 'aulas' : 'dias', repercussao: c.repercussao,
+    linhas: c.d.linhas.map(l => ({ mes: l.mes, mesNome: CF_MESES[l.mes], dias: l.dias, faltas: l.faltas })) });
+  T.baixarBlob(T.escrever(wb, n => n === 'Informações' ? '0B2F7A' : '159947'), nomeBase + '.xlsx', T.MIME_XLSX);
+}
+async function cfPanoramaCopiar(){
+  const T = window.AnonaTabelas, btn = cfEl('cfpBtnCopiar'), orig = 'Copiar tabela';
+  const flash = t => { btn.textContent = t; setTimeout(() => { btn.textContent = orig; }, 2000); };
+  if (!T) { flash('Módulo não carregou'); return; }
+  const c = cfPanoramaContexto();
+  if (!c.d.res.totais.mesesLancados) { flash('Lance as faltas primeiro'); return; }
+  const m = T.panoramaParaMatriz(c.d.res, { unidade: cfUn().aulas ? 'aulas' : 'dias', nomesMes: CF_MESES, repercussao: c.repercussao, dias: c.dias }, c.d.lim);
+  flash(await T.copiarTabela(m, { cor: '#159947' }) ? 'Copiado!' : 'Não foi possível copiar');
+}
+function cfPanoramaLimpar(){
+  document.querySelectorAll('#cfpCorpo input[data-f]').forEach(i => { i.value = ''; });
+  cfPanoramaCalcular();
+}
+document.addEventListener('DOMContentLoaded', () => { cfPanoramaCalcular(); const d = cfEl('cfPanorama'); if (d) d.addEventListener('toggle', () => { if (d.open) cfPanoramaCalcular(); }); });
+document.addEventListener('cronogramaRepercussaoPronto', () => { __cfpAssinatura = ''; cfPanoramaCalcular(); });
+window.cfPanoramaCalcular = cfPanoramaCalcular; window.cfPanoramaExportar = cfPanoramaExportar;
+window.cfPanoramaCopiar = cfPanoramaCopiar; window.cfPanoramaLimpar = cfPanoramaLimpar;
+
 /* ---- API para o assistente de presença (anona-presenca.js): só números, nunca nome de estudante ---- */
 function cfCalcular(){
   cfCalcularNucleo();
+  try { cfPanoramaCalcular(); } catch (e) {}
   try { document.dispatchEvent(new CustomEvent('anona:frequencia')); } catch (e) {}
 }
 function cfLerEstado(){
@@ -5698,6 +5733,7 @@ if ('serviceWorker' in navigator) {
 <!-- Mascote do app (cartãozinho com aceno) — puramente decorativo, some
      atrás de qualquer modal. Carregado por último e sem bloquear o resto
      da página (defer). -->
+<script src="anona-tabelas.js" defer></script>
 <script src="anona-mascot.js" defer></script>
 <script src="paulus.v1.js" defer></script>
 <script src="anona-presenca.js" defer></script>
