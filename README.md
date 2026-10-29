@@ -19,6 +19,7 @@ index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
 anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas)
+anona-tabelas.js                -> cálculos e tabelas: Panorama do ano da calculadora, estilo padrão das planilhas .xlsx (com fórmulas), exportar .xlsx/.csv e copiar tabela. Testes: `node tests/tabelas.test.js`
 anona-presenca.js               -> assistente de presença: entende frases ("3 faltas em março, 22 dias letivos"), preenche a calculadora, simula faltas e faz o mascote comentar o resultado
 icon-192.png                    -> ícone do app para Android/desktop (cantos transparentes; ilustração própria, sem uso de marca de terceiros)
 icon-512.png                    -> ícone do app (versão maior, mesmo arquivo de cantos transparentes)
