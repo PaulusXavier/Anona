@@ -316,3 +316,10 @@ Para ganhar tempo na **Calculadora de Faltas e Frequência Escolar**, em vez de 
 Arquivos: `anona-presenca.js` (novo), `paulus-anona.js` (desvio local antes de enviar ao Paulus), `index.html` (API `window.AnonaFrequencia` e o campo de texto). O `sw.js` já inclui o arquivo novo no cache offline.
 
 **Para a IA saber da calculadora**, publique de novo o Worker do Paulus com o `worker/apps.mjs` atualizado (bloco do Anona). Sem isso tudo continua funcionando; a explicação da IA só fica menos específica.
+
+### Paulus atualizado para a v0.10.0 (04/11/2026)
+
+- `paulus.v1.js` e `conhecimento.json` (pacote *geral*, ~1 MB) agora são os da v0.10.0 (antes v0.3.0). Mais normas e habilidades de condicionalidades, e o Paulus passa a aprender com o uso, **só no aparelho**.
+- O painel do mascote ganhou: 👍/👎/copiar/"mais curto"/"outro jeito" que ajustam o estilo das respostas; botões de ação que a IA propõe (só navegação até os cartões; quem toca é você); "Era esta?" quando um pedido de tela não é reconhecido; sugestões iniciais personalizadas; e o botão 🧠 ("O que o Paulus aprendeu sobre mim") com *Esquecer tudo* e *Desligar aprendizado*.
+- A memória é separada por conta (hash do uid, nunca e-mail ou nome). Continua sem ler notas, planilhas ou NIS.
+- `sw.js` na v27. Para a IA aproveitar tudo, publique o Worker do Paulus de novo (`npm run deploy:worker`).
