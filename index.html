@@ -4279,7 +4279,7 @@
   async function runAuthUI(user) {
     currentUser = user;
     // Avisa o assistente (paulus-anona.js): ao sair da conta, ele apaga a conversa e fecha o painel.
-    try { window.dispatchEvent(new CustomEvent('anona:auth', { detail: { logado: !!user } })); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent('anona:auth', { detail: { logado: !!user, uid: user ? user.uid : '' } })); } catch (e) {}
     if (user) {
       const lockScreen = document.getElementById('lockScreen');
       const appContent = document.getElementById('appContent');
