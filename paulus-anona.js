@@ -21,6 +21,13 @@
 
   var painel = null, lista = null, campo = null, enviar = null, status = null, sugestoesEl = null;
   var conversando = false, aborto = null, iniciado = false, ultimaPergunta = "", ultimasOpcoes = null;
+  var perfilId = ""; // id opaco da conta (hash do uid; nunca e-mail nem nome): a memória do Paulus fica separada por pessoa
+
+  function hashId(t) {
+    var h = 5381;
+    for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0;
+    return "u" + h.toString(36);
+  }
 
   function el(tag, cls, texto) {
     var e = document.createElement(tag);
@@ -127,11 +134,17 @@
     novo.setAttribute("aria-label", "Nova conversa");
     novo.title = "Nova conversa";
     novo.addEventListener("click", reiniciar);
+    var mem = el("button", null, "🧠");
+    mem.type = "button";
+    mem.setAttribute("aria-label", "O que o Paulus aprendeu sobre mim");
+    mem.title = "O que o Paulus aprendeu sobre mim";
+    mem.addEventListener("click", mostrarMemoria);
     var fecha = el("button", null, "✕");
     fecha.type = "button";
     fecha.setAttribute("aria-label", "Fechar conversa");
     fecha.addEventListener("click", fechar);
     var botoes = el("div");
+    botoes.appendChild(mem);
     botoes.appendChild(novo);
     botoes.appendChild(fecha);
     topo.appendChild(tit);
@@ -208,7 +221,9 @@
       barraLocal(bs, sau.acoes);
       sugestoesEl.textContent = "";
     } else {
-      mostrarSugestoes(["Calcular frequência: 3 faltas em março, 22 dias letivos"].concat(sk ? sk.sugestoes : []));
+      var pessoais = [];
+      try { pessoais = window.Paulus.sugestoesPessoais(3); } catch (e) { pessoais = sk ? sk.sugestoes : []; }
+      mostrarSugestoes(["Calcular frequência: 3 faltas em março, 22 dias letivos"].concat(pessoais));
     }
     status.textContent = "";
     conversando = false;
@@ -239,7 +254,8 @@
   }
 
   // Barra de ações sob a resposta: copiar, 👍/👎 (só no aparelho, nada é enviado) e tentar de novo.
-  function barraResposta(bolha, texto, tipo) {
+  function barraResposta(bolha, texto, tipo, r) {
+    function sinal(s) { try { if (r && window.Paulus) window.Paulus.avaliar(r, s); } catch (e) {} }
     var barra = el("div", "pa-barra");
     function botao(rotulo, aria, fn) {
       var b = el("button", null, rotulo);
@@ -265,18 +281,19 @@
       botao("Copiar", "Copiar resposta", function (b) {
         var alvo = texto;
         try {
-          navigator.clipboard.writeText(alvo).then(function () { b.textContent = "Copiado ✓"; }, function () { b.textContent = "Não deu"; });
+          navigator.clipboard.writeText(alvo).then(function () { b.textContent = "Copiado ✓"; sinal("copiou"); }, function () { b.textContent = "Não deu"; });
         } catch (e) { b.textContent = "Não deu"; }
       });
-      botao("👍", "Resposta boa", function () { trocarPor("Obrigado! 😊"); });
+      botao("👍", "Resposta boa", function () { sinal("bom"); trocarPor("Obrigado! 😊 Guardei no seu aparelho."); });
       botao("👎", "Resposta ruim", function () {
+        sinal("ruim");
         barra.textContent = "";
         barra.appendChild(el("span", "pa-ok", "Quer que eu tente de outro jeito?"));
-        [["Explicar de outro jeito", "Explique a resposta anterior de outro jeito, mais simples."],
-         ["Mais curto", "Responda a pergunta anterior de forma mais curta."]].forEach(function (o) {
+        [["Explicar de outro jeito", "Explique a resposta anterior de outro jeito, mais simples.", "outro_jeito"],
+         ["Mais curto", "Responda a pergunta anterior de forma mais curta.", "mais_curto"]].forEach(function (o) {
           var b = el("button", null, o[0]);
           b.type = "button";
-          b.addEventListener("click", function () { if (!conversando) perguntar(o[1]); });
+          b.addEventListener("click", function () { sinal(o[2]); if (!conversando) perguntar(o[1]); });
           barra.appendChild(b);
         });
       });
@@ -365,9 +382,34 @@
         } else {
           bolha.textContent = r.texto === "Pronto." ? "Pronto, levei você até lá." : r.texto;
         }
+      } else if (r.tipo === "acao_desconhecida") {
+        bolha.textContent = r.texto || "Não achei essa tela.";
+        if (r.opcoesAcoes && r.opcoesAcoes.length) {
+          var ob = el("div", "pa-barra");
+          ob.appendChild(el("span", "pa-ok", "Era esta?"));
+          r.opcoesAcoes.slice(0, 4).forEach(function (o) {
+            var b2 = el("button", null, o.rotulo);
+            b2.type = "button";
+            b2.addEventListener("click", function () { try { r.aprender(o.id); } catch (e) {} ob.textContent = ""; ob.appendChild(el("span", "pa-ok", "Anotado! Da próxima vez eu abro direto.")); });
+            ob.appendChild(b2);
+          });
+          bolha.parentNode.insertBefore(ob, bolha.nextSibling);
+        }
       } else if (r.tipo !== "ia") {
         bolha.textContent = r.texto || "Não consegui responder agora.";
       }
+      // Ações que a IA propôs (só navegação): a IA não executa nada, quem toca é a pessoa.
+      if (r.tipo === "ia" && r.acoes && r.acoes.length) {
+        var ab = el("div", "pa-barra");
+        r.acoes.slice(0, 2).forEach(function (a) {
+          var b3 = el("button", null, "Abrir: " + a.rotulo);
+          b3.type = "button";
+          b3.addEventListener("click", function () { try { a.executar(); } catch (e) {} });
+          ab.appendChild(b3);
+        });
+        bolha.parentNode.insertBefore(ab, bolha.nextSibling);
+      }
+      if (r.deMemoria) bolha.appendChild(el("div", "pa-fontes", "Resposta que você aprovou antes (a IA não respondeu agora)."));
       // Pedido da calculadora (só números): confere a resposta da IA ou, se ela falhou, mostra o resumo local.
       if (opcoes.ia && window.AnonaPresenca) {
         if (r.tipo === "ia") {
@@ -384,7 +426,7 @@
         }).filter(Boolean).slice(0, 4).join("; "));
         bolha.appendChild(f);
       }
-      if (r.tipo === "ia" || r.tipo === "norma" || r.tipo === "sem_resposta") barraResposta(bolha, bolha.firstChild ? bolha.firstChild.textContent : "", "ok");
+      if (r.tipo === "ia" || r.tipo === "norma" || r.tipo === "sem_resposta") barraResposta(bolha, bolha.firstChild ? bolha.firstChild.textContent : "", "ok", r.deMemoria ? null : r);
       else if (r.tipo === "erro" && !r.limite) barraResposta(bolha, "", "erro");
       (r.avisos || []).forEach(function (a) { mensagem("aviso", a); });
       mostrarSugestoes(r.sugestoes);
@@ -397,10 +439,32 @@
     });
   }
 
+  // O que o Paulus aprendeu (só neste aparelho): estilo de resposta, temas e perguntas frequentes. Nunca vai ao Worker.
+  function mostrarMemoria() {
+    var P = window.Paulus;
+    if (!P || !lista) return;
+    var res;
+    try { res = P.memoria.resumo(); } catch (e) { res = null; }
+    var corpo = res && !res.vazia ? "O que aprendi com o seu uso (fica só neste aparelho):\n• " + res.linhas.join("\n• ") : "Ainda não aprendi nada sobre o seu jeito de usar. Use 👍/👎 nas respostas e eu vou me ajustando.";
+    if (res && !res.ativa) corpo += "\n(Aprendizado desligado.)";
+    var m = mensagem("aviso", corpo);
+    var barra = el("div", "pa-barra");
+    var lig = el("button", null, res && res.ativa === false ? "Ligar aprendizado" : "Desligar aprendizado");
+    lig.type = "button";
+    lig.addEventListener("click", function () { try { P.memoria.ligar(!(res && res.ativa === false)); } catch (e) {} barra.textContent = ""; barra.appendChild(el("span", "pa-ok", "Pronto.")); });
+    var esq = el("button", null, "Esquecer tudo");
+    esq.type = "button";
+    esq.addEventListener("click", function () { try { P.memoria.esquecer(); } catch (e) {} barra.textContent = ""; barra.appendChild(el("span", "pa-ok", "Esqueci o que tinha aprendido.")); });
+    barra.appendChild(lig);
+    barra.appendChild(esq);
+    m.parentNode.insertBefore(barra, m.nextSibling);
+    lista.scrollTop = lista.scrollHeight;
+  }
+
   // ---------------------------------------------------------------- início
   function iniciar() {
     if (iniciado || !window.Paulus) return;
-    window.Paulus.init({ app: "anona", endpoint: ENDPOINT, conhecimentoUrl: CONHECIMENTO });
+    window.Paulus.init({ app: "anona", endpoint: ENDPOINT, conhecimentoUrl: CONHECIMENTO, perfil: perfilId });
     registrarAcoes();
     iniciado = true;
   }
@@ -418,7 +482,9 @@
 
   // o index.html avisa quando entra/sai da conta (evento anona:auth)
   window.addEventListener("anona:auth", function (ev) {
-    if (!ev.detail || !ev.detail.logado) encerrar();
+    if (!ev.detail || !ev.detail.logado) { encerrar(); iniciado = false; perfilId = ""; return; }
+    var novo = ev.detail.uid ? hashId(String(ev.detail.uid)) : "";
+    if (novo !== perfilId) { perfilId = novo; iniciado = false; } // outra conta no mesmo navegador: memória separada
   });
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ligarMascote);
