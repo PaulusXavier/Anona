@@ -32,7 +32,7 @@
     "Frequência mínima: 60% para 4 a 6 anos incompletos e 75% para 6 a 18 anos incompletos. Na saúde: pré-natal, vacinas e peso e altura até 7 anos.",
     "Descumprimento não é cancelamento direto: vem alerta, depois bloqueio de 1 mês, suspensão de 2 meses e só por último o cancelamento.",
     "Família em descumprimento tem prioridade no atendimento do SUAS. O recurso é pedido pela coordenação municipal, no Sicon.",
-    "Anote os prazos de fim de outubro: recurso da repercussão de setembro e registro da educação (ago/set) vão até 29/10.",
+    "Confira no cartão do cronograma de repercussão o mês de referência e a data limite do recurso — os prazos mudam a cada repercussão.",
     "Uma falta isolada não gera efeito: conta a frequência do período. O primeiro efeito é só um alerta e não mexe no valor.",
     "Benefício bloqueado por condicionalidade não perde a parcela: ela pode ser sacada no mês seguinte.",
     "Cadastro antigo sozinho não bloqueia o benefício. O bloqueio vale para quem foi convocado para atualizar e perdeu o prazo."
