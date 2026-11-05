@@ -18,7 +18,7 @@ Não precisa de servidor: você hospeda no próprio GitHub (GitHub Pages) e o Fi
 index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
-anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas)
+anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas). Conhece o Bolsa Família: ~30 fatos em 6 assuntos (valores, entrada, pagamento, escola/saúde, descumprimento, recurso), responde perguntas offline (`AnonaMascot.responder`) e avisa o que está valendo no mês. Testes: `node tests/mascot.test.js`
 anona-tabelas.js                -> cálculos e tabelas: Panorama do ano da calculadora, estilo padrão das planilhas .xlsx (com fórmulas), exportar .xlsx/.csv e copiar tabela. Testes: `node tests/tabelas.test.js`
 anona-presenca.js               -> assistente de presença: entende frases ("3 faltas em março, 22 dias letivos"), preenche a calculadora, simula faltas e faz o mascote comentar o resultado
 icon-192.png                    -> ícone do app para Android/desktop (cantos transparentes; ilustração própria, sem uso de marca de terceiros)
@@ -352,3 +352,11 @@ Arquivos: `anona-presenca.js` (novo), `paulus-anona.js` (desvio local antes de e
 - O painel do mascote ganhou: 👍/👎/copiar/"mais curto"/"outro jeito" que ajustam o estilo das respostas; botões de ação que a IA propõe (só navegação até os cartões; quem toca é você); "Era esta?" quando um pedido de tela não é reconhecido; sugestões iniciais personalizadas; e o botão 🧠 ("O que o Paulus aprendeu sobre mim") com *Esquecer tudo* e *Desligar aprendizado*.
 - A memória é separada por conta (hash do uid, nunca e-mail ou nome). Continua sem ler notas, planilhas ou NIS.
 - `sw.js` na v27. Para a IA aproveitar tudo, publique o Worker do Paulus de novo (`npm run deploy:worker`).
+
+## Conhecimento do mascote (Bolsa Família)
+
+- Toque no mascote: ele conta uma dica do programa (sem repetir até acabar) e mostra botões de assunto: Valores, Como entrar, Pagamento, Escola e saúde, Descumprimento e Recurso. O botão 💡 do painel do Paulus faz o mesmo.
+- Os fatos ficam em `BASE` no `anona-mascot.js`. Os valores em R$ **não** estão lá: vêm de `VALORES_BENEFICIO_POR_ANO` no `index.html` (publicados em `window.AnonaValoresBeneficio`). Em um reajuste, edite só o `index.html`.
+- Prazos de um novo período: **adicione** linhas em `MOMENTOS` (com `de`/`ate`). Elas expiram sozinhas.
+- Regra de proteção e limites em R$ dela vêm de noticiário (Portaria 1.084/2025); confirme com o CRAS antes de afirmar números.
+- `node tests/mascot.test.js` confere respostas, valores e expiração dos prazos.
