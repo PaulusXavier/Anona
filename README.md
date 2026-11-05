@@ -289,6 +289,35 @@ O app foi revisado e alguns pontos foram corrigidos diretamente no código. Resu
 - **`preconnect` adicionado** para `fonts.gstatic.com` (arquivos de fonte), `unpkg.com`, `cdn.jsdelivr.net` (bibliotecas) e `www.gstatic.com` (Firebase) — isso deixa o navegador abrir a conexão (DNS + TLS) com esses serviços mais cedo, em paralelo, em vez de só começar quando o arquivo é de fato pedido. Ganho pequeno mas "de graça" (só 4 linhas no `<head>`, sem nenhum risco).
 - `CACHE_NAME` subiu de `v20` para `v21` por causa dessas mudanças no `index.html`.
 
+### Revisão de erros (05/11/2026)
+- **Apagar anotação agora apaga na nuvem:** antes, o mapa de notas era *mesclado* no Firestore, então a nota removida continuava lá e voltava ao recarregar. Agora só o dia alterado é enviado (e removido de verdade com `deleteField()`); isso também impede que um aparelho com cópia desatualizada sobrescreva notas de outro.
+- **Dados locais separados por conta:** a cópia de segurança das notas e as planilhas guardadas no navegador usavam uma chave única, então outra conta no mesmo aparelho via as planilhas da anterior. Agora a chave leva o `uid` (os dados antigos são adotados pela primeira conta que entrar); ao sair, as planilhas saem da memória.
+- **Ícone 512 do PWA:** o arquivo estava como `icon-512.png.png` (o `manifest.json` e o `sw.js` procuram `icon-512.png`). Renomeado; o manifest também ganhou `id` e não trava mais a orientação em retrato.
+- **Offline:** `anona-tabelas.js` e `anona-presenca.js` não entravam no cache de instalação do `sw.js` (o app podia perder o Panorama/planilhas offline). Incluídos; o cache só guarda imagens com resposta 200; versão do cache: `anona-app-shell-v28`.
+- **Texto da nota no calendário:** o corte de 22 caracteres era feito *depois* de escapar o HTML e podia deixar `&am` na tela (ou cortar emoji ao meio). Agora corta antes.
+- **PDF das anotações:** o "★" saía como lixo (fonte padrão do PDF não tem esse símbolo) — agora aparece "(IMPORTANTE)"; a quebra de linhas era medida com outra fonte da usada no desenho; nota muito longa agora continua na página seguinte.
+- **"Salvo ✓" nunca aparecia:** o `render()` logo depois limpava a mensagem. Agora a mensagem é escrita depois (e avisa "Anotação removida").
+- **Mês no nome do arquivo:** a detecção por nome (`mar`, `set`, `out`…) acertava pedaços de outras palavras (ex.: "Martins", "outros"). Agora só vale mês escrito como palavra.
+- **Download de planilhas grandes:** os `.xlsx` baixados por link `data:` falhavam em silêncio acima de ~2 MB no Chrome; agora usam Blob.
+- **Testes:** `tabelas.test.js` estava na raiz com `require('../anona-tabelas.js')` (não rodava); movido para `tests/`. Rode: `node tests/tabelas.test.js` e `node tests/presenca.test.js`.
+
+### Segunda revisão de erros (05/11/2026)
+- **Valores do benefício desatualizados:** o cartão "Valores em vigor" ainda mostrava os valores de antes do reajuste de 15% (BRC R$ 142, piso R$ 600, BPI R$ 150, BVF R$ 50), enquanto o mascote já falava os novos. Agora o cartão e o exemplo de cálculo usam os valores pagos desde outubro/2026: **BRC R$ 164, piso R$ 691, BPI R$ 173, BVF R$ 58**. Em reajustes futuros, edite `VALORES_BENEFICIO_POR_ANO` no `index.html`.
+- **Dica do mascote vencida:** a dica que citava prazos "até 29/10" foi trocada por uma que não depende de data.
+- **Calculadora de faltas:** "3,5" ou "1e3" no campo de faltas viravam 3 e 1 em silêncio; agora só número inteiro é aceito.
+- Verificado sem erros: IDs duplicados, referências a elementos inexistentes, handlers `onclick` sem função, clique em todos os botões do app e 2.000+ combinações de entradas da calculadora (nenhum `NaN`/`Infinity`).
+
+### Terceira revisão (05/11/2026) — melhorias
+- **Rascunho não se perde mais:** ao clicar em outro dia, trocar de mês ou fechar/esconder o app, o texto digitado e ainda não salvo na anotação do dia é salvo sozinho (texto vazio nunca apaga nota existente — apagar continua sendo só pelo botão Salvar).
+- **Navegação de mês corrigida:** o mês era calculado a partir do dia de hoje; no dia 31, "próximo mês" pulava os meses mais curtos (31/jan → março, sem mostrar fevereiro). Agora sempre parte do dia 1.
+- **Botão "Ir para hoje"** no calendário e atalho **Ctrl+Enter** para salvar a nota.
+
+### Quarta revisão (05/11/2026)
+- **Divisão do Território Volante com linhas de título no topo:** planilhas com linhas de título (programa, período…) antes dos nomes das colunas eram divididas tomando a 1ª linha como cabeçalho — a aba saía sem cabeçalho e ordenada pela coluna errada, sem aviso (e o "Relatório individual" depois não achava a coluna "Efeito"). Agora a linha de títulos é localizada nas primeiras 25 linhas.
+- **PDF protegido (criptografado):** ao unificar folhas de rota/abrigos, o erro era genérico; agora a mensagem explica e orienta ("Imprimir > Salvar como PDF" e enviar a cópia).
+- **Nome do PDF do relatório individual** não termina mais em " - —" quando o mês não é identificado.
+- Testado de ponta a ponta: divisão → relatório individual por técnico (ZIP com PDFs); unificação de PDFs da rota; relatório do abrigo (com capa e divisórias).
+
 ### Limitações que continuam existindo (importante saber)
 - **A `apiKey` do Firebase aparece no código do site.** Isso é normal e esperado para apps desse tipo (não é uma senha secreta) — a proteção de verdade é feita pelas regras do Firestore e pela autenticação, que já estão corretas. Mesmo assim, para reforçar, você pode:
   1. No **Google Cloud Console** (console.cloud.google.com) → **APIs e Serviços > Credenciais**, abrir essa chave de API e restringir "Restrições de aplicativo" para aceitar apenas o domínio do seu GitHub Pages (`https://SEU-USUARIO.github.io/*`). Isso impede que alguém copie sua chave e a use em outro site.
