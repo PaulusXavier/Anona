@@ -17,7 +17,7 @@
 // (trocou ícones, nomes de arquivo etc.), só mudar o número da versão
 // abaixo (v3 -> v4...). Para atualizações normais de conteúdo do
 // index.html isso NÃO é necessário.
-const CACHE_NAME = "pbf-app-shell-v27";
+const CACHE_NAME = "anona-app-shell-v28";
 
 // Tempo máximo (ms) que a busca da página mais nova pode levar antes do
 // service worker desistir de esperar e mostrar a cópia guardada. Sem isso,
@@ -36,6 +36,8 @@ const SHELL_FILES = [
   "./manifest.json",
   "./styles.css",
   "./anona-mascot.js",
+  "./anona-tabelas.js",
+  "./anona-presenca.js",
   "./paulus-anona.js",
   "./paulus.v1.js"
 ];
@@ -90,7 +92,7 @@ self.addEventListener("install", (event) => {
       // instalação do app inteiro por causa de UM arquivo que faltou.
       await Promise.allSettled(
         SHELL_IMAGES.map((url) =>
-          fetch(url).then((res) => cache.put(url, res))
+          fetch(url).then((res) => { if (res.ok) return cache.put(url, res); })
         )
       );
       await Promise.allSettled(
