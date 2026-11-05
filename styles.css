@@ -251,6 +251,37 @@
     position:absolute; border-radius:50%; pointer-events:none;
     box-shadow:0 0 14px 2px currentColor;
   }
+
+  /* ---------- fundo animado da tela de acesso ---------- */
+  .access-fx{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+  .access-blob{ position:absolute; border-radius:50%; filter:blur(60px); opacity:.5; will-change:transform; }
+  .access-blob.b1{ width:min(70vw,460px); aspect-ratio:1; left:-15%; top:-10%; background:#159947; animation:blobA 18s ease-in-out infinite alternate; }
+  .access-blob.b2{ width:min(65vw,420px); aspect-ratio:1; right:-18%; bottom:-12%; background:#FFCC29; opacity:.38; animation:blobB 22s ease-in-out infinite alternate; }
+  .access-blob.b3{ width:min(55vw,380px); aspect-ratio:1; left:30%; top:35%; background:#1E56C8; opacity:.45; animation:blobC 26s ease-in-out infinite alternate; }
+  @keyframes blobA{ to{ transform:translate(30vw,22vh) scale(1.25); } }
+  @keyframes blobB{ to{ transform:translate(-28vw,-20vh) scale(1.2); } }
+  @keyframes blobC{ 0%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-22vw,14vh) scale(1.3); } 100%{ transform:translate(18vw,-16vh) scale(.9); } }
+  .access-bokeh{
+    position:absolute; bottom:-30px; width:var(--s); height:var(--s); border-radius:50%;
+    background:var(--c); opacity:0; box-shadow:0 0 18px 3px var(--c);
+    animation:bokehUp var(--d) linear var(--t) infinite;
+  }
+  @keyframes bokehUp{
+    0%{ transform:translate(0,0); opacity:0; }
+    10%{ opacity:.55; }
+    50%{ transform:translate(18px,-55vh); }
+    90%{ opacity:.45; }
+    100%{ transform:translate(-14px,-112vh); opacity:0; }
+  }
+  .access-bg .ring-seal{ animation:ringSpin 60s linear infinite; }
+  .access-bg .ring-seal:nth-of-type(2){ animation-duration:80s; animation-direction:reverse; }
+  @keyframes ringSpin{ to{ rotate:360deg; } }
+  .access-dot{ animation:dotPulse 4.5s ease-in-out infinite; }
+  @keyframes dotPulse{ 50%{ scale:1.9; translate:0 -8px; } }
+  @media (prefers-reduced-motion: reduce){
+    .access-blob, .access-bokeh, .access-bg .ring-seal, .access-dot{ animation:none; }
+    .access-bokeh{ display:none; }
+  }
   .access-card{
     background:var(--card);
     border-radius:1.75rem;
@@ -297,8 +328,40 @@
   .ticket-notch::after{ right:-.5rem; }
   .access-input{
     width:100%; border:1.5px solid var(--line); border-radius:1rem;
-    padding:.85rem .9rem .85rem 2.6rem; font-size:.9rem;
+    /* 16px: abaixo disso o iOS dá zoom automático ao focar o campo */
+    padding:.85rem .9rem .85rem 2.6rem; font-size:1rem; min-height:3rem;
     background:#FCFBF8; transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .access-input::placeholder{ color:#9AA3B2; }
+  .access-input-wrap:focus-within > svg, .access-input-wrap:focus-within > .lucide{ opacity:1; }
+  .access-eye{
+    position:absolute; right:.35rem; top:50%; transform:translateY(-50%);
+    width:2.4rem; height:2.4rem; border-radius:.8rem; color:#7B8597;
+    display:flex; align-items:center; justify-content:center; transition:background .15s, color .15s;
+  }
+  .access-eye:hover{ background:var(--azul-soft); color:var(--azul); }
+  .access-eye[aria-pressed="true"]{ color:var(--azul); }
+  .access-link{ color:var(--azul); padding:.35rem .1rem; border-radius:.4rem; }
+  .access-link:hover{ text-decoration:underline; }
+  .access-check{ display:inline-flex; align-items:center; gap:.4rem; cursor:pointer; padding:.35rem 0; user-select:none; }
+  .access-check input{ width:1rem; height:1rem; accent-color:var(--azul); cursor:pointer; }
+  .access-caps svg{ display:inline-block; vertical-align:-2px; width:.8rem; height:.8rem; margin-right:.2rem; }
+  .access-chips{
+    display:flex; flex-wrap:wrap; justify-content:center; gap:.35rem .5rem;
+    margin:1.1rem 0 0; padding:0; list-style:none;
+  }
+  .access-chips li{
+    display:inline-flex; align-items:center; gap:.3rem; font-size:10px; font-weight:700;
+    color:var(--azul); background:var(--azul-soft); padding:.28rem .6rem; border-radius:999px;
+  }
+  .access-chips svg{ width:.75rem; height:.75rem; }
+  .access-card-in{ animation:accessCardIn .6s cubic-bezier(.2,.8,.2,1) backwards; }
+  .access-card-in .logo-mark{ animation:accessPop .7s .15s cubic-bezier(.3,1.4,.5,1) both; }
+  @keyframes accessCardIn{ from{ opacity:0; transform:translateY(18px) scale(.985); } to{ opacity:1; transform:none; } }
+  @keyframes accessPop{ from{ opacity:0; transform:scale(.7) rotate(-8deg); } to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){ .access-card-in, .access-card-in .logo-mark{ animation:none; } }
+  #lockScreen button:focus-visible, #lockScreen input[type=checkbox]:focus-visible{
+    outline:3px solid rgba(216,155,50,.75); outline-offset:2px;
   }
   .access-input:focus{ outline:none; border-color:var(--azul); background:#fff; box-shadow:0 0 0 4px rgba(13,46,99,.13); }
   .access-input-wrap{ position:relative; }
@@ -307,7 +370,7 @@
     width:1.05rem; height:1.05rem; color:var(--azul); opacity:.55; pointer-events:none;
   }
   .access-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:.25rem; background:var(--azul-soft); border-radius:.9rem; padding:.25rem; }
-  .access-tab{ padding:.5rem 0; border-radius:.7rem; font-size:.75rem; font-weight:700; transition:all .15s; color:var(--azul); opacity:.55; display:flex; align-items:center; justify-content:center; gap:.3rem; }
+  .access-tab{ padding:.7rem 0; min-height:2.75rem; border-radius:.7rem; font-size:.75rem; font-weight:700; transition:all .15s; color:var(--azul); opacity:.7; display:flex; align-items:center; justify-content:center; gap:.3rem; }
   .access-tab.active{ background:var(--card); opacity:1; box-shadow:0 1px 4px rgba(13,46,99,.18); }
   .access-tab svg{ width:.85rem; height:.85rem; }
   /* Botão principal das telas de acesso: gradiente sutil + brilho que
@@ -553,4 +616,35 @@
   @media (min-width:1280px){
     .cal-panel{ display:flex; flex-direction:column; }
     .cal-panel .calendar-grid{ flex:1; grid-auto-rows:minmax(104px,1fr); }
+  }
+
+  /* ---------- login: acabamento extra ---------- */
+  #lockScreen{ transition:opacity .4s ease, transform .4s ease; }
+  #lockScreen.access-leaving{ opacity:0; transform:scale(1.03); pointer-events:none; }
+  .access-fx{ translate:var(--px,0) var(--py,0); transition:translate .6s ease-out; }
+  #lockCard{ transition:transform .35s ease-out; will-change:transform; }
+  #lockCard.shake{ transition:none; }
+  /* faixa da bandeira com brilho passando */
+  #lockCard .flag-ribbon{ position:relative; overflow:hidden; height:5px; }
+  #lockCard .flag-ribbon::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.75) 50%, transparent 70%);
+    transform:translateX(-120%); animation:ribbonShine 5s ease-in-out 1.2s infinite;
+  }
+  @keyframes ribbonShine{ 0%{ transform:translateX(-120%); } 40%,100%{ transform:translateX(120%); } }
+  /* entrada escalonada dos blocos do formulário */
+  #authForm > *, .access-tabs, #authModalSubtitle{ animation:accessRise .55s cubic-bezier(.2,.8,.2,1) both; }
+  .access-tabs{ animation-delay:.25s; } #authModalSubtitle{ animation-delay:.3s; }
+  #authForm > :nth-child(1){ animation-delay:.35s; } #authForm > :nth-child(2){ animation-delay:.42s; }
+  #authForm > :nth-child(3){ animation-delay:.49s; } #authForm > :nth-child(6){ animation-delay:.56s; }
+  @keyframes accessRise{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  /* botão principal respira de leve */
+  .access-btn:not(:disabled){ animation:btnGlow 3.2s ease-in-out infinite; }
+  @keyframes btnGlow{ 50%{ box-shadow:0 16px 34px -8px rgba(30,86,200,.65), inset 0 1px 0 rgba(255,255,255,.2); } }
+  .access-btn:active{ transform:scale(.985); }
+  /* autofill do Chrome sem o amarelo/azul destoando */
+  .access-input:-webkit-autofill{ -webkit-box-shadow:0 0 0 40px #FCFBF8 inset; -webkit-text-fill-color:#1b2433; }
+  @media (prefers-reduced-motion: reduce){
+    #lockCard .flag-ribbon::after, #authForm > *, .access-tabs, #authModalSubtitle, .access-btn{ animation:none !important; }
+    .access-fx{ transition:none; }
   }
