@@ -226,7 +226,10 @@
     rows.forEach((l, i) => {
       const r = i + 2, d = 'B' + r, f = 'C' + r, tem = Number.isFinite(lerInteiro(l.faltas));
       const av = tem ? avaliar(lerInteiro(l.dias), lerInteiro(l.faltas), lim) : null;
-      const vazio = 'ISBLANK(' + f + ')';
+      // `=""` vale tanto para célula realmente vazia quanto para texto vazio ("")
+      // — o estilizar() grava células vazias como texto vazio, e ISBLANK() daria
+      // FALSO nelas (o Excel então calcularia D = B − "" → #VALOR!).
+      const vazio = f + '=""';
       // O mínimo usa inteiros: ceil(lim×dias/100) = INT((lim×dias+99)/100), igual ao cálculo da tela.
       const minP = 'INT((' + lim + '*' + d + '+99)/100)';
       ws['D' + r] = celulaFormula('IF(' + vazio + ',"",' + d + '-' + f + ')', av ? av.presencas : '');
@@ -243,7 +246,7 @@
     const soma = col => 'SUM(' + col + '2:' + col + last + ')';
     const ok = rows.filter(l => Number.isFinite(lerInteiro(l.faltas)));
     const dT = ok.reduce((a, l) => a + lerInteiro(l.dias), 0), fT = ok.reduce((a, l) => a + lerInteiro(l.faltas), 0);
-    ws['B' + tot] = celulaFormula('SUMIF(C2:C' + last + ',"<>",B2:B' + last + ')', dT);       // só os meses já lançados
+    ws['B' + tot] = celulaFormula('SUMPRODUCT(ISNUMBER(C2:C' + last + ')*B2:B' + last + ')', dT);       // só os meses já lançados
     ws['C' + tot] = celulaFormula(soma('C'), fT);
     ws['D' + tot] = celulaFormula('B' + tot + '-C' + tot, dT - fT);
     ws['E' + tot] = celulaFormula('IF(B' + tot + '=0,"",C' + tot + '/B' + tot + ')', dT ? fT / dT : '');
