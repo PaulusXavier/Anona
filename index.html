@@ -3658,6 +3658,8 @@
   const ANOS_VALORES_DISPONIVEIS = Object.keys(VALORES_BENEFICIO_POR_ANO).map(Number).sort((a,b) => a - b);
   const ANO_VALORES_VIGENTE = ANOS_VALORES_DISPONIVEIS[ANOS_VALORES_DISPONIVEIS.length - 1];
   const VALORES_BENEFICIO_ATUAL = VALORES_BENEFICIO_POR_ANO[ANO_VALORES_VIGENTE];
+  // O mascote (anona-mascot.js) lê os valores daqui para falar sempre o valor vigente.
+  window.AnonaValoresBeneficio = VALORES_BENEFICIO_ATUAL;
 
   // Preenche o cartão "Valores em vigor" (título, lista de benefícios e
   // exemplo de cálculo) a partir do ano mais recente cadastrado acima — o
