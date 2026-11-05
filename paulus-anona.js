@@ -134,6 +134,11 @@
     novo.setAttribute("aria-label", "Nova conversa");
     novo.title = "Nova conversa";
     novo.addEventListener("click", reiniciar);
+    var dicaBt = el("button", null, "💡");
+    dicaBt.type = "button";
+    dicaBt.setAttribute("aria-label", "Dica rápida sobre o Bolsa Família");
+    dicaBt.title = "Dica rápida sobre o Bolsa Família";
+    dicaBt.addEventListener("click", function () { fechar(); if (window.AnonaMascot && window.AnonaMascot.dica) window.AnonaMascot.dica(); });
     var mem = el("button", null, "🧠");
     mem.type = "button";
     mem.setAttribute("aria-label", "O que o Paulus aprendeu sobre mim");
@@ -144,6 +149,7 @@
     fecha.setAttribute("aria-label", "Fechar conversa");
     fecha.addEventListener("click", fechar);
     var botoes = el("div");
+    botoes.appendChild(dicaBt);
     botoes.appendChild(mem);
     botoes.appendChild(novo);
     botoes.appendChild(fecha);
