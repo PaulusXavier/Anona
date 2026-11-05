@@ -381,7 +381,7 @@
           <i data-lucide="chevron-left" class="w-6 h-6 text-slate-600"></i>
         </button>
         <div class="flex flex-col items-center gap-1">
-          <h3 id="currentMonthLabel" class="display text-2xl sm:text-3xl font-semibold text-slate-800 capitalize"></h3>
+          <h3 id="currentMonthLabel" class="display text-2xl sm:text-3xl font-semibold text-slate-800"></h3>
           <button type="button" onclick="irParaHoje()" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 hover:bg-slate-100" style="color:var(--azul)">Ir para hoje</button>
         </div>
         <button onclick="changeMonth(1)" id="btnNext" aria-label="Próximo mês" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
@@ -590,6 +590,10 @@
         <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros, um gráfico da quantidade de efeitos e uma rota de visita sugerida. Se a planilha já vier <strong>dividida por técnico</strong> (uma aba por pessoa, como a gerada em "Divisão por técnico" do Território Volante), o app gera automaticamente um PDF separado para cada um.</p>
 
         <div class="rounded-xl px-3 py-2.5 mb-3" style="background:var(--line-soft)">
+          <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer mb-2">
+            <input type="checkbox" id="relIndColunaVisita" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)" onchange="try{localStorage.setItem('anonaRelIndColunaVisita', this.checked ? '1' : '0')}catch(e){}">
+            <span>Incluir a coluna <strong>Visita</strong> (☐) nos PDFs — uma caixinha por família para marcar à mão durante as visitas</span>
+          </label>
           <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer">
             <input type="checkbox" id="geminiRotaToggle" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
             <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
@@ -1732,12 +1736,25 @@
       let currentFamilyValues = [];
       rows.slice(headerIndex + 1).forEach(row => {
         if (!row.some(v => String(v).trim() !== '')) return;
-        const isContinuation = !String(row[bairroIdx] || '').trim() && row.length <= 6;
+        // Linha adicional da família (outro integrante): sem bairro e sem os
+        // campos iniciais. ATENÇÃO: com `defval:''` o SheetJS completa TODA
+        // linha até a última coluna, então o teste antigo `row.length <= 6`
+        // nunca era verdadeiro e essas linhas saíam sem NIS, CPF, endereço e
+        // bairro da família. Agora o tamanho é medido sem as células vazias
+        // do final, e também vale a forma "alinhada" (dados do integrante já
+        // nas colunas certas, com as 12 primeiras vazias).
+        const ultimaCol = (() => { let n = row.length; while (n > 0 && String(row[n - 1]).trim() === '') n--; return n; })();
+        const inicioVazio = row.slice(0, 12).every(v => String(v).trim() === '');
+        const semBairro = !String(row[bairroIdx] || '').trim();
+        const isCompacta = semBairro && ultimaCol > 0 && ultimaCol <= 6 && !inicioVazio;
+        const isAlinhada = semBairro && ultimaCol > 12 && inicioVazio;
+        const isContinuation = (isCompacta || isAlinhada) && h.length > 16 && currentFamilyValues.length > 0;
         const fullRow = Array(h.length).fill('');
-        if (isContinuation && row.length <= 6 && h.length > 16) {
+        if (isContinuation) {
           // O relatório MDS coloca linhas adicionais da família sem repetir
           // os campos iniciais; reposicionamos os dados do integrante.
-          row.forEach((value, index) => { fullRow[12 + index] = value; });
+          if (isCompacta) row.forEach((value, index) => { if (12 + index < fullRow.length) fullRow[12 + index] = value; });
+          else row.forEach((value, index) => { if (index >= 12 && index < fullRow.length) fullRow[index] = value; });
           currentFamilyValues.forEach((value, index) => { if (index < 12) fullRow[index] = value; });
         } else {
           row.forEach((value, index) => { if (index < fullRow.length) fullRow[index] = value; });
@@ -1789,10 +1806,27 @@
       ...informacoesRelatorio.map(text => [text])
     ];
     XLSX.utils.book_append_sheet(out,XLSX.utils.aoa_to_sheet(resumoFinal),sheetName('Resumo do território'));
+    const abaPorEquipe = new Map();
     gruposOrdenados.forEach(([team,g]) => {
       const finalRows = [outputHeader, ...g.rows];
-      XLSX.utils.book_append_sheet(out,XLSX.utils.aoa_to_sheet(finalRows),sheetName(team));
+      const nomeAba = sheetName(team);
+      abaPorEquipe.set(team, nomeAba);
+      XLSX.utils.book_append_sheet(out,XLSX.utils.aoa_to_sheet(finalRows),nomeAba);
     });
+    // "Registros no relatório" vira fórmula viva (conta as linhas da aba do
+    // técnico): se alguém apagar/ajustar linhas na aba, o resumo acompanha.
+    gruposOrdenados.forEach(([team,g], i) => {
+      const cel = XLSX.utils.encode_cell({ r: i + 1, c: 4 });
+      out.Sheets['Resumo do território'][cel] = AnonaTabelas.celulaFormula(`COUNTA('${abaPorEquipe.get(team).replace(/'/g, "''")}'!A:A)-1`, g.rows.length);
+    });
+    // Linha de TOTAL (a linha em branco logo abaixo da tabela do resumo é
+    // aproveitada, sem deslocar o bloco "INFORMAÇÕES DO RELATÓRIO").
+    {
+      const rTot = gruposOrdenados.length + 1, wsR = out.Sheets['Resumo do território'];
+      const totalRegs = gruposOrdenados.reduce((a, [, g]) => a + g.rows.length, 0);
+      wsR[XLSX.utils.encode_cell({ r: rTot, c: 0 })] = { t: 's', v: 'Total' };
+      wsR[XLSX.utils.encode_cell({ r: rTot, c: 4 })] = AnonaTabelas.celulaFormula(`SUM(E2:E${rTot})`, totalRegs);
+    }
     const bordaLeve = {
       top: { style: 'thin', color: { rgb: 'D9E2F3' } },
       bottom: { style: 'thin', color: { rgb: 'D9E2F3' } },
@@ -1936,12 +1970,32 @@
     if (nameIdx < 0) nameIdx = headerNorm.findIndex(h => h.includes('responsavel') && h.includes('familiar'));
     if (nameIdx < 0) nameIdx = 0;
 
-    const sorted = [...dataRows].sort((a,b) =>
-      String(a[nameIdx] || '').trim().localeCompare(String(b[nameIdx] || '').trim(), 'pt-BR', {sensitivity:'base'})
+    // A planilha tem uma linha por INTEGRANTE; uma família com vários
+    // integrantes ocupa várias linhas. Dividir por linha podia separar a
+    // mesma família entre dois técnicos na fronteira das partes. Por isso
+    // agrupa as linhas por família (NIS do responsável; senão CPF; senão
+    // nome) e divide as FAMÍLIAS em três partes iguais, sempre mantendo
+    // cada família inteira com um único técnico.
+    const nisRespIdx = headerNorm.findIndex(h => h.includes('nis') && h.includes('responsavel'));
+    const cpfRespIdx = headerNorm.findIndex(h => h.includes('cpf'));
+    const chaveFam = row => {
+      if (nisRespIdx >= 0 && String(row[nisRespIdx] || '').trim()) return 'nis:' + String(row[nisRespIdx]).trim();
+      if (cpfRespIdx >= 0 && String(row[cpfRespIdx] || '').trim()) return 'cpf:' + String(row[cpfRespIdx]).trim();
+      return 'nome:' + normalizeText(row[nameIdx]);
+    };
+    const grupos = new Map();
+    dataRows.forEach(row => {
+      const k = chaveFam(row);
+      if (!grupos.has(k)) grupos.set(k, []);
+      grupos.get(k).push(row);
+    });
+    const listaGrupos = [...grupos.values()].sort((a,b) =>
+      String(a[0][nameIdx] || '').trim().localeCompare(String(b[0][nameIdx] || '').trim(), 'pt-BR', {sensitivity:'base'})
     );
+    const sorted = listaGrupos.flat();
 
-    // Três partes o mais iguais possível; se sobrar resto, ele vai para as primeiras partes.
-    const total = sorted.length;
+    // Três partes o mais iguais possível (em nº de famílias); se sobrar resto, ele vai para as primeiras partes.
+    const total = listaGrupos.length;
     const base = Math.floor(total / 3);
     const rem = total % 3;
     const tamanhos = [0,1,2].map(i => base + (i < rem ? 1 : 0));
@@ -1952,7 +2006,10 @@
       { nome:'Keomara Teles', formacao:'Assistente Social', cor:'DB2777' }
     ];
     let cursor = 0;
-    profissionais.forEach((p,i) => { p.rows = sorted.slice(cursor, cursor + tamanhos[i]); cursor += tamanhos[i]; });
+    profissionais.forEach((p,i) => {
+      const gs = listaGrupos.slice(cursor, cursor + tamanhos[i]);
+      p.rows = gs.flat(); p.nFamilias = gs.length; cursor += tamanhos[i];
+    });
 
     const out = XLSX.utils.book_new();
     const used = new Set();
@@ -1961,7 +2018,7 @@
     const summary = [['Técnico responsável','Formação','Nº de famílias','Faixa alfabética (A a Z)','Mês de Repercussão']];
     profissionais.forEach(p => {
       const faixa = p.rows.length ? `${primeiraLetra(p.rows[0][nameIdx])} a ${primeiraLetra(p.rows[p.rows.length-1][nameIdx])}` : '—';
-      summary.push([p.nome, p.formacao, p.rows.length, faixa, mesRepercussao || 'Não identificado no arquivo enviado']);
+      summary.push([p.nome, p.formacao, p.nFamilias, faixa, mesRepercussao || 'Não identificado no arquivo enviado']);
     });
     XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(summary), safeSheetName('Resumo da divisão', used));
     profissionais.forEach(p => {
@@ -1975,7 +2032,9 @@
     const colNome = XLSX.utils.encode_col(nameIdx);
     profissionais.forEach((p, i) => {
       const cel = XLSX.utils.encode_cell({ r: i + 1, c: 2 });
-      out.Sheets['Resumo da divisão'][cel] = AnonaTabelas.celulaFormula(`COUNTA('${p.sheetName.replace(/'/g, "''")}'!${colNome}:${colNome})-1`, p.rows.length);
+      // Contagem de famílias (valor fixo): a fórmula COUNTA contaria linhas
+      // (integrantes), não famílias.
+      out.Sheets['Resumo da divisão'][cel] = { t:'n', v:p.nFamilias };
     });
     out.SheetNames.forEach(name => {
       AnonaTabelas.estilizar(out.Sheets[name], { cor: corPorAba(name), colunaNome: name === 'Resumo da divisão' ? -1 : nameIdx, tamFonte: 12, altCab: 50, altLinha: 34, larguraMax: 42 });
@@ -2068,9 +2127,7 @@
         if (!dados || !dados.rows.length) { semRegistros.push(nomeTecnico); continue; }
         // O nome da aba vem como "Paulo Xavier - Psicólogo"; separa nome e
         // formação para exibir corretamente no cabeçalho do PDF.
-        const partes = nomeTecnico.split(' - ');
-        const nome = partes[0].trim();
-        const formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : (dados.formacao || '');
+        const { nome, formacao } = relatorioIndividualSepararNomeFormacao(nomeTecnico, dados.formacao);
         const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
           dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome, formacao }, { retornarBytes: true }
         );
@@ -2126,7 +2183,11 @@
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''})
         .filter(row => row.some(v => String(v).trim() !== ''));
       if (!rows.length) return;
-      const header = rows[0];
+      // O relatório bruto do MDS traz linhas de título (programa, período...)
+      // ANTES dos nomes das colunas; procura a linha de títulos nas primeiras
+      // 25 linhas em vez de assumir que é a primeira.
+      const headerPos = Math.max(0, rows.slice(0, 25).findIndex(row => row.some(v => normalizeText(v) === 'efeito')));
+      const header = rows[headerPos];
       const headerNorm = header.map(v => normalizeText(v));
       const efeitoIdx = headerNorm.findIndex(h => h === 'efeito');
       if (efeitoIdx < 0) return; // não é uma aba de condicionalidades (ex.: aba de resumo)
@@ -2140,11 +2201,17 @@
       const integranteIdx = headerNorm.findIndex(h => h.includes('nome') && h.includes('integrante'));
       const mesIdx = headerNorm.findIndex(h => h.includes('mes') && h.includes('repercuss'));
       const tecnicoDaAba = sheetName.split(' - ')[0].trim();
-      rows.slice(1).forEach(row => {
-        const nis = nisIdx >= 0 ? String(row[nisIdx] || '').trim() : '';
-        const cpf = cpfIdx >= 0 ? String(row[cpfIdx] || '').trim() : '';
+      let ultimaChave = '', ultimoNis = '', ultimoCpf = '';
+      rows.slice(headerPos + 1).forEach(row => {
+        let nis = nisIdx >= 0 ? String(row[nisIdx] || '').trim() : '';
+        let cpf = cpfIdx >= 0 ? String(row[cpfIdx] || '').trim() : '';
+        // Linha de outro integrante da mesma família (sem repetir NIS/CPF do
+        // responsável): herda a família da linha anterior, em vez de ser
+        // descartada (o integrante sumia da lista "Integrantes com efeito").
+        if (!nis && !cpf && ultimaChave) { nis = ultimoNis; cpf = ultimoCpf; }
         const chave = nis || cpf;
         if (!chave) return;
+        ultimaChave = chave; ultimoNis = nis; ultimoCpf = cpf;
         if (!mes && mesIdx >= 0 && String(row[mesIdx] || '').trim()) mes = String(row[mesIdx]).trim();
         const tecnicoColuna = tecnicoColunaIdx >= 0 ? String(row[tecnicoColunaIdx] || '').trim() : '';
         const tecnicoGenerico = /^(territ[oó]rio volante|equipe volante)$/i.test(tecnicoColuna);
@@ -2362,6 +2429,19 @@
     'Efeito'
   ];
 
+  // Lembra (neste navegador) se a coluna "Visita" fica marcada; padrão: marcada.
+  (function initColunaVisita() {
+    const el = document.getElementById('relIndColunaVisita');
+    if (!el) return;
+    let v = '1';
+    try { v = localStorage.getItem('anonaRelIndColunaVisita') || '1'; } catch (e) {}
+    el.checked = v !== '0';
+  })();
+  const relIndIncluirVisita = () => {
+    const el = document.getElementById('relIndColunaVisita');
+    return el ? el.checked : true;
+  };
+
   // Chave "solta" para casar nomes de coluna entre a lista acima e a
   // planilha enviada mesmo com pequenas diferenças (acentos, numeração
   // "(1)"/"(2)"/"(3)", espaços extras, etc.).
@@ -2405,7 +2485,11 @@
     const linhas = [];
 
     function registrarColuna(nomeOriginal) {
-      const norm = normalizeText(nomeOriginal);
+      // Chave "solta" (sem acento, sem numeração "(1)/(2)/(3)"): abas com
+      // variações do mesmo título (ex.: "NIS do Integrante(2)" x "NIS do
+      // Integrante") caem na MESMA coluna, em vez de duas colunas das quais
+      // só a primeira era usada (e os dados da outra sumiam do PDF).
+      const norm = relatorioIndividualChaveColuna(nomeOriginal) || normalizeText(nomeOriginal);
       if (!headerIndexGlobal.has(norm)) {
         headerIndexGlobal.set(norm, headerGlobal.length);
         headerGlobal.push(String(nomeOriginal || '').trim());
@@ -2490,6 +2574,28 @@
     const dataRowsComFamilia = dataRowsFinais.map((r, i) => [numerosFamilia[i], ...r]);
 
     return { headers: headersComFamilia, rows: dataRowsComFamilia, mesTexto, formacao: formacaoTecnico };
+  }
+
+  // Separa "Nome - Formação" do nome da aba. Como o Excel limita o nome da
+  // aba a 31 caracteres, "Keomara Teles - Assistente Social" chega cortado
+  // ("... Assistente Soci") e a formação saía errada no cabeçalho do PDF.
+  // Aqui a formação cortada é completada a partir das formações conhecidas
+  // (ou da coluna "Formação" da planilha, quando existe).
+  const RELATORIO_FORMACOES_CONHECIDAS = ['Psicólogo', 'Psicóloga', 'Assistente Social', 'Pedagogo', 'Pedagoga', 'Advogado', 'Advogada', 'Educador Social', 'Terapeuta Ocupacional'];
+  function relatorioIndividualSepararNomeFormacao(nomeAba, formacaoDados) {
+    const partes = String(nomeAba || '').split(' - ');
+    const nome = partes[0].trim();
+    let formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : '';
+    if (formacao) {
+      const f = normalizeText(formacao);
+      const completa = RELATORIO_FORMACOES_CONHECIDAS.find(k => normalizeText(k) === f)
+        || RELATORIO_FORMACOES_CONHECIDAS.find(k => f.length >= 3 && normalizeText(k).startsWith(f));
+      if (completa) formacao = completa;
+      else if (formacaoDados && normalizeText(formacaoDados).startsWith(f)) formacao = String(formacaoDados).trim();
+    } else {
+      formacao = String(formacaoDados || '').trim();
+    }
+    return { nome, formacao };
   }
 
   // Identifica a "chave" da família de uma linha (integrante), para saber
@@ -2745,8 +2851,14 @@
       // Ordem por proximidade (rua -> número -> ordem original): base e
       // também reserva caso a IA não possa ser usada neste bloco.
       const heuristica = [...doBloco].sort((a, b) => {
-        if (a.rua !== b.rua) return a.rua.localeCompare(b.rua, 'pt-BR');
+        if (a.rua !== b.rua) {
+          if (!a.rua) return 1;   // sem endereço: vai para o fim do bairro
+          if (!b.rua) return -1;
+          return a.rua.localeCompare(b.rua, 'pt-BR');
+        }
         if (a.numero !== b.numero) return a.numero - b.numero;
+        // Mesmo endereço: mantém as linhas de uma mesma família juntas.
+        if (a.familia !== b.familia) return (parseInt(a.familia, 10) || 0) - (parseInt(b.familia, 10) || 0) || String(a.familia).localeCompare(String(b.familia));
         return a.i - b.i;
       });
 
@@ -2782,14 +2894,31 @@
 
   async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo, tecnicoInfo, opcoes) {
     const { jsPDF } = window.jspdf;
+    // Coluna opcional "Visita": uma caixinha por família (na 1ª linha dela)
+    // para marcar à mão em campo. Entra logo depois de "Família".
+    const incluirVisita = (opcoes && opcoes.colunaVisita != null) ? !!opcoes.colunaVisita : relIndIncluirVisita();
+    const idxFam0 = headers.findIndex(h => normalizeText(h) === 'familia');
+    if (incluirVisita && idxFam0 >= 0) {
+      headers = [...headers.slice(0, idxFam0 + 1), 'Visita', ...headers.slice(idxFam0 + 1)];
+      dataRows = dataRows.map(r => [...r.slice(0, idxFam0 + 1), '', ...r.slice(idxFam0 + 1)]);
+    }
+    const idxVisita = incluirVisita && idxFam0 >= 0 ? idxFam0 + 1 : -1;
     const idxEfeito = headers.findIndex(h => normalizeText(h) === 'efeito');
     const idxNome = headers.findIndex(h => normalizeText(h).includes('nome') && normalizeText(h).includes('responsavel'));
     const idxFamilia = headers.findIndex(h => normalizeText(h) === 'familia');
 
+    // Efeito é da FAMÍLIA: uma família com 3 integrantes aparece em 3
+    // linhas, mas conta uma vez só. Contar linhas inflava o gráfico e os
+    // cartões. Sem a coluna "Família", cai para contar linhas.
     const contagem = {};
+    const famPorEfeito = {};
     dataRows.forEach(r => {
       const v = idxEfeito >= 0 ? String(r[idxEfeito] || '').trim() : '';
-      if (v) contagem[v] = (contagem[v] || 0) + 1;
+      if (!v) return;
+      if (idxFamilia < 0) { contagem[v] = (contagem[v] || 0) + 1; return; }
+      if (!famPorEfeito[v]) famPorEfeito[v] = new Set();
+      famPorEfeito[v].add(String(r[idxFamilia]));
+      contagem[v] = famPorEfeito[v].size;
     });
     const ordemPref = ['Alerta','Bloqueio','Suspensão','Cancelamento'];
     const labelsEf = Object.keys(contagem).sort((a,b) => {
@@ -2816,6 +2945,21 @@
     const { linhasRota, usouIA, avisos } = await relatorioIndividualCalcularRota(headers, dataRows, usarIA, apiKey, modelo);
     const blocoLabels = ROTA_BLOCOS_DEF.map(b => b.label).concat([ROTA_OUTROS_LABEL]);
     const blocoContagem = blocoLabels.map((_, bi) => linhasRota.filter(l => l.bloco === bi).length);
+
+    // Renumera a coluna "Família" na ORDEM DA ROTA (1, 2, 3... de cima para
+    // baixo no PDF). Antes, o número seguia a ordem da planilha original e,
+    // depois de reordenar por bairro/rua, a coluna saía embaralhada
+    // (2, 3, 3, 1, 1, 4...). Linhas da mesma família continuam com o mesmo
+    // número.
+    if (idxFamilia >= 0) {
+      const novoNumero = new Map();
+      linhasRota.forEach(l => {
+        const antigo = String(l.row[idxFamilia]);
+        if (!novoNumero.has(antigo)) novoNumero.set(antigo, novoNumero.size + 1);
+        l.row = l.row.slice();
+        l.row[idxFamilia] = novoNumero.get(antigo);
+      });
+    }
 
     const docPdf = new jsPDF({ unit:'pt', format:'a3', orientation:'landscape' });
     const pageW = docPdf.internal.pageSize.getWidth();
@@ -2876,7 +3020,10 @@
     y += 20;
     docPdf.setFont('helvetica','normal'); docPdf.setFontSize(10.5); docPdf.setTextColor(...slate);
     docPdf.text(`Repercussão de ${mesTexto} · CRAS Cristiana Vicente Nunes`, margin, y);
-    y += 26;
+    y += 14;
+    docPdf.setFontSize(8.5);
+    docPdf.text(idxFamilia >= 0 ? 'Efeitos contados por família (cada família conta uma vez, mesmo com vários integrantes).' : 'Efeitos contados por linha da planilha.', margin, y);
+    y += 20;
 
     const cardLabels = ['Total de registros','Famílias distintas', ...labelsEf];
     const cardValues = [totalRegistros, totalFamilias, ...labelsEf.map(l => contagem[l])];
@@ -2980,8 +3127,12 @@
     // vez de uma vez por linha onde ela aparece, evita remedir o mesmo
     // texto centenas de vezes sem mudar o resultado (o maior valor entre as
     // palavras únicas é sempre igual ao maior valor entre todas as linhas).
-    const palavrasUnicasPorColuna = headers.map((_, i) => {
+    const palavrasUnicasPorColuna = headers.map((h, i) => {
       const vistas = new Set();
+      // Inclui as palavras do TÍTULO da coluna: antes só os dados contavam, e
+      // um título como "Responsável" quebrava no meio ("Re / sponsável")
+      // quando os valores da coluna eram curtos.
+      String(h ?? '').split(/\s+/).forEach(palavra => { if (palavra) vistas.add(palavra); });
       dataRows.forEach(r => {
         String(r[i] ?? '').split(/\s+/).forEach(palavra => { if (palavra) vistas.add(palavra); });
       });
@@ -2997,7 +3148,7 @@
           if (w > maior) maior = w;
         });
         return Math.max(minColW, maior + cellPad*2 + gutter + 2);
-      });
+      }).map((w, i) => i === idxVisita ? Math.max(w, 38) : w);
     }
 
     // Reparte a largura disponível respeitando os mínimos acima: cada
@@ -3119,6 +3270,31 @@
     let ty = drawTableHeader(66);
     let blocoAtualDesenhado = -1;
 
+    // Altura de uma linha no tamanho de fonte da tabela (mesma conta usada
+    // ao desenhar), para poder reservar espaço para a família inteira.
+    function alturaLinha(row) {
+      let maxL = 1;
+      headers.forEach((h,i) => {
+        docPdf.setFont('helvetica', (i === idxNome || i === idxFamilia) ? 'bold' : 'normal');
+        docPdf.setFontSize(fontData);
+        const n = docPdf.splitTextToSize(String(row[i] ?? ''), colWidths[i]-cellPad*2-gutter).length;
+        if (n > maxL) maxL = n;
+      });
+      return Math.max(minRowH, maxL*lineH + cellPad*2);
+    }
+    const alturaFamiliaAPartir = new Array(linhasRota.length).fill(0);
+    if (idxFamilia >= 0) {
+      for (let k = linhasRota.length - 1; k >= 0; k--) {
+        const igualProx = k + 1 < linhasRota.length && linhasRota[k+1].row[idxFamilia] === linhasRota[k].row[idxFamilia]
+          && linhasRota[k+1].bloco === linhasRota[k].bloco;
+        alturaFamiliaAPartir[k] = alturaLinha(linhasRota[k].row) + (igualProx ? alturaFamiliaAPartir[k+1] : 0);
+      }
+    }
+
+    const zebraIdx = []; { let z = 0; linhasRota.forEach((l, k) => {
+      if (k > 0 && (idxFamilia < 0 || l.row[idxFamilia] !== linhasRota[k-1].row[idxFamilia])) z++;
+      zebraIdx.push(z);
+    }); }
     linhasRota.forEach(({row, bloco}, rIdx) => {
       docPdf.setFont('helvetica','normal'); docPdf.setFontSize(fontData);
       const efeitoVal = idxEfeito >= 0 ? String(row[idxEfeito] || '').trim() : '';
@@ -3141,7 +3317,12 @@
         docPdf.addPage();
         drawTopBar();
         ty = drawTableHeader(66);
-      } else if (ty + (precisaFaixa ? 33 : 0) + rowH > pageH - 34) {
+      } else if (ty + (precisaFaixa ? 33 : 0) + rowH > pageH - 34
+        || (idxFamilia >= 0 && rIdx > 0 && linhasRota[rIdx-1].row[idxFamilia] !== row[idxFamilia]
+            && ty + alturaFamiliaAPartir[rIdx] > pageH - 34 && alturaFamiliaAPartir[rIdx] < pageH - 66 - 60)) {
+        // (segunda condição: a família inteira não cabe no resto da página,
+        // mas cabe numa página nova — então começa na próxima, em vez de
+        // ficar partida entre duas páginas)
         docPdf.addPage();
         drawTopBar();
         ty = drawTableHeader(66);
@@ -3162,7 +3343,9 @@
       // desenho final que saía do tamanho certo).
       docPdf.setFontSize(fontData);
 
-      docPdf.setFillColor(...(rIdx % 2 === 0 ? [255,255,255] : zebra));
+      // Zebra por FAMÍLIA (todas as linhas de uma família com o mesmo tom),
+      // para a família aparecer como um bloco; sem a coluna, por linha.
+      docPdf.setFillColor(...(zebraIdx[rIdx] % 2 === 0 ? [255,255,255] : zebra));
       docPdf.rect(margin, ty, usableWidth, rowH, 'F');
       if (badge && idxEfeito >= 0) {
         docPdf.setFillColor(...badge.bg);
@@ -3171,6 +3354,12 @@
       docPdf.setDrawColor(217,224,240);
       docPdf.rect(margin, ty, usableWidth, rowH, 'S');
 
+      if (idxVisita >= 0 && (rIdx === 0 || linhasRota[rIdx-1].row[idxFamilia] !== row[idxFamilia] || linhasRota[rIdx-1].bloco !== bloco)) {
+        // caixinha para marcar à mão (só na 1ª linha de cada família)
+        docPdf.setDrawColor(...azulDeep); docPdf.setLineWidth(0.9);
+        docPdf.rect(colX[idxVisita] + colWidths[idxVisita]/2 - 5, ty + 3.5, 10, 10, 'S');
+        docPdf.setLineWidth(0.4);
+      }
       linesPerCol.forEach((lines,i) => {
         const bold = i === idxNome || i === idxFamilia;
         docPdf.setFont('helvetica', bold ? 'bold' : 'normal');
@@ -3301,9 +3490,7 @@
           const { nome: nomeAba, dados } = abasValidas[i];
           // O nome da aba vem como "Fulano - Formação"; separa nome e
           // formação para exibir corretamente no cabeçalho do PDF.
-          const partes = nomeAba.split(' - ');
-          const nomeTecnico = partes[0].trim();
-          const formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : (dados.formacao || '');
+          const { nome: nomeTecnico, formacao } = relatorioIndividualSepararNomeFormacao(nomeAba, dados.formacao);
           if (labelTexto) labelTexto.textContent = `Gerando relatório ${i + 1} de ${abasValidas.length} (${nomeTecnico})…`;
           try {
             const { usouIA: usouIAEsta, avisos: avisosEsta, nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
@@ -3355,7 +3542,7 @@
       }
     } catch (e) {
       console.error(e);
-      alert('Não consegui gerar o relatório. Confirme se a planilha tem uma coluna "Efeito" e a primeira linha (ou uma das primeiras) com os títulos das colunas.');
+      alert('Não consegui gerar o relatório. Confirme se a planilha tem uma coluna "Efeito" e a primeira linha (ou uma das primeiras) com os títulos das colunas.' + (e && e.message ? '\n\nDetalhe: ' + e.message : ''));
       input.value = '';
     } finally {
       if (labelTexto) labelTexto.textContent = labelTextoOriginal || 'Enviar tabela (.xlsx)';
@@ -4229,28 +4416,60 @@
       const wb = XLSX.read(bytesFromBase64(rep.dataBase64), {type:'array'});
       const outWb = XLSX.utils.book_new();
       const used = new Set();
-      const summaryRows = [['Técnico/equipe','Formação','Bairros agrupados','Nº de bairros','Registros no relatório']];
+      const itensResumo = [];      // para o resumo com fórmulas
+      const coresPorAba = {};
+      // Mesmas cores de aba da planilha original (guia inferior do Excel).
+      const coresOriginais = {};
+      (wb.Workbook && wb.Workbook.Sheets || []).forEach(s => { if (s.TabColor && s.TabColor.rgb) coresOriginais[s.name] = s.TabColor.rgb; });
+      let infoRelatorio = [];
+      const abasDados = [];
       wb.SheetNames.forEach(name => {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, defval:''});
         if (!rows.length) return;
-        if (name === 'Resumo do território') return;
+        if (name === 'Resumo do território') {
+          // Preserva o bloco "INFORMAÇÕES DO RELATÓRIO" (programa, período, UF...)
+          const ini = rows.findIndex(r => String(r[0] || '').trim() === 'INFORMAÇÕES DO RELATÓRIO');
+          if (ini >= 0) infoRelatorio = rows.slice(ini).filter(r => r.some(v => String(v).trim() !== '')).map(r => [r[0]]);
+          return;
+        }
         const header = rows[0];
         const idx = header.findIndex(h => String(h).trim().toLowerCase() === 'bairro do território');
         const filtered = idx < 0 ? rows.slice(1) : rows.slice(1).filter(row => !selected.length || selected.includes(String(row[idx]).trim()));
         if (!filtered.length) return;
-        const result = [header, ...filtered];
         const sheetName = safeSheetName(name, used);
-        XLSX.utils.book_append_sheet(outWb, XLSX.utils.aoa_to_sheet(result), sheetName);
-        const formacao = filtered[0]?.[2] || '';
-        const bairroSet = [...new Set(filtered.map(row => String(row[idx] || '').trim()).filter(Boolean))];
-        summaryRows.push([name, formacao, bairroSet.join('; '), bairroSet.length, filtered.length]);
+        coresPorAba[sheetName] = coresOriginais[name] || '0B2F7A';
+        abasDados.push({ sheetName, aoa: [header, ...filtered] });
+        const formacao = filtered[0] && filtered[0][2] || '';
+        const bairroSet = idx < 0 ? [] : [...new Set(filtered.map(row => String(row[idx] || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+        itensResumo.push({ rotulo: name, aba: sheetName, linhas: filtered.length, extras: [formacao, bairroSet.join('; '), bairroSet.length] });
       });
-      const summary = [['Técnico/equipe','Formação','Bairros agrupados','Nº de bairros','Registros no relatório'], ...summaryRows.slice(1)];
-      XLSX.utils.book_append_sheet(outWb, XLSX.utils.aoa_to_sheet(summary), safeSheetName('Resumo do território', used), true);
+      if (!abasDados.length) { alert('Nenhum registro encontrado para os bairros escolhidos.'); return; }
+      // Resumo PRIMEIRO (como na planilha original), com contagens vivas e total.
+      const wsResumo = AnonaTabelas.abaResumoComFormulas(['Técnico/equipe','Formação','Bairros agrupados','Nº de bairros','Registros no relatório'], itensResumo, { cor: '0B2F7A', tamFonte: 12, altCab: 46, larguraMax: 60 });
+      if (infoRelatorio.length) {
+        const ref = XLSX.utils.decode_range(wsResumo['!ref']);
+        let r = ref.e.r + 2;
+        infoRelatorio.forEach((linha, k) => {
+          const a = XLSX.utils.encode_cell({ r, c: 0 });
+          wsResumo[a] = { t: 's', v: String(linha[0]), s: k === 0
+            ? { font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } }, fill: { patternType: 'solid', fgColor: { rgb: '0B2F7A' } } }
+            : { font: { name: 'Arial', sz: 11, color: { rgb: '1F2937' } } } };
+          r++;
+        });
+        wsResumo['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: r - 1, c: ref.e.c } });
+      }
+      XLSX.utils.book_append_sheet(outWb, wsResumo, safeSheetName('Resumo do território', used));
+      coresPorAba['Resumo do território'] = '0B2F7A';
+      abasDados.forEach(({ sheetName, aoa }) => {
+        // Formatação padrão do app (cabeçalho colorido, linhas alternadas, larguras, filtro).
+        XLSX.utils.book_append_sheet(outWb, AnonaTabelas.abaDeDados(aoa, { cor: coresPorAba[sheetName], tamFonte: 12, altCab: 46, altLinha: 36, larguraMax: 60 }), sheetName);
+      });
+      outWb.Workbook = outWb.Workbook || {};
+      outWb.Workbook.Sheets = outWb.SheetNames.map(name => ({ name, Hidden: 0, TabColor: { rgb: coresPorAba[name] || '0B2F7A' } }));
       const base = (rep.filename || 'Repercussao').replace(/\.(xlsx|xls|csv)$/i, '');
       const suffix = selected.length ? '_filtrada' : '_completa';
       XLSX.writeFile(outWb, base + suffix + '.xlsx');
-    } catch (e) { console.error(e); alert('Não foi possível gerar a planilha filtrada.'); }
+    } catch (e) { console.error(e); alert('Não foi possível gerar a planilha filtrada.' + (e && e.message ? '\n\nDetalhe: ' + e.message : '')); }
   };
 
   // Gera um PDF de Relatório de Repercussão Individual para CADA aba de
@@ -4293,7 +4512,7 @@
         const dados = relatorioIndividualExtrairDadosDoWorkbook(wb, [nomeTecnico]);
         if (!dados || !dados.rows.length) { semRegistros.push(nomeTecnico); continue; }
         const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
-          dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome: nomeTecnico, formacao: dados.formacao }, { retornarBytes: true }
+          dados.headers, dados.rows, dados.mesTexto, false, '', '', relatorioIndividualSepararNomeFormacao(nomeTecnico, dados.formacao), { retornarBytes: true }
         );
         arquivosGerados.push({ nomeArquivo, bytes });
         gerados++;
@@ -4658,8 +4877,10 @@ function render(){
   const year = currentMonth.getFullYear();
   const dadosAno = dadosDoAno(year);
 
-  document.getElementById('currentMonthLabel').innerText =
-    new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(currentMonth);
+  // "novembro de 2026" -> "Novembro de 2026" (só a 1ª letra maiúscula; o
+  // CSS `capitalize` antigo escrevia "Novembro De 2026").
+  { const t = new Intl.DateTimeFormat('pt-BR',{month:'long',year:'numeric'}).format(currentMonth);
+    document.getElementById('currentMonthLabel').innerText = t.charAt(0).toUpperCase() + t.slice(1); }
 
   const monthData = dadosAno.monthHighlights[monthIdx] || [];
   const payday = paydayForMonth(monthIdx, year);
@@ -4717,6 +4938,8 @@ function render(){
     if (hasNote) rotuloPartes.push(noteObj.emphasis ? 'com anotação em destaque' : 'com anotação');
     if (events.length) rotuloPartes.push(events[0].title);
     cell.setAttribute('aria-label', rotuloPartes.join(', '));
+    // Dica ao passar o mouse: o texto do dia pode aparecer cortado na célula.
+    if (events.length || hasNote) cell.title = [...events.map(e => e.title), hasNote ? String(noteObj.text).slice(0, 140) : ''].filter(Boolean).join('\n');
     cell.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter' || ev.key === ' ') {
         ev.preventDefault();
