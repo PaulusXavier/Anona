@@ -2,12 +2,13 @@
   "name": "Anona — Acompanhamento de Condicionalidades",
   "short_name": "Anona",
   "description": "Anona - ferramenta independente (não oficial) de apoio ao acompanhamento de condicionalidades de programas sociais, usada por profissionais do CRAS. Não possui vínculo, afiliação ou endosso do Governo Federal, do MDS ou da Caixa.",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#F2EEE3",
   "theme_color": "#0B2F7A",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
