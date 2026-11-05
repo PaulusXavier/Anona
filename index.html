@@ -192,7 +192,18 @@
 </script>
 
 <!-- TELA DE SENHA (bloqueia o app até digitar a senha correta) -->
-<div id="lockScreen" class="access-bg fixed inset-0 z-[9999] flex items-center justify-center px-4 py-8">
+<div id="lockScreen" class="access-bg fixed inset-0 z-[9999] flex px-4 py-8" style="overflow-y:auto; overflow-x:hidden;">
+  <!-- fundo animado: manchas de luz (cores da bandeira) + bolhas subindo -->
+  <div class="access-fx" aria-hidden="true">
+    <span class="access-blob b1"></span><span class="access-blob b2"></span><span class="access-blob b3"></span>
+    <span class="access-bokeh" style="left:8%;  --s:14px; --d:19s; --t:0s;   --c:var(--amarelo)"></span>
+    <span class="access-bokeh" style="left:22%; --s:8px;  --d:15s; --t:-6s;  --c:var(--verde)"></span>
+    <span class="access-bokeh" style="left:37%; --s:18px; --d:24s; --t:-11s; --c:#fff"></span>
+    <span class="access-bokeh" style="left:52%; --s:10px; --d:17s; --t:-3s;  --c:var(--amarelo)"></span>
+    <span class="access-bokeh" style="left:66%; --s:16px; --d:22s; --t:-14s; --c:var(--verde)"></span>
+    <span class="access-bokeh" style="left:79%; --s:9px;  --d:16s; --t:-8s;  --c:#fff"></span>
+    <span class="access-bokeh" style="left:91%; --s:13px; --d:21s; --t:-2s;  --c:var(--amarelo)"></span>
+  </div>
   <div class="brand-seal" aria-hidden="true" style="left:50%; top:8%; transform:translateX(-50%); opacity:.07; background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNjcgMTU4IEgyMzMgVjIwMiBIMTY3IFogTTE2NyAxNzggSDIzMyBWMTgyIEgxNjcgWiBNMTg2IDEzOCBIMjE0IFYxNTggSDE4NiBaIE0xOTEgMTQyIEgyMDkgVjE1OCBIMTkxIFoiIGZpbGw9IiNGRkNDMjkiIHN0cm9rZT0ibm9uZSIvPgogIDxnIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTExMiAzNzIgUTE1OCA0MDAgMjAwIDM4MiBRMjQyIDQwMCAyODggMzcyIi8+CiAgICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSIzNDYiIHI9IjE3Ii8+CiAgICA8cGF0aCBkPSJNOTUgMzY2IEM5MyAzODQgOTEgNDAyIDkxIDQxMCBMMTMzIDQxMCBDMTMzIDQwMiAxMzEgMzg0IDEyOSAzNjYiLz4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjM1OCIgcj0iMTMiLz4KICAgIDxwYXRoIGQ9Ik0xODYgMzc0IEMxODUgMzg4IDE4NCA0MDQgMTg0IDQxMCBMMjE2IDQxMCBDMjE2IDQwNCAyMTUgMzg4IDIxNCAzNzQiLz4KICAgIDxjaXJjbGUgY3g9IjI4OCIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik0yNzEgMzY2IEMyNjkgMzg0IDI2NyA0MDIgMjY3IDQxMCBMMzA5IDQxMCBDMzA5IDQwMiAzMDcgMzg4IDMwNSAzNjYiLz4KICA8L2c+Cjwvc3ZnPgo=');"></div>
 
   <div class="ring-seal" aria-hidden="true" style="width:min(50vw,220px); right:-8%; top:-6%; transform:rotate(-20deg);"></div>
@@ -204,7 +215,7 @@
   <div class="access-dot" aria-hidden="true" style="width:6px; height:6px; right:12%; bottom:24%; background:var(--amarelo); color:var(--amarelo); opacity:.4;"></div>
   <div class="access-dot" aria-hidden="true" style="width:4px; height:4px; left:20%; bottom:18%; background:var(--verde); color:var(--verde); opacity:.45;"></div>
 
-  <div class="access-card fade-in w-full max-w-sm" id="lockCard">
+  <div class="access-card access-card-in w-full max-w-sm" id="lockCard" style="margin:auto; z-index:1;">
     <div class="flag-ribbon"></div>
     <div class="px-7 pt-7 pb-4 text-center">
       <div class="logo-mark mx-auto mb-4" aria-hidden="true" style="width:4.4rem; height:4.4rem;">
@@ -234,6 +245,7 @@
           <circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
         </svg>
       </div>
+      <p id="authGreeting" class="text-[11px] font-semibold text-slate-400 mb-0.5" aria-hidden="true"></p>
       <h1 class="display font-bold text-2xl mb-1" style="color:var(--azul-deep)">Anona</h1>
       <p id="lockYearSubtitle" class="text-[11px] font-bold tracking-wide uppercase mb-1" style="color:var(--amarelo-text)">Acompanhamento de condicionalidades · 2026</p>
       <p class="text-xs text-slate-400 flex items-center justify-center gap-1.5">
@@ -246,17 +258,18 @@
 
     <div class="px-7 pt-5 pb-7">
       <div class="access-tabs mb-4">
-        <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="access-tab"><i data-lucide="log-in"></i> Entrar</button>
+        <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="access-tab active" aria-pressed="true"><i data-lucide="log-in"></i> Entrar</button>
         <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="access-tab"><i data-lucide="user-plus"></i> Criar conta</button>
       </div>
       <p id="authModalSubtitle" class="text-xs text-slate-500 mb-3 text-center leading-snug">Entre com e-mail e senha para acessar suas anotações com segurança, em qualquer aparelho.</p>
 
-      <form id="authForm" class="space-y-3 text-left" autocomplete="off" onsubmit="event.preventDefault(); submitAuthForm();">
+      <form id="authForm" class="space-y-3 text-left" autocomplete="on" novalidate onsubmit="event.preventDefault(); submitAuthForm();">
         <div>
           <label for="authEmail" class="text-[11px] font-bold text-slate-500 mb-1 block">E-mail</label>
           <div class="access-input-wrap">
             <i data-lucide="mail"></i>
-            <input id="authEmail" type="email" placeholder="seu@email.com" autocomplete="username" required class="access-input">
+            <input id="authEmail" name="email" type="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next"
+              placeholder="seu@email.com" autocomplete="username" required class="access-input">
           </div>
         </div>
 
@@ -264,13 +277,17 @@
           <label for="authPass" class="text-[11px] font-bold text-slate-500 mb-1 block">Senha</label>
           <div class="access-input-wrap">
             <i data-lucide="lock"></i>
-            <input id="authPass" type="password" placeholder="Mín. 6 caracteres" autocomplete="current-password" required minlength="6"
-              class="access-input" style="padding-right:2.5rem" oninput="updateAuthPassStrength()">
-            <button type="button" onclick="toggleAuthPassVisibility()" aria-label="Mostrar ou ocultar senha"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+            <input id="authPass" name="password" type="password" placeholder="Sua senha" autocomplete="current-password" required minlength="6"
+              enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false"
+              class="access-input" style="padding-right:2.9rem" oninput="updateAuthPassStrength()">
+            <button type="button" id="authPassToggle" onclick="toggleAuthPassVisibility()" aria-label="Mostrar senha" aria-pressed="false"
+              class="access-eye">
               <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
             </button>
           </div>
+          <p id="authCapsWarn" class="access-caps hidden mt-1.5 text-[10.5px] font-semibold" style="color:var(--amarelo-text)" role="status">
+            <i data-lucide="arrow-big-up" class="w-3 h-3"></i> Caps Lock está ligado
+          </p>
           <div id="authPassStrengthWrap" class="hidden mt-1.5">
             <div class="h-1 rounded-full bg-slate-200 overflow-hidden flex gap-0.5">
               <div id="authPassStrengthBar" class="h-full rounded-full transition-all" style="width:0%; background:#DC2626;"></div>
@@ -278,19 +295,28 @@
             <p id="authPassStrengthLabel" class="text-[10px] font-semibold mt-1 text-slate-400"></p>
           </div>
         </div>
-        <div class="text-right -mt-1">
-          <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="text-[11px] font-semibold hover:underline" style="color:var(--azul)">Esqueci minha senha</button>
+        <div class="flex items-center justify-between gap-2 -mt-1">
+          <label class="access-check text-[11px] font-semibold text-slate-500">
+            <input type="checkbox" id="authRemember" checked>
+            <span>Lembrar e-mail</span>
+          </label>
+          <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="access-link text-[11px] font-semibold">Esqueci minha senha</button>
         </div>
 
-        <p id="authError" class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 hidden"></p>
-        <p id="authSuccess" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 hidden"></p>
+        <p id="authError" role="alert" class="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2 hidden"></p>
+        <p id="authSuccess" role="status" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 hidden"></p>
 
         <button type="submit" id="authSubmitBtn" class="access-btn w-full text-white py-3.5 rounded-xl text-sm font-bold transition hover:-translate-y-px active:translate-y-0 disabled:opacity-60 flex items-center justify-center gap-2">
           <i data-lucide="loader-2" id="authSubmitSpinner" class="w-4 h-4 animate-spin hidden"></i>
           <span id="authSubmitLabel">Entrar</span> <i data-lucide="arrow-right" class="w-4 h-4" id="authSubmitArrow"></i>
         </button>
       </form>
-      <p class="text-[10px] text-slate-400 text-center mt-4 leading-snug">Sua senha é verificada pelo Firebase (Google) — nunca fica salva nem visível no código do app.</p>
+      <ul class="access-chips" aria-label="Recursos">
+        <li><i data-lucide="shield-check"></i> Protegido</li>
+        <li><i data-lucide="refresh-cw"></i> Sincroniza</li>
+        <li><i data-lucide="wifi-off"></i> Offline</li>
+      </ul>
+      <p class="text-[10px] text-slate-400 text-center mt-3 leading-snug">Sua senha é verificada pelo Firebase (Google) — nunca fica salva nem visível no código do app.</p>
     </div>
   </div>
 </div>
@@ -1342,6 +1368,7 @@
       // desta revisão.
       passEl.setAttribute('minlength', '6');
       passEl.placeholder = 'Sua senha';
+      document.getElementById('authRemember').closest('label').classList.remove('hidden');
       document.getElementById('authPassStrengthWrap').classList.add('hidden');
     } else {
       tabSignup.className = activeCls;
@@ -1353,6 +1380,7 @@
       // podem conter dados sensíveis de famílias atendidas.
       passEl.setAttribute('minlength', '8');
       passEl.placeholder = 'Mín. 8 caracteres';
+      document.getElementById('authRemember').closest('label').classList.add('hidden');
       document.getElementById('authPassStrengthWrap').classList.remove('hidden');
       updateAuthPassStrength();
     }
@@ -1396,9 +1424,83 @@
     const icon = document.getElementById('authPassEyeIcon');
     const showing = input.type === 'text';
     input.type = showing ? 'password' : 'text';
-    icon.setAttribute('data-lucide', showing ? 'eye' : 'eye-off');
+    const btn = document.getElementById('authPassToggle');
+    if (btn) {
+      btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+      btn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
+    }
+    // lucide.createIcons() troca o <i> por <svg>: o ícone antigo some do DOM,
+    // então recriamos o <i> (com o mesmo id) no lugar do svg atual.
+    const cur = btn && btn.querySelector('svg, i');
+    if (cur) {
+      const fresh = document.createElement('i');
+      fresh.id = 'authPassEyeIcon';
+      fresh.className = 'w-4 h-4';
+      fresh.setAttribute('data-lucide', showing ? 'eye' : 'eye-off');
+      cur.replaceWith(fresh);
+    } else if (icon) {
+      icon.setAttribute('data-lucide', showing ? 'eye' : 'eye-off');
+    }
     if (window.lucide) lucide.createIcons();
+    input.focus();
   };
+
+  // Saudação conforme o horário + leve inclinação do cartão seguindo o mouse (só desktop).
+  (function () {
+    const g = document.getElementById('authGreeting');
+    if (g) { const hr = new Date().getHours(); g.textContent = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite'; }
+    const scr = document.getElementById('lockScreen'), card = document.getElementById('lockCard');
+    if (!scr || !card || !window.matchMedia) return;
+    if (!matchMedia('(hover:hover) and (pointer:fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0;
+    scr.addEventListener('mousemove', (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const x = (e.clientX / innerWidth - .5), y = (e.clientY / innerHeight - .5);
+        scr.style.setProperty('--px', (x * -40).toFixed(1) + 'px');
+        scr.style.setProperty('--py', (y * -40).toFixed(1) + 'px');
+        card.style.transform = `perspective(900px) rotateX(${(y * -3).toFixed(2)}deg) rotateY(${(x * 4).toFixed(2)}deg)`;
+      });
+    });
+    scr.addEventListener('mouseleave', () => { card.style.transform = ''; scr.style.setProperty('--px','0px'); scr.style.setProperty('--py','0px'); });
+  })();
+
+  // Aviso de Caps Lock no campo de senha.
+  (function () {
+    const passEl = document.getElementById('authPass');
+    const warn = document.getElementById('authCapsWarn');
+    if (!passEl || !warn) return;
+    const check = (ev) => {
+      try { warn.classList.toggle('hidden', !(ev.getModifierState && ev.getModifierState('CapsLock'))); } catch (_) {}
+    };
+    passEl.addEventListener('keydown', check);
+    passEl.addEventListener('keyup', check);
+    passEl.addEventListener('blur', () => warn.classList.add('hidden'));
+  })();
+
+  // "Lembrar e-mail" (só o e-mail, nunca a senha) neste aparelho.
+  const LS_EMAIL_LEMBRADO = 'anona_email_lembrado';
+  (function () {
+    try {
+      const saved = localStorage.getItem(LS_EMAIL_LEMBRADO);
+      const emailEl = document.getElementById('authEmail');
+      if (saved && emailEl && !emailEl.value) emailEl.value = saved;
+      const focusEl = document.getElementById(saved ? 'authPass' : 'authEmail');
+      // Só foca sozinho em telas com mouse — no celular abriria o teclado
+      // de cara e cobriria metade do cartão.
+      if (focusEl && window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches) {
+        setTimeout(() => { try { focusEl.focus({ preventScroll: true }); } catch (_) {} }, 350);
+      }
+    } catch (_) {}
+  })();
+  function rememberEmailChoice(email) {
+    try {
+      const chk = document.getElementById('authRemember');
+      if (chk && chk.checked && authMode === 'login') localStorage.setItem(LS_EMAIL_LEMBRADO, email);
+      else localStorage.removeItem(LS_EMAIL_LEMBRADO);
+    } catch (_) {}
+  }
 
   function setAuthLoading(loading) {
     authLoading = loading;
@@ -1430,6 +1532,8 @@
     try {
       if (authMode === 'login') {
         await signInWithEmailAndPassword(auth, email, pass);
+        rememberEmailChoice(email);
+        document.getElementById('lockScreen').classList.add('access-leaving');
       } else {
         await createUserWithEmailAndPassword(auth, email, pass);
       }
@@ -1496,6 +1600,11 @@
     };
     authError.textContent = map[e.code] || 'Não foi possível concluir. Tente novamente.';
     authError.classList.remove('hidden');
+    // Balança o cartão e leva o foco para o campo da senha (ou e-mail).
+    const card = document.getElementById('lockCard');
+    if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+    const target = document.getElementById(e.code === 'auth/invalid-email' || e.code === 'auth/email-already-in-use' ? 'authEmail' : 'authPass');
+    if (target) { try { target.focus(); target.select && target.select(); } catch (_) {} }
   }
 
   async function loadNotesFromCloud() {
@@ -4316,7 +4425,7 @@
     const lockScreen = document.getElementById('lockScreen');
     const appContent = document.getElementById('appContent');
     if (appContent) appContent.style.display = 'none';
-    if (lockScreen) lockScreen.style.display = '';
+    if (lockScreen) { lockScreen.classList.remove('access-leaving'); lockScreen.style.display = ''; }
     setAuthMode('login');
     const emailEl = document.getElementById('authEmail');
     const passEl = document.getElementById('authPass');
