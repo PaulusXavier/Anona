@@ -869,3 +869,7 @@ textarea{ line-height:1.5; }
   border-color:#DC2626; box-shadow:0 0 0 4px rgba(220,38,38,.16);
 }
 #lockScreen .access-tab:focus-visible, #lockScreen .access-eye:focus-visible{ border-radius:.7rem; box-shadow:none; }
+
+/* Botão "mostrar senha": a regra geral de button:active (translateY(1px)) anulava o translateY(-50%) que o centraliza,
+   então ao apertar o botão ele pulava para baixo, saía de baixo do cursor e o clique se perdia. */
+button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); }
