@@ -111,6 +111,7 @@
     var msg = String(mensagem == null ? '' : mensagem);
     var tipo = 'error';
     if (/sucesso/i.test(msg)) tipo = 'success';
+    else if (/^\d+ (de \d+ )?relat[óo]rio|^Backup baixado|^Restaurado/i.test(msg) && !/n[ãa]o consegui/i.test(msg)) tipo = 'success';   // "3 relatório(s)… gerado(s) e baixado(s)" não tem a palavra "sucesso" e saía como erro (vermelho)
     else if (/^(Nenhuma|Você (ainda )?não tem)/i.test(msg) || /gerado normalmente/i.test(msg)) tipo = 'info';
     window.toast(msg, tipo);
   };
@@ -327,9 +328,10 @@
             <input id="authPass" name="password" type="password" placeholder="Sua senha" autocomplete="current-password" required minlength="6"
               enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false"
               class="access-input" style="padding-right:2.9rem" oninput="updateAuthPassStrength()">
-            <button type="button" id="authPassToggle" onclick="toggleAuthPassVisibility()" aria-label="Mostrar senha" aria-pressed="false"
+            <button type="button" id="authPassToggle" onmousedown="event.preventDefault()" onclick="toggleAuthPassVisibility()" aria-label="Mostrar senha" aria-pressed="false"
               class="access-eye">
               <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
+              <i data-lucide="eye-off" id="authPassEyeOffIcon" class="w-4 h-4 hidden"></i>
             </button>
           </div>
           <p id="authCapsWarn" class="access-caps hidden mt-1.5 text-[10.5px] font-semibold" style="color:var(--amarelo-text)" role="status">
@@ -1542,7 +1544,6 @@ window.AnonaPDF = (function () {
 
   window.toggleAuthPassVisibility = () => {
     const input = document.getElementById('authPass');
-    const icon = document.getElementById('authPassEyeIcon');
     const showing = input.type === 'text';
     input.type = showing ? 'password' : 'text';
     const btn = document.getElementById('authPassToggle');
@@ -1550,19 +1551,11 @@ window.AnonaPDF = (function () {
       btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
       btn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
     }
-    // lucide.createIcons() troca o <i> por <svg>: o ícone antigo some do DOM,
-    // então recriamos o <i> (com o mesmo id) no lugar do svg atual.
-    const cur = btn && btn.querySelector('svg, i');
-    if (cur) {
-      const fresh = document.createElement('i');
-      fresh.id = 'authPassEyeIcon';
-      fresh.className = 'w-4 h-4';
-      fresh.setAttribute('data-lucide', showing ? 'eye' : 'eye-off');
-      cur.replaceWith(fresh);
-    } else if (icon) {
-      icon.setAttribute('data-lucide', showing ? 'eye' : 'eye-off');
-    }
-    if (window.lucide) lucide.createIcons();
+    // Os dois ícones (olho / olho riscado) ficam no botão e só alternamos qual aparece.
+    // Antes o ícone era recriado a cada clique, e o clique se perdia quando o ícone era trocado entre o "apertar" e o "soltar" do mouse.
+    const olho = document.getElementById('authPassEyeIcon'), riscado = document.getElementById('authPassEyeOffIcon');
+    if (olho) olho.classList.toggle('hidden', !showing);
+    if (riscado) riscado.classList.toggle('hidden', showing);
     input.focus();
   };
 
@@ -1831,7 +1824,7 @@ window.AnonaPDF = (function () {
     return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
   }
 
-  function makeCrasFormattedWorkbook(base64) {
+  async function makeCrasFormattedWorkbook(base64) {
     const source = XLSX.read(bytesFromBase64(base64), {type:'array'});
     const mapaBairros = {
       'BURITIS':['Fernanda Gomes','Psicóloga','Buritis'],
@@ -1933,6 +1926,10 @@ window.AnonaPDF = (function () {
     });
     if (!rawHeader || !groups.size) throw new Error('Não encontrei o cabeçalho do relatório bruto ou nenhum bairro do mapa do CRAS.');
     const outputHeader = ['Bairro do território','Técnico/equipe','Formação',...rawHeader];
+    // NIS/CPF lidos como número perdem o zero à esquerda (e viram notação científica no Excel):
+    // restaura como texto de 11 dígitos, igual aos demais relatórios.
+    const colId = outputHeader.map(v => window.AnonaPDF.colunaIdentificador(v));
+    groups.forEach(g => { g.rows = g.rows.map(r => r.map((v, i) => colId[i] ? window.AnonaPDF.identificador(v) : v)); });
     const out = XLSX.utils.book_new();
     const used = new Set();
     const sheetName = name => {
@@ -2015,6 +2012,7 @@ window.AnonaPDF = (function () {
       'Rafaela Garcia': 'E8EAF6',
       'Território Volante': 'F0F9E8'
     };
+    const linhaInfoTitulo = summary.length + 1;   // linha (0-based) do título "INFORMAÇÕES DO RELATÓRIO"
     out.SheetNames.forEach(name => {
       const ws = out.Sheets[name];
       const range = XLSX.utils.decode_range(ws['!ref']);
@@ -2025,12 +2023,20 @@ window.AnonaPDF = (function () {
       for (let r = range.s.r; r <= range.e.r; r++) {
         ws['!rows'][r] = { hpt: r === range.s.r ? 46 : 36 };
         for (let c = range.s.c; c <= range.e.c; c++) {
+          // linhas de "INFORMAÇÕES": só a coluna A existe (as vazias ao lado impediriam o texto de se estender)
+          if (name === 'Resumo do território' && r > linhaInfoTitulo && c > 0) continue;
           const address = XLSX.utils.encode_cell({r,c});
           if (!ws[address]) ws[address] = { v: '', t: 's' };
           const isInfoTitle = String(ws[address].v || '') === 'INFORMAÇÕES DO RELATÓRIO';
           const nomeResumo = name === 'Resumo do território' && r > range.s.r ? String(ws[XLSX.utils.encode_cell({r, c: 0})]?.v || '') : '';
           const corResumo = coresResumo[nomeResumo];
-          ws[address].s = isInfoTitle
+          const ehInfo = name === 'Resumo do território' && r >= linhaInfoTitulo;
+          const ehTotal = name === 'Resumo do território' && r === gruposOrdenados.length + 1;
+          ws[address].s = ehInfo && !isInfoTitle
+            ? { font: { name: 'Arial', sz: 11, color: { rgb: '1F2937' } }, alignment: { vertical: 'center', wrapText: false } }
+            : ehTotal
+            ? { ...estiloCelula, font: { name: 'Arial', sz: 12, bold: true, color: { rgb: '1F2937' } }, border: { ...bordaLeve, top: { style: 'medium', color: { rgb: corAba } } }, alignment: { vertical: 'center', horizontal: c === 4 ? 'right' : 'left' } }
+            : isInfoTitle
             ? { ...estiloCabecalho, fill: { patternType: 'solid', fgColor: { rgb: corAba } } }
             : r === range.s.r
             ? { ...estiloCabecalho, fill: { patternType: 'solid', fgColor: { rgb: corAba } } }
@@ -2039,12 +2045,14 @@ window.AnonaPDF = (function () {
             : (r % 2 === 0 ? estiloCelulaAlternada : estiloCelula);
         }
       }
-      ws['!autofilter'] = { ref: ws['!ref'] };
+      if (name !== 'Resumo do território') ws['!autofilter'] = { ref: ws['!ref'] };
       ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+      ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 };
       ws['!cols'] = [];
       for (let c = range.s.c; c <= range.e.c; c++) {
         let max = 12;
-        for (let r = range.s.r; r <= range.e.r; r++) {
+        // No resumo, as linhas de "INFORMAÇÕES" são texto corrido (não contam para a largura da coluna A).
+        for (let r = range.s.r; r <= (name === 'Resumo do território' ? Math.min(range.e.r, linhaInfoTitulo - 1) : range.e.r); r++) {
           const cell = ws[XLSX.utils.encode_cell({r,c})];
           const value = cell && cell.v != null ? String(cell.v) : '';
           max = Math.max(max, value.length);
@@ -2061,18 +2069,15 @@ window.AnonaPDF = (function () {
       Hidden: 0,
       TabColor: { rgb: coresAbas[name] || '0B2F7A' }
     }));
-    const written=XLSX.write(out,{bookType:'xlsx',type:'array'});
-    const bytes=written instanceof ArrayBuffer ? new Uint8Array(written) : written;
-    let binary=''; const chunk=0x8000;
-    for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.slice(i,i+chunk));
-    return { dataBase64: btoa(binary), bairrosNaoMapeados };
+    const bytes = await AnonaTabelas.escreverPolido(out, name => coresAbas[name]);
+    return { dataBase64: AnonaTabelas.bytesParaBase64(bytes), bairrosNaoMapeados };
   };
 
   // Divide uma tabela de condicionalidades só do Território Volante em três
   // partes iguais, respeitando a ordem alfabética (A a Z), e monta uma
   // planilha nova com uma aba por técnico: 1ª parte = Paulo Xavier,
   // 2ª parte = Danilo Braga, 3ª parte = Keomara Teles.
-  function makeVolanteDivisaoWorkbook(base64) {
+  async function makeVolanteDivisaoWorkbook(base64) {
     const wb = XLSX.read(bytesFromBase64(base64), {type:'array'});
     let header = null;
     let dataRows = [];
@@ -2193,11 +2198,8 @@ window.AnonaPDF = (function () {
     out.Workbook = out.Workbook || {};
     out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
 
-    const written = XLSX.write(out, {bookType:'xlsx', type:'array'});
-    const bytes = written instanceof ArrayBuffer ? new Uint8Array(written) : written;
-    let binary=''; const chunk=0x8000;
-    for (let i=0;i<bytes.length;i+=chunk) binary += String.fromCharCode(...bytes.slice(i,i+chunk));
-    return { base64: btoa(binary), mesRepercussao };
+    const bytes = await AnonaTabelas.escreverPolido(out, corPorAba);
+    return { base64: AnonaTabelas.bytesParaBase64(bytes), mesRepercussao };
   }
 
   // Guarda o resultado (em base64) da última divisão do Território Volante
@@ -2222,7 +2224,7 @@ window.AnonaPDF = (function () {
     try {
       if (!window.XLSX) throw new Error('Biblioteca de planilhas não carregada.');
       const base64 = await fileToBase64(file);
-      const { base64: outBase64, mesRepercussao } = makeVolanteDivisaoWorkbook(base64);
+      const { base64: outBase64, mesRepercussao } = await makeVolanteDivisaoWorkbook(base64);
       // Deixa o texto do mês de repercussão seguro para usar em nome de
       // arquivo (troca barras/dois-pontos e afins por hífen/espaço).
       const mesArquivo = String(mesRepercussao || '').trim()
@@ -2392,17 +2394,23 @@ window.AnonaPDF = (function () {
 
   // Monta a planilha de comparação com as famílias que aparecem nos dois
   // meses enviados, mostrando os dados dos dois períodos lado a lado.
-  function gerarComparacaoFamiliasRecorrentes(anterior, atual) {
-    const chavesComuns = [...anterior.familias.keys()].filter(chave => atual.familias.has(chave));
-    if (!chavesComuns.length) {
+  async function gerarComparacaoFamiliasRecorrentes(anterior, atual) {
+    // Casa as famílias pelo NIS e, na falta dele, pelo CPF: se um mês trouxe só o CPF e o outro só o NIS
+    // da mesma família, a chave simples (NIS || CPF) diferia e a família recorrente passava despercebida.
+    const porNisAtual = new Map(), porCpfAtual = new Map();
+    atual.familias.forEach((f, k) => { if (f.nis !== '—') porNisAtual.set(f.nis, k); if (f.cpf !== '—') porCpfAtual.set(f.cpf, k); });
+    const pares = [];
+    anterior.familias.forEach((a, k) => {
+      const kAtual = atual.familias.has(k) ? k : (a.nis !== '—' && porNisAtual.get(a.nis)) || (a.cpf !== '—' && porCpfAtual.get(a.cpf)) || null;
+      if (kAtual != null && !pares.some(p => p.kAtual === kAtual)) pares.push({ a, b: atual.familias.get(kAtual), kAtual });
+    });
+    if (!pares.length) {
       alert('Nenhuma família se repetiu entre os dois meses enviados.');
       return;
     }
     const mesAnterior = anterior.mes || 'Mês anterior';
     const mesAtual = atual.mes || 'Mês atual';
-    const linhas = chavesComuns.map(chave => {
-      const a = anterior.familias.get(chave);
-      const b = atual.familias.get(chave);
+    const linhas = pares.map(({ a, b }) => {
       return {
         nome: b.nome || a.nome, nis: b.nis !== '—' ? b.nis : a.nis, cpf: b.cpf !== '—' ? b.cpf : a.cpf,
         bairro: b.bairro || a.bairro, endereco: b.endereco || a.endereco,
@@ -2506,14 +2514,11 @@ window.AnonaPDF = (function () {
     out.Workbook = out.Workbook || {};
     out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
 
-    const written = XLSX.write(out, {bookType:'xlsx', type:'array'});
-    const bytes = written instanceof ArrayBuffer ? new Uint8Array(written) : written;
-    let binary=''; const chunk=0x8000;
-    for (let i=0;i<bytes.length;i+=chunk) binary += String.fromCharCode(...bytes.slice(i,i+chunk));
+    const bytes = await AnonaTabelas.escreverPolido(out, corPorAba);
 
     const sanitiza = t => String(t || '').trim().replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
     const nomeArquivo = `Famílias Recorrentes - ${sanitiza(mesAnterior)} e ${sanitiza(mesAtual)}.xlsx`;
-    baixarXlsxBase64(btoa(binary), nomeArquivo);
+    baixarXlsxBase64(AnonaTabelas.bytesParaBase64(bytes), nomeArquivo);
     const mensagemMudaram = linhasMudaram.length ? `, ${linhasMudaram.length} mudaram de técnico` : '';
     alert(`Relatório gerado e baixado com sucesso: ${nomeArquivo} (${linhas.length} família(s) recorrente(s), em ${tecnicosOrdenados.length} aba(s) de técnico${mensagemMudaram})`);
   }
@@ -2540,7 +2545,7 @@ window.AnonaPDF = (function () {
       window.__comparacaoVolante[papel] = dados;
       if (labelEl) labelEl.textContent = `${dados.mes || 'Mês não identificado'} — ${dados.familias.size} família(s) (${file.name})`;
       if (window.__comparacaoVolante.anterior && window.__comparacaoVolante.atual) {
-        gerarComparacaoFamiliasRecorrentes(window.__comparacaoVolante.anterior, window.__comparacaoVolante.atual);
+        await gerarComparacaoFamiliasRecorrentes(window.__comparacaoVolante.anterior, window.__comparacaoVolante.atual);
       }
       input.value = '';
     } catch (e) {
@@ -2711,6 +2716,25 @@ window.AnonaPDF = (function () {
     if (!headersFinais.length) return null;
 
     const dataRowsFinais = dataRows.map(r => posicoesFinais.map(i => r[i]));
+
+    // O relatório bruto do MDS não repete os dados da família nas linhas dos outros integrantes
+    // (ficam NIS/CPF/nome do responsável, endereço e bairro em branco). Sem completar, cada integrante
+    // virava uma "família" própria (numeração e contagem erradas) e, sem bairro, caía em "Outros bairros".
+    // Aqui a linha sem identificação do responsável herda os dados da família da linha anterior.
+    {
+      const nh = headersFinais.map(h => normalizeText(h));
+      const idsResp = nh.map((h, i) => ((h.includes('nis') && h.includes('responsavel')) || h.includes('cpf') || (h.includes('nome') && h.includes('responsavel'))) ? i : -1).filter(i => i >= 0);
+      const colsFam = nh.map((h, i) => (idsResp.includes(i) || h === 'endereco' || h === 'bairro' || (h.includes('referencia') && h.includes('endereco'))) ? i : -1).filter(i => i >= 0);
+      const vazio = v => String(v == null ? '' : v).trim() === '';
+      if (idsResp.length) {
+        for (let k = 1; k < dataRowsFinais.length; k++) {
+          const r = dataRowsFinais[k];
+          if (idsResp.every(i => vazio(r[i])) && r.some(v => !vazio(v))) {
+            colsFam.forEach(i => { if (vazio(r[i])) r[i] = dataRowsFinais[k - 1][i]; });
+          }
+        }
+      }
+    }
 
     // Guarda o texto do "Mês da Repercussão" separadamente (mesmo que essa
     // coluna não apareça mais na tabela do PDF), para continuar exibindo
@@ -3232,6 +3256,7 @@ window.AnonaPDF = (function () {
     docPdf.text(`Partida: ${ROTA_PARTIDA}`, margin, y);
     y += 16;
     blocoLabels.forEach((label, bi) => {
+      if (!blocoContagem[bi]) return;   // não lista bloco sem nenhum registro (ex.: "Outros bairros — 0")
       docPdf.setFillColor(...azul);
       docPdf.circle(margin+4, y-3, 4, 'F');
       docPdf.setFont('helvetica','bold'); docPdf.setFontSize(9.5); docPdf.setTextColor(...azulDeep);
@@ -4414,7 +4439,7 @@ window.AnonaPDF = (function () {
       const mes = autoGuess.mes;
       const ano = autoGuess.ano;
 
-      const { dataBase64, bairrosNaoMapeados } = makeCrasFormattedWorkbook(originalBase64);
+      const { dataBase64, bairrosNaoMapeados } = await makeCrasFormattedWorkbook(originalBase64);
       const nomeMes = MESES_NOMES[mes] || 'Mês';
       const nomeArquivo = `Repercussão ${nomeMes} de ${ano} (CRAS Cristiana).xlsx`;
       const testeSaida = XLSX.read(bytesFromBase64(dataBase64), {type:'array'});
@@ -4574,7 +4599,7 @@ window.AnonaPDF = (function () {
     used.add(clean); return clean;
   }
 
-  window.downloadFilteredReport = () => {
+  window.downloadFilteredReport = async () => {
     const fileId = document.getElementById('reportFileFilter').value;
     const rep = reports.find(r => r.id === fileId);
     if (!rep) { alert('Escolha uma planilha primeiro.'); return; }
@@ -4635,7 +4660,8 @@ window.AnonaPDF = (function () {
       outWb.Workbook.Sheets = outWb.SheetNames.map(name => ({ name, Hidden: 0, TabColor: { rgb: coresPorAba[name] || '0B2F7A' } }));
       const base = (rep.filename || 'Repercussao').replace(/\.(xlsx|xls|csv)$/i, '');
       const suffix = selected.length ? '_filtrada' : '_completa';
-      XLSX.writeFile(outWb, base + suffix + '.xlsx');
+      const bytesFiltrada = await AnonaTabelas.escreverPolido(outWb, name => coresPorAba[name]);
+      AnonaTabelas.baixarBlob(bytesFiltrada, base + suffix + '.xlsx', AnonaTabelas.MIME_XLSX);
     } catch (e) { console.error(e); alert('Não foi possível gerar a planilha filtrada.' + (e && e.message ? '\n\nDetalhe: ' + e.message : '')); }
   };
 
@@ -4817,9 +4843,10 @@ window.AnonaPDF = (function () {
     const passEl = document.getElementById('authPass');
     if (passEl) { passEl.value = ''; passEl.type = 'password'; }
     if (typeof updateAuthPassStrength === 'function') updateAuthPassStrength();
-    const eyeIcon = document.getElementById('authPassEyeIcon');
-    if (eyeIcon) eyeIcon.setAttribute('data-lucide', 'eye');
-    if (window.lucide) lucide.createIcons();
+    document.getElementById('authPassEyeIcon')?.classList.remove('hidden');
+    document.getElementById('authPassEyeOffIcon')?.classList.add('hidden');
+    const btnOlho = document.getElementById('authPassToggle');
+    if (btnOlho) { btnOlho.setAttribute('aria-pressed', 'false'); btnOlho.setAttribute('aria-label', 'Mostrar senha'); }
     setTimeout(() => emailEl?.focus(), 50);
   }
 
@@ -6116,7 +6143,7 @@ function cfPanoramaContexto(){
   d.linhas.forEach(l => { dias[l.mes] = l.dias; });
   return { d, ano, nome: cfEl('cfNome').value.trim(), rede: `${cal ? cal.nome : ''} · ${mod ? mod.nome : ''}`, faixaTxt: CF_FAIXAS[d.faixa], repercussao, dias };
 }
-function cfPanoramaExportar(tipo){
+async function cfPanoramaExportar(tipo){
   const T = window.AnonaTabelas;
   if (!T) { alert('O módulo de tabelas ainda não carregou. Tente de novo em instantes.'); return; }
   const c = cfPanoramaContexto();
@@ -6130,7 +6157,9 @@ function cfPanoramaExportar(tipo){
   if (!window.XLSX) { alert('A biblioteca de planilhas ainda não carregou. Tente de novo em instantes.'); return; }
   const wb = T.panoramaWorkbook({ nome: c.nome, rede: c.rede, ano: c.ano, faixaTxt: c.faixaTxt, lim: c.d.lim, unidade: cfUn().aulas ? 'aulas' : 'dias', repercussao: c.repercussao,
     linhas: c.d.linhas.map(l => ({ mes: l.mes, mesNome: CF_MESES[l.mes], dias: l.dias, faltas: l.faltas })) });
-  T.baixarBlob(T.escrever(wb, n => n === 'Informações' ? '0B2F7A' : '159947'), nomeBase + '.xlsx', T.MIME_XLSX);
+  try {
+    T.baixarBlob(await T.escreverPolido(wb, n => n === 'Informações' ? '0B2F7A' : '159947'), nomeBase + '.xlsx', T.MIME_XLSX);
+  } catch (e) { console.error(e); alert('Não consegui gerar a planilha do panorama. Tente novamente.'); }
 }
 async function cfPanoramaCopiar(){
   const T = window.AnonaTabelas, btn = cfEl('cfpBtnCopiar'), orig = 'Copiar tabela';
