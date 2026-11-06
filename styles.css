@@ -735,3 +735,137 @@ textarea{ line-height:1.5; }
 @media (max-width:639px){
   .day-cell .mt-auto > div.uppercase{ display:none; }
 }
+
+/* =====================================================================
+   TELA DE LOGIN (v3) — cartão dividido no desktop, cabeçalho compacto
+   no celular, abas com indicador deslizante e validação inline.
+   ===================================================================== */
+#lockCard{ max-width:24rem; }
+.access-split{ display:block; }
+.access-hero{ display:none; }
+.access-main{ min-width:0; }
+
+/* cabeçalho (celular): marca à esquerda, texto à direita */
+.access-head{ text-align:left; }
+.access-head-row{ display:flex; align-items:center; gap:.9rem; }
+.access-head .logo-mark{ width:3.6rem; height:3.6rem; }
+.access-head-text{ min-width:0; }
+.access-greeting{ font-size:11px; font-weight:600; color:#94A3B8; line-height:1.2; margin:0 0 .1rem; }
+.access-title{ font-weight:700; font-size:1.6rem; line-height:1.1; color:var(--azul-deep); margin:0; }
+.access-title-lg{ display:none; }
+.access-sub{ margin:.3rem 0 0; font-size:11px; line-height:1.35; font-weight:700; letter-spacing:.02em; color:var(--amarelo-text); }
+.access-year{
+  display:inline-block; margin-left:.2rem; padding:.05rem .45rem; border-radius:999px;
+  background:var(--amarelo-soft, #F4DFB4); color:var(--amarelo-text); font-weight:800; white-space:nowrap;
+}
+.access-credit{
+  display:flex; align-items:center; gap:.4rem; margin:.85rem 0 0;
+  font-size:11.5px; line-height:1.3; color:#64748B;
+}
+
+/* abas com indicador deslizante */
+.access-tabs{ position:relative; }
+.access-tabs::before{
+  content:""; position:absolute; top:.25rem; bottom:.25rem; left:.25rem; width:calc(50% - .25rem);
+  background:var(--card); border-radius:.7rem; box-shadow:0 1px 4px rgba(13,46,99,.18);
+  transition:transform .28s cubic-bezier(.3,.9,.3,1);
+}
+.access-tabs[data-mode="signup"]::before{ transform:translateX(100%); }
+.access-tab{ position:relative; z-index:1; }
+.access-tab.active{ background:transparent; box-shadow:none; }
+@media (prefers-reduced-motion: reduce){ .access-tabs::before{ transition:none; } }
+
+/* validação inline */
+.access-input.is-invalid{ border-color:#DC2626; background:#FFF8F7; }
+.access-input.is-invalid:focus{ box-shadow:0 0 0 4px rgba(220,38,38,.14); }
+.access-hint{ margin:.35rem 0 0; font-size:11px; font-weight:600; color:#B3261E; line-height:1.35; }
+.access-input-wrap:focus-within > svg, .access-input-wrap:focus-within > .lucide{ color:var(--azul); }
+
+/* rodapé: nota de segurança + aviso legal */
+.access-legal{
+  margin-top:1.1rem; padding-top:.9rem; border-top:1px solid var(--line);
+  display:grid; gap:.5rem; text-align:center;
+}
+.access-legal p{ margin:0; font-size:10.5px; line-height:1.45; color:#64748B; }
+.access-legal p:first-child svg{ display:inline-block; width:.8rem; height:.8rem; vertical-align:-2px; margin-right:.2rem; color:var(--verde); }
+.access-legal p:last-child{ font-size:10px; color:#8391A5; }
+
+/* campo e botão com leve elevação ao focar */
+.access-btn:focus-visible{ outline:3px solid rgba(216,155,50,.75); outline-offset:3px; }
+
+/* celulares baixos / teclado aberto: tira o respiro do topo */
+@media (max-height:700px){
+  #lockScreen{ padding-top:1rem !important; padding-bottom:1rem !important; }
+  .access-chips{ display:none; }
+}
+
+/* ===== desktop: cartão dividido ===== */
+@media (min-width:900px){
+  #lockCard{ max-width:58rem; border-radius:2rem; }
+  .access-split{ display:grid; grid-template-columns:minmax(0,1.02fr) minmax(0,1fr); min-height:34rem; }
+  .access-hero{
+    display:flex; flex-direction:column; justify-content:space-between; gap:2rem;
+    position:relative; overflow:hidden; color:#fff; padding:2.4rem 2.4rem 2rem;
+    background:
+      radial-gradient(90% 60% at 0% 0%, rgba(21,153,71,.55), transparent 60%),
+      radial-gradient(80% 55% at 100% 100%, rgba(255,204,41,.34), transparent 62%),
+      linear-gradient(160deg,#0D2E63 0%,#082252 55%,#041634 100%);
+  }
+  .access-hero::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.09) 1px, transparent 0);
+    background-size:18px 18px;
+  }
+  .access-hero::after{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:5px;
+    background:linear-gradient(90deg, var(--verde) 0 33%, var(--amarelo) 33% 66%, #1E56C8 66% 100%);
+  }
+  .access-hero > *{ position:relative; z-index:1; }
+  .access-hero .ring-seal{ position:absolute; z-index:0; animation:ringSpin 70s linear infinite; }
+  .access-hero-top{ display:flex; align-items:center; gap:.85rem; }
+  .access-hero-top .logo-mark{ box-shadow:0 8px 22px -6px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.18); }
+  .access-hero-name{ font-size:1.9rem; font-weight:700; letter-spacing:-.01em; }
+  .access-hero-eyebrow{
+    margin:0 0 .7rem; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#FFD36B;
+  }
+  .access-hero-body h2{ font-size:2rem; line-height:1.12; font-weight:600; margin:0 0 1.4rem; max-width:17ch; text-wrap:balance; }
+  .access-hero-list{ list-style:none; margin:0; padding:0; display:grid; gap:.8rem; }
+  .access-hero-list li{ display:flex; align-items:center; gap:.75rem; font-size:.88rem; line-height:1.35; color:rgba(255,255,255,.88); }
+  .access-hero-list li svg{
+    flex:none; width:2.1rem; height:2.1rem; padding:.5rem; border-radius:.7rem;
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.14); color:#FFD36B;
+  }
+  .access-hero-credit{
+    display:flex; align-items:center; gap:.5rem; margin:0; padding-bottom:.3rem;
+    font-size:11.5px; color:rgba(255,255,255,.7);
+  }
+  .access-hero-credit .psi-mini{ border-color:rgba(255,255,255,.6); color:#fff; }
+
+  .access-main{ display:flex; flex-direction:column; justify-content:center; padding:1.2rem .6rem 0; }
+  .access-main > .px-7{ padding-left:2.2rem; padding-right:2.2rem; }
+  .access-head{ padding-top:1.4rem !important; padding-bottom:.4rem !important; }
+  .access-head .logo-mark, .access-head .access-sub, .access-head .access-credit, .access-title-brand{ display:none; }
+  .access-title-lg{ display:inline; }
+  .access-head-row{ display:block; }
+  .access-greeting{ font-size:13px; margin-bottom:.15rem; }
+  .access-title{ font-size:1.75rem; }
+  .ticket-notch{ display:none; }
+  .access-main .access-tabs{ margin-top:.4rem; }
+}
+@media (min-width:900px) and (max-height:640px){
+  .access-split{ min-height:0; }
+  .access-hero-list li:nth-child(n+3){ display:none; }
+}
+@media (prefers-reduced-motion: reduce){ .access-hero .ring-seal{ animation:none !important; } }
+#lockScreen{ position:fixed; inset:0; }
+
+/* foco dos campos do login: mantém cantos arredondados e o anel azul
+   (a regra global de :focus-visible deixava o campo quadrado e verde) */
+#lockScreen .access-input:focus-visible{
+  border-radius:1rem; border-color:var(--azul); background:#fff;
+  box-shadow:0 0 0 4px rgba(13,46,99,.16);
+}
+#lockScreen .access-input.is-invalid:focus-visible{
+  border-color:#DC2626; box-shadow:0 0 0 4px rgba(220,38,38,.16);
+}
+#lockScreen .access-tab:focus-visible, #lockScreen .access-eye:focus-visible{ border-radius:.7rem; box-shadow:none; }
