@@ -215,11 +215,58 @@
   <div class="access-dot" aria-hidden="true" style="width:6px; height:6px; right:12%; bottom:24%; background:var(--amarelo); color:var(--amarelo); opacity:.4;"></div>
   <div class="access-dot" aria-hidden="true" style="width:4px; height:4px; left:20%; bottom:18%; background:var(--verde); color:var(--verde); opacity:.45;"></div>
 
-  <div class="access-card access-card-in w-full max-w-sm" id="lockCard" style="margin:auto; z-index:1;">
+  <div class="access-card access-card-in w-full" id="lockCard" style="margin:auto; z-index:1;">
     <div class="flag-ribbon"></div>
-    <div class="px-7 pt-7 pb-4 text-center">
-      <div class="logo-mark mx-auto mb-4" aria-hidden="true" style="width:4.4rem; height:4.4rem;">
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+    <div class="access-split">
+    <!-- painel de marca (só aparece em telas largas) -->
+    <aside class="access-hero" aria-hidden="true">
+      <span class="ring-seal" style="width:280px; right:-110px; top:-110px; transform:rotate(-20deg);"></span>
+      <span class="ring-seal" style="width:200px; left:-80px; bottom:-70px; transform:rotate(150deg);"></span>
+      <div class="access-hero-top">
+        <div class="logo-mark" style="width:4rem; height:4rem;"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="aMarkBgHero" x1="2" y1="0" x2="62" y2="64" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#1B8259"/>
+              <stop offset=".55" stop-color="#0D2E63"/>
+              <stop offset="1" stop-color="#071A3D"/>
+            </linearGradient>
+            <radialGradient id="aMarkGoldHero" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#D89B32" stop-opacity=".9"/>
+              <stop offset="1" stop-color="#D89B32" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="aMarkShadeHero" cx="50%" cy="50%" r="50%">
+              <stop offset="0" stop-color="#030F26" stop-opacity=".5"/>
+              <stop offset="1" stop-color="#030F26" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="64" height="64" fill="url(#aMarkBgHero)"/>
+          <circle cx="50" cy="12" r="26" fill="url(#aMarkGoldHero)"/>
+          <circle cx="9" cy="55" r="24" fill="url(#aMarkShadeHero)"/>
+          <path d="M-4 18 L70 -8 L70 3 L-4 27 Z" fill="#FFFFFF" opacity=".06"/>
+          <text x="24.6" y="46" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#071A3D" opacity=".3">A</text>
+          <text x="24" y="45" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#FFFDF8">A</text>
+          <circle cx="46.6" cy="44.6" r="3.6" fill="#030F26" opacity=".25"/>
+          <circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
+        </svg></div>
+        <span class="access-hero-name display">Anona</span>
+      </div>
+      <div class="access-hero-body">
+        <p class="access-hero-eyebrow">Bolsa Família · <span id="lockYearHero">2026</span></p>
+        <h2 class="display">Condicionalidades sob controle, o ano inteiro.</h2>
+        <ul class="access-hero-list">
+          <li><i data-lucide="calendar-days"></i><span>Calendário de condicionalidades e pagamentos</span></li>
+          <li><i data-lucide="calculator"></i><span>Calculadora de faltas e relatórios em PDF e planilha</span></li>
+          <li><i data-lucide="cloud"></i><span>Anotações sincronizadas entre seus aparelhos</span></li>
+          <li><i data-lucide="wifi-off"></i><span>Continua funcionando sem internet</span></li>
+        </ul>
+      </div>
+      <p class="access-hero-credit"><span class="psi-mini" aria-hidden="true">Ψ</span> Paulo Xavier · CRP-20/09816 · Psicólogo</p>
+    </aside>
+
+    <div class="access-main">
+    <div class="access-head px-7 pt-6 pb-4">
+      <div class="access-head-row">
+        <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="aMarkBgLogin" x1="2" y1="0" x2="62" y2="64" gradientUnits="userSpaceOnUse">
               <stop offset="0" stop-color="#1B8259"/>
@@ -243,15 +290,14 @@
           <text x="24" y="45" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#FFFDF8">A</text>
           <circle cx="46.6" cy="44.6" r="3.6" fill="#030F26" opacity=".25"/>
           <circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
-        </svg>
+        </svg></div>
+        <div class="access-head-text">
+          <p id="authGreeting" class="access-greeting" aria-hidden="true"></p>
+          <h1 class="display access-title"><span class="access-title-brand">Anona</span><span class="access-title-lg">Acesse sua conta</span></h1>
+          <p id="lockYearSubtitle" class="access-sub">Condicionalidades do Bolsa Família <span class="access-year" id="lockYear">2026</span></p>
+        </div>
       </div>
-      <p id="authGreeting" class="text-[11px] font-semibold text-slate-400 mb-0.5" aria-hidden="true"></p>
-      <h1 class="display font-bold text-2xl mb-1" style="color:var(--azul-deep)">Anona</h1>
-      <p id="lockYearSubtitle" class="text-[11px] font-bold tracking-wide uppercase mb-1" style="color:var(--amarelo-text)">Acompanhamento de condicionalidades · 2026</p>
-      <p class="text-xs text-slate-400 flex items-center justify-center gap-1.5">
-        <span class="psi-mini" aria-hidden="true">Ψ</span> Paulo Xavier · CRP-20/09816 · Psicólogo
-      </p>
-      <p class="text-[10px] text-slate-400 mt-2 leading-snug">Ferramenta independente, sem vínculo, afiliação ou endosso do Governo Federal, do MDS ou da Caixa.</p>
+      <p class="access-credit"><span class="psi-mini" aria-hidden="true">Ψ</span> Paulo Xavier · CRP-20/09816 · Psicólogo</p>
     </div>
 
     <div class="ticket-notch"></div>
@@ -269,8 +315,9 @@
           <div class="access-input-wrap">
             <i data-lucide="mail"></i>
             <input id="authEmail" name="email" type="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next"
-              placeholder="seu@email.com" autocomplete="username" required class="access-input">
+              placeholder="seu@email.com" autocomplete="username" required class="access-input" aria-describedby="authEmailHint">
           </div>
+          <p id="authEmailHint" class="access-hint hidden" role="status">Confira o e-mail — parece incompleto (ex.: nome@gmail.com).</p>
         </div>
 
         <div>
@@ -316,8 +363,13 @@
         <li><i data-lucide="refresh-cw"></i> Sincroniza</li>
         <li><i data-lucide="wifi-off"></i> Offline</li>
       </ul>
-      <p class="text-[10px] text-slate-400 text-center mt-3 leading-snug">Sua senha é verificada pelo Firebase (Google) — nunca fica salva nem visível no código do app.</p>
+      <div class="access-legal">
+        <p><i data-lucide="lock-keyhole"></i> Sua senha é verificada pelo Firebase (Google) — nunca fica salva nem visível no código do app.</p>
+        <p>Ferramenta independente, sem vínculo, afiliação ou endosso do Governo Federal, do MDS ou da Caixa.</p>
+      </div>
     </div>
+    </div><!-- /access-main -->
+    </div><!-- /access-split -->
   </div>
 </div>
 
@@ -1248,6 +1300,69 @@
   <p class="display font-semibold text-slate-500">Paulo Xavier — CRP-20/09816 — Psicólogo</p>
 </footer>
 
+<script>
+/* Anona — utilitários compartilhados pelos PDFs (Relatório Individual, Notas,
+   folhas unificadas): mesmo logotipo do app, rodapé com aviso de dados
+   pessoais (LGPD), metadados do arquivo e tratamento de NIS/CPF. */
+window.AnonaPDF = (function () {
+  const AVISO_LGPD = 'Contém dados pessoais protegidos (LGPD) — uso restrito ao serviço; não compartilhe nem imprima sem necessidade.';
+
+  // Marca "A." do app (selo azul, canto verde, "A" creme e ponto dourado) — mesma
+  // identidade do cabeçalho e da tela de login, em vez do selo antigo.
+  function logo(doc, x, y, s) {
+    doc.setFillColor(13, 46, 99);
+    doc.roundedRect(x, y, s, s, s * 0.22, s * 0.22, 'F');
+    doc.setDrawColor(27, 130, 89); doc.setLineWidth(Math.max(0.6, s * 0.035));
+    doc.roundedRect(x + s * 0.05, y + s * 0.05, s * 0.9, s * 0.9, s * 0.18, s * 0.18, 'S');
+    doc.setFont('times', 'bold'); doc.setFontSize(s * 0.62);
+    doc.setTextColor(255, 253, 248);
+    doc.text('A', x + s * 0.4, y + s * 0.7, { align: 'center' });
+    doc.setFillColor(216, 155, 50);
+    doc.circle(x + s * 0.76, y + s * 0.7, s * 0.075, 'F');
+  }
+
+  function metadados(doc, titulo, assunto) {
+    try {
+      doc.setProperties({
+        title: titulo, subject: assunto || '', author: 'Anona · Paulo Xavier — CRP-20/09816',
+        creator: 'Anona', keywords: 'Bolsa Família, condicionalidades, CRAS'
+      });
+    } catch (e) {}
+  }
+
+  // Rodapé de todas as páginas: aviso LGPD (esq.), "Página X de Y" (centro) e data (dir.).
+  function rodape(doc, opts) {
+    opts = opts || {};
+    const w = doc.internal.pageSize.getWidth(), hgt = doc.internal.pageSize.getHeight();
+    const m = opts.margem != null ? opts.margem : 26, n = doc.internal.getNumberOfPages();
+    const data = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date());
+    const larguraAviso = (w - m * 2) * 0.42;
+    for (let p = 1; p <= n; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(203, 213, 225); doc.setLineWidth(0.5);
+      doc.line(m, hgt - 26, w - m, hgt - 26);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      const linhas = doc.splitTextToSize(opts.aviso || AVISO_LGPD, larguraAviso);
+      doc.text(linhas.slice(0, 2), m, hgt - 17);
+      doc.setFontSize(8);
+      doc.text('Página ' + p + ' de ' + n, w / 2, hgt - 14, { align: 'center' });
+      doc.text('Anona · ' + data, w - m, hgt - 14, { align: 'right' });
+    }
+  }
+
+  // NIS e CPF vindos de planilha como NÚMERO perdem o zero à esquerda (CPF
+  // 01234567890 vira 1234567890). Devolve o texto com 11 dígitos.
+  function identificador(valor) {
+    if (typeof valor === 'number' && Number.isInteger(valor) && valor >= 0 && valor < 1e11) return String(valor).padStart(11, '0');
+    if (typeof valor === 'number' && Number.isInteger(valor) && valor >= 0) return String(valor);
+    return valor;
+  }
+  const colunaIdentificador = rotulo => /\b(nis|cpf)\b/i.test(String(rotulo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+
+  return { logo, metadados, rodape, identificador, colunaIdentificador, AVISO_LGPD };
+})();
+</script>
 <!-- FIREBASE -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
@@ -1354,7 +1469,9 @@
 
   function setAuthMode(mode) {
     authMode = mode;
+    const tabsEl = document.querySelector('.access-tabs'); if (tabsEl) tabsEl.dataset.mode = mode;
     authError.classList.add('hidden');
+    clearFieldInvalid();
     document.getElementById('authSuccess').classList.add('hidden');
     const tabLogin = document.getElementById('authTabLogin');
     const tabSignup = document.getElementById('authTabSignup');
@@ -1470,6 +1587,33 @@
     scr.addEventListener('mouseleave', () => { card.style.transform = ''; scr.style.setProperty('--px','0px'); scr.style.setProperty('--py','0px'); });
   })();
 
+  // Validação inline: borda vermelha + aria-invalid + dica abaixo do campo.
+  function markFieldInvalid(id, bad) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('is-invalid', !!bad);
+    if (bad) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid');
+    if (id === 'authEmail') {
+      const hint = document.getElementById('authEmailHint');
+      if (hint) hint.classList.toggle('hidden', !bad);
+    }
+  }
+  function clearFieldInvalid() { markFieldInvalid('authEmail', false); markFieldInvalid('authPass', false); }
+  function shakeCard() {
+    const card = document.getElementById('lockCard');
+    if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  }
+  (function () {
+    const em = document.getElementById('authEmail');
+    const pw = document.getElementById('authPass');
+    const RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (em) {
+      em.addEventListener('blur', () => { const v = em.value.trim(); markFieldInvalid('authEmail', v.length > 0 && !RE.test(v)); });
+      em.addEventListener('input', () => { if (em.classList.contains('is-invalid') && RE.test(em.value.trim())) markFieldInvalid('authEmail', false); });
+    }
+    if (pw) pw.addEventListener('input', () => { if (pw.classList.contains('is-invalid')) markFieldInvalid('authPass', false); });
+  })();
+
   // Aviso de Caps Lock no campo de senha.
   (function () {
     const passEl = document.getElementById('authPass');
@@ -1524,12 +1668,16 @@
     if (!email || !EMAIL_RE.test(email)) {
       authError.textContent = 'Digite um e-mail válido.';
       authError.classList.remove('hidden');
+      markFieldInvalid('authEmail', true); shakeCard();
+      try { document.getElementById('authEmail').focus(); } catch (_) {}
       return;
     }
     const minPass = authMode === 'signup' ? 8 : 6;
     if (pass.length < minPass) {
       authError.textContent = `A senha precisa ter ao menos ${minPass} caracteres.`;
       authError.classList.remove('hidden');
+      markFieldInvalid('authPass', true); shakeCard();
+      try { document.getElementById('authPass').focus(); } catch (_) {}
       return;
     }
     setAuthLoading(true);
@@ -1947,6 +2095,9 @@
       break;
     }
     if (!header || !dataRows.length) throw new Error('Não encontrei dados na tabela enviada.');
+    // NIS/CPF lidos como número perdem o zero à esquerda: restaura como texto de 11 dígitos.
+    const colId = header.map(v => window.AnonaPDF.colunaIdentificador(v));
+    dataRows = dataRows.map(row => row.map((v, i) => colId[i] ? window.AnonaPDF.identificador(v) : v));
 
     // "Mês da Repercussão" é uma COLUNA da planilha (igual "Efeito"), com o
     // mesmo valor repetido em (quase) todas as linhas — pega o valor da
@@ -2203,8 +2354,8 @@
       const tecnicoDaAba = sheetName.split(' - ')[0].trim();
       let ultimaChave = '', ultimoNis = '', ultimoCpf = '';
       rows.slice(headerPos + 1).forEach(row => {
-        let nis = nisIdx >= 0 ? String(row[nisIdx] || '').trim() : '';
-        let cpf = cpfIdx >= 0 ? String(row[cpfIdx] || '').trim() : '';
+        let nis = nisIdx >= 0 ? String(window.AnonaPDF.identificador(row[nisIdx]) || '').trim() : '';
+        let cpf = cpfIdx >= 0 ? String(window.AnonaPDF.identificador(row[cpfIdx]) || '').trim() : '';
         // Linha de outro integrante da mesma família (sem repetir NIS/CPF do
         // responsável): herda a família da linha anterior, em vez de ser
         // descartada (o integrante sumia da lista "Integrantes com efeito").
@@ -2513,9 +2664,14 @@
 
     if (!headerGlobal.length || !linhas.length) return null;
 
+    const colunaId = headerGlobal.map(h => window.AnonaPDF.colunaIdentificador(h));
     const dataRowsBrutas = linhas.map(({posicoes, valores}) => {
       const linha = new Array(headerGlobal.length).fill('');
-      posicoes.forEach((destino, origem) => { linha[destino] = valores[origem] != null ? valores[origem] : ''; });
+      posicoes.forEach((destino, origem) => {
+        const v = valores[origem] != null ? valores[origem] : '';
+        // NIS/CPF lidos como número perdem o zero à esquerda: restaura (11 dígitos)
+        linha[destino] = colunaId[destino] ? window.AnonaPDF.identificador(v) : v;
+      });
       return linha;
     });
 
@@ -2920,9 +3076,10 @@
       famPorEfeito[v].add(String(r[idxFamilia]));
       contagem[v] = famPorEfeito[v].size;
     });
-    const ordemPref = ['Alerta','Bloqueio','Suspensão','Cancelamento'];
+    const ordemPref = ['alerta','bloqueio','suspensao','cancelamento'];
+    const posEfeito = l => ordemPref.indexOf(normalizeText(l).replace(/[^a-z]/g,''));
     const labelsEf = Object.keys(contagem).sort((a,b) => {
-      const ia = ordemPref.indexOf(a), ib = ordemPref.indexOf(b);
+      const ia = posEfeito(a), ib = posEfeito(b);
       if (ia < 0 && ib < 0) return a.localeCompare(b,'pt-BR');
       if (ia < 0) return 1; if (ib < 0) return -1; return ia - ib;
     });
@@ -2962,6 +3119,9 @@
     }
 
     const docPdf = new jsPDF({ unit:'pt', format:'a3', orientation:'landscape' });
+    window.AnonaPDF.metadados(docPdf,
+      `Relatório de Repercussão Individual${(tecnicoInfo && tecnicoInfo.nome) ? ' — ' + tecnicoInfo.nome : ''} — ${mesTexto}`,
+      'Repercussão de condicionalidades do Programa Bolsa Família — CRAS Cristiana Vicente Nunes');
     const pageW = docPdf.internal.pageSize.getWidth();
     const pageH = docPdf.internal.pageSize.getHeight();
     const margin = 26;
@@ -2976,19 +3136,7 @@
     };
     const chaveEfeito = label => normalizeText(label).replace(/[^a-z]/g,'');
 
-    function drawLogoBadge(x, y, size) {
-      const cx = x+size/2, cy = y+size/2, r = size*0.42;
-      docPdf.setFillColor(0,156,59);
-      docPdf.roundedRect(x, y, size, size, size*0.2, size*0.2, 'F');
-      docPdf.setFillColor(255,223,0);
-      docPdf.triangle(cx-r, cy, cx, cy-r, cx+r, cy, 'F');
-      docPdf.triangle(cx-r, cy, cx, cy+r, cx+r, cy, 'F');
-      docPdf.setFillColor(0,39,118);
-      docPdf.circle(cx, cy, size*0.24, 'F');
-      docPdf.setFont('times','bold'); docPdf.setFontSize(size*0.34);
-      docPdf.setTextColor(255,253,248);
-      docPdf.text('A', cx, cy+size*0.12, {align:'center'});
-    }
+    function drawLogoBadge(x, y, size) { window.AnonaPDF.logo(docPdf, x, y, size); }
 
     function drawTopBar() {
       docPdf.setFillColor(...azulDeep);
@@ -3038,7 +3186,12 @@
       docPdf.setFillColor(...zebra);
       docPdf.rect(x, y+24, cardW-cardGap, 34, 'F');
       docPdf.setTextColor(...azulDeep); docPdf.setFont('helvetica','bold'); docPdf.setFontSize(17);
-      docPdf.text(String(cardValues[i]), x+(cardW-cardGap)/2, y+48, {align:'center'});
+      docPdf.text(String(cardValues[i]), x+(cardW-cardGap)/2, y+46, {align:'center'});
+      // nos cartões de efeito, mostra também a fatia do total de famílias
+      if (i >= 2 && totalFamilias > 0 && idxFamilia >= 0) {
+        docPdf.setFont('helvetica','normal'); docPdf.setFontSize(7.5); docPdf.setTextColor(...slate);
+        docPdf.text(`${(cardValues[i] / totalFamilias * 100).toLocaleString('pt-BR',{maximumFractionDigits:0})}% das famílias`, x+(cardW-cardGap)/2, y+55, {align:'center'});
+      }
     });
     y += 24+34+30;
 
@@ -3317,15 +3470,19 @@
         docPdf.addPage();
         drawTopBar();
         ty = drawTableHeader(66);
-      } else if (ty + (precisaFaixa ? 33 : 0) + rowH > pageH - 34
+      } else if (ty + (precisaFaixa ? 33 : 0) + rowH > pageH - 40
         || (idxFamilia >= 0 && rIdx > 0 && linhasRota[rIdx-1].row[idxFamilia] !== row[idxFamilia]
-            && ty + alturaFamiliaAPartir[rIdx] > pageH - 34 && alturaFamiliaAPartir[rIdx] < pageH - 66 - 60)) {
+            && ty + alturaFamiliaAPartir[rIdx] > pageH - 40 && alturaFamiliaAPartir[rIdx] < pageH - 66 - 60)) {
         // (segunda condição: a família inteira não cabe no resto da página,
         // mas cabe numa página nova — então começa na próxima, em vez de
         // ficar partida entre duas páginas)
         docPdf.addPage();
         drawTopBar();
         ty = drawTableHeader(66);
+        // mesma rota continua: lembra em que bloco a tabela está
+        docPdf.setFont('helvetica','bolditalic'); docPdf.setFontSize(8); docPdf.setTextColor(...amareloText);
+        docPdf.text(`${blocoLabels[bloco]} (continuação)`, margin + cellPad, ty + 9);
+        ty += 13;
       }
 
       if (precisaFaixa) {
@@ -3375,13 +3532,7 @@
       ty += rowH;
     });
 
-    const totalPages = docPdf.internal.getNumberOfPages();
-    for (let p=1;p<=totalPages;p++){
-      docPdf.setPage(p);
-      docPdf.setFont('helvetica','normal'); docPdf.setFontSize(8);
-      docPdf.setTextColor(...slate);
-      docPdf.text(`Página ${p} de ${totalPages}`, pageW/2, pageH-16, {align:'center'});
-    }
+    window.AnonaPDF.rodape(docPdf, { margem: margin });
 
     const sufixoTecnico = (tecnicoInfo && tecnicoInfo.nome) ? ` - ${tecnicoInfo.nome}` : '';
     // Sem mês identificado (texto "—"), não põe o traço no nome do arquivo.
@@ -3760,7 +3911,7 @@
   // Desenha uma página de capa/divisória simples no PDF unificado, usando
   // as mesmas cores da marca (azul/amarelo), com pdf-lib (sem depender do
   // jsPDF, que não sabe combinar PDFs já existentes).
-  function unificarDesenharPagina(pdfDoc, fontBold, fontRegular, linhas) {
+  function unificarDesenharPagina(pdfDoc, fontBold, fontRegular, linhas, tituloTopo) {
     const azul = window.PDFLib.rgb(0x0B/255, 0x2F/255, 0x7A/255);
     const amarelo = window.PDFLib.rgb(1, 223/255, 0);
     const slate = window.PDFLib.rgb(0x33/255, 0x41/255, 0x55/255);
@@ -3768,8 +3919,12 @@
     const { width, height } = page.getSize();
     page.drawRectangle({ x: 0, y: height - 52, width, height: 52, color: azul });
     page.drawRectangle({ x: 0, y: height - 55, width, height: 3, color: amarelo });
-    page.drawText('Anona · Visitas Domiciliares', { x: 32, y: height - 34, size: 14, font: fontBold, color: window.PDFLib.rgb(1,1,1) });
-    page.drawText('CRAS Cristiana Vicente Nunes · SEMADS · Paulo Xavier, Psicólogo, CRP-20/09816', { x: 32, y: height - 47, size: 8.5, font: fontRegular, color: window.PDFLib.rgb(0.78,0.84,1) });
+    // selo "A." (mesma marca do app) ao lado do título
+    page.drawRectangle({ x: 32, y: height - 46, width: 34, height: 34, color: window.PDFLib.rgb(13/255, 46/255, 99/255), borderColor: window.PDFLib.rgb(27/255, 130/255, 89/255), borderWidth: 1.2 });
+    page.drawText('A', { x: 42.5, y: height - 38, size: 20, font: fontBold, color: window.PDFLib.rgb(1, 0.99, 0.97) });
+    page.drawCircle({ x: 59, y: height - 38.5, size: 2.2, color: window.PDFLib.rgb(216/255, 155/255, 50/255) });
+    page.drawText(tituloTopo || 'Anona · Visitas Domiciliares', { x: 78, y: height - 30, size: 14, font: fontBold, color: window.PDFLib.rgb(1,1,1) });
+    page.drawText('CRAS Cristiana Vicente Nunes · SEMADS · Paulo Xavier, Psicólogo, CRP-20/09816', { x: 78, y: height - 44, size: 8.5, font: fontRegular, color: window.PDFLib.rgb(0.78,0.84,1) });
     let y = height - 100;
     linhas.forEach(linha => {
       const font = linha.bold ? fontBold : fontRegular;
@@ -3777,6 +3932,15 @@
       y -= (linha.tamanho || 11) + 12;
     });
     page.drawText(`Gerado em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}`, { x: 32, y: 24, size: 8, font: fontRegular, color: slate });
+    page.drawText('Contém dados pessoais protegidos (LGPD) — uso restrito ao serviço.', { x: width - 32 - fontRegular.widthOfTextAtSize('Contém dados pessoais protegidos (LGPD) — uso restrito ao serviço.', 8), y: 24, size: 8, font: fontRegular, color: slate });
+  }
+
+  // Metadados do PDF unificado (título que aparece na aba do leitor de PDF).
+  function unificarMetadados(pdfDoc, titulo, assunto) {
+    try {
+      pdfDoc.setTitle(titulo); pdfDoc.setSubject(assunto || ''); pdfDoc.setAuthor('Anona · Paulo Xavier — CRP-20/09816');
+      pdfDoc.setCreator('Anona'); pdfDoc.setProducer('Anona'); pdfDoc.setCreationDate(new Date());
+    } catch (e) {}
   }
 
   window.unificarGerarPDF = async () => {
@@ -3799,6 +3963,7 @@
       const outDoc = await PDFDocument.create();
       const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
       const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
+      unificarMetadados(outDoc, 'Folhas de família unificadas — rota de visita', 'Visitas domiciliares — CRAS Cristiana Vicente Nunes');
 
       // Página de capa: partida + quantidade de famílias por bloco.
       const capaLinhas = [
@@ -3808,6 +3973,7 @@
       UNIFICAR_BLOCOS.forEach((b, i) => {
         capaLinhas.push({ texto: `${b.label} — ${unificarListas[i].length} família${unificarListas[i].length === 1 ? '' : 's'}`, tamanho: 10.5, bold: true });
       });
+      capaLinhas.push({ texto: `Total: ${totalArquivos} família${totalArquivos === 1 ? '' : 's'} (${totalArquivos} folha${totalArquivos === 1 ? '' : 's'} resumo)`, tamanho: 10.5, bold: true });
       unificarDesenharPagina(outDoc, fontBold, fontRegular, capaLinhas);
 
       for (let bloco = 0; bloco < UNIFICAR_BLOCOS.length; bloco++) {
@@ -4124,6 +4290,7 @@
       const fontRegular = await outDoc.embedFont(StandardFonts.Helvetica);
       const azul = window.PDFLib.rgb(0x0B/255, 0x2F/255, 0x7A/255);
       const vermelho = window.PDFLib.rgb(0xDC/255, 0x26/255, 0x26/255);
+      unificarMetadados(outDoc, `Relatório de Repercussão — Abrigo ${abrigo} — ${cronograma.mes}/${ANO_REPERCUSSAO_VIGENTE}`, 'Operação Acolhida — informações para a equipe de proteção social do abrigo');
 
       // Capa: informações para a equipe de proteção social do abrigo.
       unificarDesenharPagina(outDoc, fontBold, fontRegular, [
@@ -4145,7 +4312,7 @@
         { texto: 'Saúde — Pré-natal: acompanhamento pelo SUS (gestantes)', tamanho: 10.5 },
         { texto: 'Saúde — Vacinação: menores de 7 anos', tamanho: 10.5 },
         { texto: 'Saúde — Peso e Nutrição: menores de 7 anos', tamanho: 10.5 }
-      ]);
+      ], 'Anona · Operação Acolhida — Abrigos');
 
       for (let efeitoIdx = 0; efeitoIdx < ABRIGO_UNIFICAR_EFEITOS.length; efeitoIdx++) {
         const grupo = inicio + efeitoIdx;
@@ -4157,7 +4324,7 @@
         unificarDesenharPagina(outDoc, fontBold, fontRegular, [
           { texto: `${abrigo} · ${efeito}`, tamanho: 14, bold: true, cor: azul },
           { texto: `${lista.length} família${lista.length === 1 ? '' : 's'}`, tamanho: 10.5 }
-        ]);
+        ], 'Anona · Operação Acolhida — Abrigos');
 
         // Mesma otimização do PDF unificado da rota de visita: lê e abre
         // todos os PDFs deste efeito em paralelo, e só copia as páginas
@@ -4812,7 +4979,7 @@ function dadosDoAno(ano) {
 // senha, cabeçalho e rodapé) — assim você só cadastra o ano novo lá em
 // cima e esses textos se atualizam sozinhos para o ano mais recente.
 document.title = `Anona — Acompanhamento de Condicionalidades ${ANO_VIGENTE}`;
-document.getElementById('lockYearSubtitle').textContent = `Acompanhamento de condicionalidades · ${ANO_VIGENTE}`;
+['lockYear','lockYearHero'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ANO_VIGENTE; });
 document.getElementById('headerYearSpan').textContent = ANO_VIGENTE;
 document.getElementById('footerYearText').textContent =
   `Datas conforme calendário oficial MDS/Caixa ${ANO_VIGENTE}. Este app é uma ferramenta independente de organização pessoal — não é canal oficial do governo.`;
@@ -5116,6 +5283,7 @@ async function exportNotesPDF(){
     : `Anona · ${anoTextoNotas} · Anotações de ${monthNames[parseInt(filterVal,10)]}`;
 
   const docPdf = new jsPDF({ unit:'pt', format:'a4' });
+  window.AnonaPDF.metadados(docPdf, 'Minhas Anotações — ' + subtitleText, 'Calendário e anotações do Anona');
   const pageW = docPdf.internal.pageSize.getWidth();
   const pageH = docPdf.internal.pageSize.getHeight();
   const margin = 48;
@@ -5125,19 +5293,7 @@ async function exportNotesPDF(){
   const amareloText = [107,78,0];
   const slate = [71,85,105];
 
-  function drawLogoBadge(x, y, size){
-    const cx = x+size/2, cy = y+size/2, r = size*0.42;
-    docPdf.setFillColor(0,156,59);
-    docPdf.roundedRect(x, y, size, size, size*0.2, size*0.2, 'F');
-    docPdf.setFillColor(255,223,0);
-    docPdf.triangle(cx-r, cy, cx, cy-r, cx+r, cy, 'F');
-    docPdf.triangle(cx-r, cy, cx, cy+r, cx+r, cy, 'F');
-    docPdf.setFillColor(0,39,118);
-    docPdf.circle(cx, cy, size*0.24, 'F');
-    docPdf.setFont('times','bold'); docPdf.setFontSize(size*0.34);
-    docPdf.setTextColor(255,253,248);
-    docPdf.text('A', cx, cy+size*0.12, {align:'center'});
-  }
+  function drawLogoBadge(x, y, size){ window.AnonaPDF.logo(docPdf, x, y, size); }
 
   function drawHeader(){
     docPdf.setFillColor(...azulDeep);
@@ -5164,14 +5320,10 @@ async function exportNotesPDF(){
     );
   }
 
-  function drawFooter(pageNum, totalPages){
-    docPdf.setFontSize(8);
-    docPdf.setTextColor(...slate);
-    docPdf.text(`Página ${pageNum} de ${totalPages}`, pageW/2, pageH-20, { align:'center' });
-  }
 
   let y = 120;
   drawHeader();
+  let mesAnteriorKey = '';
 
   keys.forEach((key) => {
     const noteObj = getNoteObj(notes, key);
@@ -5190,10 +5342,24 @@ async function exportNotesPDF(){
     const resto = lines.slice(linhasPorPagina);
     const blockHeight = 34 + parte.length*13;
 
-    if (y + blockHeight > pageH - 50){
+    // Título do mês quando muda (só ao exportar todos os meses): facilita
+    // achar uma anotação numa lista longa.
+    const mesKey = key.slice(0, 7);
+    const mostrarMes = filterVal === 'all' && mesKey !== mesAnteriorKey;
+    mesAnteriorKey = mesKey;
+    if (y + (mostrarMes ? 34 : 0) + blockHeight > pageH - 50){
       docPdf.addPage();
       drawHeader();
       y = 120;
+    }
+    if (mostrarMes) {
+      const mesLabelRaw = new Intl.DateTimeFormat('pt-BR',{ month:'long', year:'numeric' }).format(d);
+      docPdf.setFont('helvetica','bold'); docPdf.setFontSize(13); docPdf.setTextColor(...azulDeep);
+      docPdf.text(mesLabelRaw.charAt(0).toUpperCase() + mesLabelRaw.slice(1), margin, y);
+      docPdf.setDrawColor(...amarelo); docPdf.setLineWidth(1.5);
+      docPdf.line(margin, y + 5, pageW - margin, y + 5);
+      docPdf.setLineWidth(0.4);
+      y += 30;
     }
 
     docPdf.setFillColor(...(noteObj.emphasis ? amarelo : azul));
@@ -5230,11 +5396,7 @@ async function exportNotesPDF(){
     }
   });
 
-  const totalPages = docPdf.internal.getNumberOfPages();
-  for (let p=1;p<=totalPages;p++){
-    docPdf.setPage(p);
-    drawFooter(p, totalPages);
-  }
+  window.AnonaPDF.rodape(docPdf, { margem: margin, aviso: 'Anotações pessoais — podem conter dados sensíveis de famílias atendidas (LGPD). Guarde com cuidado.' });
 
   docPdf.save(filterVal === 'all'
     ? `minhas-anotacoes-condicionalidades-${anoTextoNotas}.pdf`
