@@ -205,6 +205,47 @@
     const w = root.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     return w instanceof ArrayBuffer ? new Uint8Array(w) : w;
   }
+  // A biblioteca de planilhas (xlsx-js-style) IGNORA em silêncio '!freeze', '!tabColor' e '!pageSetup': o
+  // cabeçalho nunca ficava congelado, a guia não ganhava cor e a impressão não saía "ajustar à largura".
+  // Esta etapa abre o .xlsx gerado e escreve esses três itens direto no XML de cada aba.
+  // Se algo falhar (ou o JSZip não carregou), devolve os bytes originais: o arquivo nunca fica pior.
+  async function polirXlsx(bytes, wb) {
+    try {
+      if (!root.JSZip || !wb || !wb.SheetNames) return bytes;
+      const zip = await root.JSZip.loadAsync(bytes);
+      for (let i = 0; i < wb.SheetNames.length; i++) {
+        const ws = wb.Sheets[wb.SheetNames[i]], arq = zip.file('xl/worksheets/sheet' + (i + 1) + '.xml');
+        if (!ws || !arq) continue;
+        let xml = await arq.async('string');
+        const fr = ws['!freeze'];
+        const xs = fr && fr.xSplit > 0 ? fr.xSplit | 0 : 0, ys = fr && fr.ySplit > 0 ? fr.ySplit | 0 : 0;
+        if ((xs || ys) && !/<pane\b/.test(xml)) {
+          const topLeft = endereco(ys, xs), ativo = xs && ys ? 'bottomRight' : (ys ? 'bottomLeft' : 'topRight');
+          const pane = '<pane' + (xs ? ' xSplit="' + xs + '"' : '') + (ys ? ' ySplit="' + ys + '"' : '') +
+            ' topLeftCell="' + topLeft + '" activePane="' + ativo + '" state="frozen"/><selection pane="' + ativo + '" activeCell="' + topLeft + '" sqref="' + topLeft + '"/>';
+          xml = xml.replace(/<sheetView([^>]*?)\/>/, '<sheetView$1>' + pane + '</sheetView>');
+        }
+        const cor = ws['!tabColor'] && ws['!tabColor'].rgb, ps = ws['!pageSetup'];
+        if ((cor || ps) && !/<sheetPr\b/.test(xml)) {
+          const sp = '<sheetPr>' + (cor ? '<tabColor rgb="FF' + String(cor).slice(-6).toUpperCase() + '"/>' : '') + (ps ? '<pageSetUpPr fitToPage="1"/>' : '') + '</sheetPr>';
+          xml = xml.replace(/<dimension\b/, sp + '<dimension');
+        }
+        if (ps && !/<pageSetup\b/.test(xml)) {
+          const tag = '<pageSetup orientation="' + (ps.orientation === 'portrait' ? 'portrait' : 'landscape') + '" fitToWidth="' + (ps.fitToWidth != null ? ps.fitToWidth : 1) + '" fitToHeight="' + (ps.fitToHeight != null ? ps.fitToHeight : 0) + '"/>';
+          xml = /<pageMargins\b[^>]*\/>/.test(xml) ? xml.replace(/(<pageMargins\b[^>]*\/>)/, '$1' + tag) : xml.replace('</worksheet>', tag + '</worksheet>');
+        }
+        zip.file(arq.name, xml);
+      }
+      return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+    } catch (e) { console.warn('Não consegui aplicar o acabamento extra da planilha (o arquivo sai sem ele):', e); return bytes; }
+  }
+  // Escreve o workbook e já aplica o acabamento acima. Devolve Uint8Array.
+  async function escreverPolido(wb, corPorAba) { return polirXlsx(escrever(wb, corPorAba), wb); }
+  function bytesParaBase64(bytes) {
+    let bin = ''; const passo = 0x8000;
+    for (let i = 0; i < bytes.length; i += passo) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + passo));
+    return btoa(bin);
+  }
   function baixarBlob(bytesOuTexto, nome, mime) {
     const blob = new Blob([bytesOuTexto], { type: mime });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome;
@@ -301,7 +342,7 @@
   root.AnonaTabelas = {
     lerInteiro, minPresencas, avaliar, panorama, fmtPct,
     csv, tabelaHTML, tsv, copiarTabela,
-    estilizar, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
+    estilizar, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, escreverPolido, polirXlsx, bytesParaBase64, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
     panoramaWorkbook, panoramaParaMatriz
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.AnonaTabelas;
