@@ -92,6 +92,36 @@
     return '<table style="border-collapse:collapse">' + aoa.map((l, i) => '<tr>' + l.map(v =>
       i === 0 ? '<th ' + th + '>' + escHtml(v) + '</th>' : '<td ' + td + '>' + escHtml(v) + '</td>').join('') + '</tr>').join('') + '</table>';
   }
+  // Texto seguro para as fontes padrão do PDF (Helvetica, alfabeto "WinAnsi"): emoji, setas, símbolos e letras
+  // de outros alfabetos NÃO existem nela — no jsPDF saíam como lixo ("Ø=Ý") e no pdf-lib davam erro e travavam o PDF.
+  // Mantém acentos do português; troca o que tem equivalente simples e descarta o resto.
+  const PDF_OK = /[\t\n\r\x20-\x7E\xA0-\xFF\u2018\u2019\u201A\u201C\u201D\u201E\u2020\u2021\u2022\u2026\u2030\u2039\u203A\u20AC\u2122\u2013\u2014\u0152\u0153\u0160\u0161\u0178\u017D\u017E\u0192\u02C6\u02DC]/;
+  const PDF_TROCAS = { '\u2192': '->', '\u2190': '<-', '\u2191': '^', '\u2193': 'v', '\u2713': 'OK', '\u2714': 'OK', '\u2705': 'OK', '\u2717': 'X', '\u2718': 'X', '\u274C': 'X', '\u2605': '*', '\u2606': '*', '\u2B50': '*', '\u2264': '<=', '\u2265': '>=', '\u00A0': ' ', '\u200B': '', '\u200D': '', '\uFE0F': '', '\u2212': '-', '\u2010': '-', '\u2011': '-', '\u2012': '-', '\u2015': '-' };
+  function textoParaPdf(v) {
+    if (v == null) return '';
+    if (typeof v !== 'string') return v;
+    let out = '';
+    for (const ch of v.normalize('NFC')) {
+      if (PDF_TROCAS[ch] != null) { out += PDF_TROCAS[ch]; continue; }
+      if (PDF_OK.test(ch)) { out += ch; continue; }
+      const base = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');       // "ć" -> "c"
+      out += base !== ch && PDF_OK.test(base) ? base : '';
+    }
+    // palavra sem espaço maior que ~60 caracteres (link, código) não quebra linha no PDF e invadia a margem/coluna ao lado
+    return out.replace(/\S{60,}/g, m => m.replace(/(.{50})/g, '$1 '));
+  }
+
+  // Tabela para IMPRESSÃO (página própria do app): <thead> repete em cada folha, linha não é cortada ao meio.
+  function tabelaImpressao(aoa, opts) {
+    opts = opts || {};
+    const num = opts.colunasNumero || [];
+    const cel = (tag, v, i) => '<' + tag + (num.indexOf(i) >= 0 ? ' class="n"' : '') + '>' + escHtml(v) + '</' + tag + '>';
+    const [cab, ...corpo] = aoa;
+    const total = opts.ultimaLinhaTotal && corpo.length ? corpo.pop() : null;
+    return '<table class="pr-tab"><thead><tr>' + cab.map((v, i) => cel('th', v, i)).join('') + '</tr></thead><tbody>'
+      + corpo.map(l => '<tr>' + l.map((v, i) => cel('td', v, i)).join('') + '</tr>').join('') + '</tbody>'
+      + (total ? '<tfoot><tr>' + total.map((v, i) => cel('td', v, i)).join('') + '</tr></tfoot>' : '') + '</table>';
+  }
   const tsv = aoa => aoa.map(l => l.map(v => String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
 
   async function copiarTabela(aoa, opts) {
@@ -202,6 +232,14 @@
   function escrever(wb, corPorAba) {
     wb.Workbook = wb.Workbook || {};
     wb.Workbook.Sheets = wb.SheetNames.map(name => ({ name, Hidden: 0, TabColor: { rgb: (corPorAba && corPorAba(name)) || '0B2F7A' } }));
+    // Impressão: nas abas com cabeçalho congelado, a linha 1 se repete no topo de TODA página impressa
+    // (antes, da 2ª folha em diante a tabela ficava sem títulos de coluna).
+    const nomes = (wb.Workbook.Names || []).filter(n => n.Name !== '_xlnm.Print_Titles');
+    wb.SheetNames.forEach((name, i) => {
+      const fr = wb.Sheets[name] && wb.Sheets[name]['!freeze'];
+      if (fr && fr.ySplit >= 1) nomes.push({ Name: '_xlnm.Print_Titles', Sheet: i, Ref: aspas(name) + '!$1:$' + (fr.ySplit | 0) });
+    });
+    if (nomes.length) wb.Workbook.Names = nomes;
     const w = root.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     return w instanceof ArrayBuffer ? new Uint8Array(w) : w;
   }
@@ -231,7 +269,9 @@
           xml = xml.replace(/<dimension\b/, sp + '<dimension');
         }
         if (ps && !/<pageSetup\b/.test(xml)) {
-          const tag = '<pageSetup orientation="' + (ps.orientation === 'portrait' ? 'portrait' : 'landscape') + '" fitToWidth="' + (ps.fitToWidth != null ? ps.fitToWidth : 1) + '" fitToHeight="' + (ps.fitToHeight != null ? ps.fitToHeight : 0) + '"/>';
+          // paperSize 9 = A4 (sem isso, o Excel imprime em "Carta" em alguns computadores). Rodapé: aba, página X de Y e data.
+          const tag = '<pageSetup paperSize="9" orientation="' + (ps.orientation === 'portrait' ? 'portrait' : 'landscape') + '" fitToWidth="' + (ps.fitToWidth != null ? ps.fitToWidth : 1) + '" fitToHeight="' + (ps.fitToHeight != null ? ps.fitToHeight : 0) + '"/>'
+            + (/<headerFooter\b/.test(xml) ? '' : '<headerFooter><oddFooter>&amp;L&amp;8Anona · &amp;A&amp;C&amp;8Página &amp;P de &amp;N&amp;R&amp;8Impresso em &amp;D</oddFooter></headerFooter>');
           xml = /<pageMargins\b[^>]*\/>/.test(xml) ? xml.replace(/(<pageMargins\b[^>]*\/>)/, '$1' + tag) : xml.replace('</worksheet>', tag + '</worksheet>');
         }
         zip.file(arq.name, xml);
@@ -341,7 +381,7 @@
 
   root.AnonaTabelas = {
     lerInteiro, minPresencas, avaliar, panorama, fmtPct,
-    csv, tabelaHTML, tsv, copiarTabela,
+    csv, tabelaHTML, tabelaImpressao, textoParaPdf, tsv, copiarTabela,
     estilizar, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, escreverPolido, polirXlsx, bytesParaBase64, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
     panoramaWorkbook, panoramaParaMatriz
   };
