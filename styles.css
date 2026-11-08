@@ -873,3 +873,64 @@ textarea{ line-height:1.5; }
 /* Botão "mostrar senha": a regra geral de button:active (translateY(1px)) anulava o translateY(-50%) que o centraliza,
    então ao apertar o botão ele pulava para baixo, saía de baixo do cursor e o clique se perdia. */
 button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); }
+
+
+/* ═════════════════════════ IMPRESSÃO ═════════════════════════
+   Dois modos:
+   1) Botões "Imprimir…" do app: o JS monta uma folha própria (#anonaPrintRoot) e põe a classe .anona-imprimindo no <body>;
+      só então o resto da página some (e só na impressão — na tela nada muda).
+   2) Ctrl+P direto: imprime a página, mas sem banners, tela de login, mascote, botões e sombras. */
+#anonaPrintRoot{ display:none; }
+@media print{
+  html, body{ background:#fff !important; }
+  body{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+  /* modo 1 — folha de impressão do app */
+  body.anona-imprimindo > *:not(#anonaPrintRoot){ display:none !important; }
+  body.anona-imprimindo #anonaPrintRoot{ display:block !important; color:#111827; font:10.5pt/1.4 Inter, Arial, sans-serif; }
+  .pr-topo{ display:flex; align-items:center; gap:10px; border-bottom:3px solid #0B2F7A; padding-bottom:7px; margin-bottom:10px; }
+  .pr-marca{ width:32px; height:32px; flex:none; border-radius:8px; background:#0D2E63; border:1.5px solid #1B8259; color:#FFFDF8; font:700 20px/30px Georgia, serif; text-align:center; }
+  .pr-topo h1{ margin:0; font:700 16pt/1.15 Fraunces, Georgia, serif; color:#0B2F7A; }
+  .pr-topo p{ margin:1px 0 0; font-size:9pt; color:#475569; }
+  .pr-data{ margin-left:auto; text-align:right; font-size:8.5pt; color:#475569; }
+  .pr-rodape{ margin-top:14px; padding-top:5px; border-top:1px solid #cbd5e1; font-size:8pt; color:#64748b; }
+  .pr-h{ margin:14px 0 6px; padding-bottom:2px; border-bottom:1.5px solid #FFCC29; font:700 12pt Inter, Arial, sans-serif; color:#0B2F7A; break-after:avoid; }
+  .pr-peq{ margin:8px 0 0; font-size:8.5pt; color:#64748b; }
+  .pr-pre{ margin:0; white-space:pre-wrap; overflow-wrap:anywhere; font:10.5pt/1.5 Inter, Arial, sans-serif; }
+  .pr-lista{ margin:0; padding-left:18px; } .pr-lista li{ margin-bottom:3px; }
+
+  /* tabelas: título repete em cada folha e nenhuma linha é cortada ao meio */
+  .pr-tab{ width:100%; border-collapse:collapse; font-size:9.5pt; }
+  .pr-tab thead{ display:table-header-group; } .pr-tab tfoot{ display:table-row-group; }
+  .pr-tab th{ background:#0B2F7A; color:#fff; padding:4px 6px; border:1px solid #0B2F7A; text-align:left; }
+  .pr-tab td{ padding:4px 6px; border:1px solid #cbd5e1; vertical-align:top; }
+  .pr-tab tr{ break-inside:avoid; }
+  .pr-tab tbody tr:nth-child(even){ background:#EEF3FB; }
+  .pr-tab .n{ text-align:right; }
+  .pr-tab tfoot td{ font-weight:700; background:#E8F5EC; border-top:2px solid #0B2F7A; }
+
+  /* calendário do mês */
+  .pr-cal{ width:100%; table-layout:fixed; border-collapse:collapse; }
+  .pr-cal th{ background:#0B2F7A; color:#fff; padding:3px; font-size:9pt; border:1px solid #0B2F7A; }
+  .pr-cal td{ height:23mm; padding:3px 4px; border:1px solid #94a3b8; vertical-align:top; overflow:hidden; font-size:7.5pt; line-height:1.25; break-inside:avoid; }
+  .pr-cal td.vazio{ background:#f1f5f9; }
+  .pr-cal tr{ break-inside:avoid; }
+  .pr-cal .dia{ display:block; font:800 11pt/1.1 Inter, Arial, sans-serif; color:#0B2F7A; }
+  .pr-cal .pag{ display:block; margin:1px 0; padding:0 3px; background:#FFCC29; color:#4a3500; font-weight:700; border-radius:3px; }
+  .pr-cal .ev{ display:block; color:#334155; font-weight:600; }
+  .pr-cal .nt{ display:block; margin-top:2px; padding:1px 3px; border-left:3px solid #0B2F7A; background:#EEF3FB; overflow-wrap:anywhere; }
+  .pr-cal .nt.imp{ border-left-color:#FFCC29; background:#FFF3C4; font-weight:700; }
+  .pr-nota{ break-inside:avoid; margin:0 0 8px; padding:2px 0 2px 9px; border-left:4px solid #0B2F7A; }
+  .pr-nota.imp{ border-left-color:#FFCC29; background:#FFF8DF; }
+  .pr-nota > div{ margin-top:2px; white-space:pre-wrap; overflow-wrap:anywhere; }
+
+  /* modo 2 — Ctrl+P direto na página */
+  body:not(.anona-imprimindo) #globalErrorBanner, body:not(.anona-imprimindo) #offlineBanner, body:not(.anona-imprimindo) #lockScreen,
+  body:not(.anona-imprimindo) #toastContainer, body:not(.anona-imprimindo) #confirmModalOverlay, body:not(.anona-imprimindo) #anonaMascotWrap,
+  body:not(.anona-imprimindo) [id^="paulusAnona"], body:not(.anona-imprimindo) .flag-ribbon,
+  body:not(.anona-imprimindo) button, body:not(.anona-imprimindo) input[type="file"], body:not(.anona-imprimindo) .no-print{ display:none !important; }
+  body:not(.anona-imprimindo) header{ background:#fff !important; color:#0B2F7A !important; box-shadow:none !important; }
+  body:not(.anona-imprimindo) header *{ color:#0B2F7A !important; }
+  body:not(.anona-imprimindo) .panel, body:not(.anona-imprimindo) .panel-tool{ box-shadow:none !important; break-inside:avoid; }
+  body:not(.anona-imprimindo) .day-cell{ break-inside:avoid; }
+}
