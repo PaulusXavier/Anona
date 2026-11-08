@@ -436,7 +436,10 @@
         </button>
         <div class="flex flex-col items-center gap-1">
           <h3 id="currentMonthLabel" class="display text-2xl sm:text-3xl font-semibold text-slate-800"></h3>
-          <button type="button" onclick="irParaHoje()" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 hover:bg-slate-100" style="color:var(--azul)">Ir para hoje</button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="irParaHoje()" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 hover:bg-slate-100" style="color:var(--azul)">Ir para hoje</button>
+            <button type="button" onclick="imprimirMes()" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 hover:bg-slate-100 inline-flex items-center gap-1" style="color:var(--azul)" aria-label="Imprimir este mês (calendário, prazos e anotações)"><i data-lucide="printer" class="w-3 h-3"></i> Imprimir mês</button>
+          </div>
         </div>
         <button onclick="changeMonth(1)" id="btnNext" aria-label="Próximo mês" class="p-2 hover:bg-slate-100 rounded-full transition disabled:opacity-20">
           <i data-lucide="chevron-right" class="w-6 h-6 text-slate-600"></i>
@@ -528,6 +531,9 @@
       </select>
       <button onclick="exportNotesPDF()" class="w-full text-white px-4 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--azul)">
         <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar PDF das anotações
+      </button>
+      <button type="button" onclick="imprimirNotas()" class="w-full mt-2 px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2">
+        <i data-lucide="printer" class="w-3.5 h-3.5"></i> Imprimir anotações
       </button>
     </div>
 
@@ -1220,6 +1226,7 @@
     <div class="flex flex-col sm:flex-row gap-2 mb-3">
       <input id="cfNome" type="text" maxlength="80" autocomplete="off" placeholder="Estudante (opcional — vai só no resumo copiado, não é salvo)" aria-label="Nome do estudante (opcional, não é salvo)" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
       <button type="button" id="cfBtnCopiar" onclick="cfCopiarResumo()" class="px-4 py-2 rounded-xl text-xs font-bold text-white" style="background:var(--verde)">Copiar resumo</button>
+      <button type="button" onclick="cfImprimir()" class="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Imprimir</button>
       <button type="button" onclick="cfLimpar()" class="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Limpar (outro estudante)</button>
     </div>
     <div id="cfRepercInfo" class="rounded-xl border p-3 mb-3 text-xs" style="border-color:var(--amarelo-soft);background:#FFF9EB;color:var(--amarelo-text)"></div>
@@ -1258,6 +1265,7 @@
         <div class="flex flex-wrap gap-2 mt-3">
           <button type="button" onclick="cfPanoramaExportar('xlsx')" class="px-3 py-2 rounded-xl text-xs font-bold text-white" style="background:var(--verde)">Baixar planilha (.xlsx)</button>
           <button type="button" onclick="cfPanoramaExportar('csv')" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Baixar .csv</button>
+          <button type="button" onclick="cfImprimir()" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Imprimir</button>
           <button type="button" id="cfpBtnCopiar" onclick="cfPanoramaCopiar()" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Copiar tabela</button>
           <button type="button" onclick="cfPanoramaLimpar()" class="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-50">Limpar faltas</button>
         </div>
@@ -1362,7 +1370,48 @@ window.AnonaPDF = (function () {
   }
   const colunaIdentificador = rotulo => /\b(nis|cpf)\b/i.test(String(rotulo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
 
-  return { logo, metadados, rodape, identificador, colunaIdentificador, AVISO_LGPD };
+  // Limpa o texto para a fonte padrão do PDF (emoji/símbolos viravam lixo ou davam erro) — ver AnonaTabelas.textoParaPdf.
+  const texto = v => (window.AnonaTabelas && window.AnonaTabelas.textoParaPdf) ? window.AnonaTabelas.textoParaPdf(v) : v;
+
+  return { logo, metadados, rodape, identificador, colunaIdentificador, texto, AVISO_LGPD };
+})();
+</script>
+<script>
+/* Anona — IMPRESSÃO. O app não tinha CSS de impressão: Ctrl+P saía com botões, tela de login, mascote e calendário cortado.
+   Agora há uma "folha de impressão" própria (cabeçalho, tabela com títulos que se repetem, aviso LGPD no rodapé): a função
+   imprimir() monta a folha, esconde o resto só na hora de imprimir (ver "IMPRESSÃO" no styles.css) e limpa tudo depois. */
+window.AnonaImpressao = (function () {
+  let ativo = false, tituloOriginal = null;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function limpar() {
+    ativo = false;
+    document.body.classList.remove('anona-imprimindo');
+    const r = document.getElementById('anonaPrintRoot'); if (r) r.remove();
+    const st = document.getElementById('anonaPrintPage'); if (st) st.remove();
+    if (tituloOriginal != null) { document.title = tituloOriginal; tituloOriginal = null; }
+  }
+  // opts: { titulo, subtitulo, html (já escapado), orientacao: 'portrait' | 'landscape' }
+  function imprimir(opts) {
+    limpar();
+    const data = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date());
+    const root = document.createElement('div'); root.id = 'anonaPrintRoot';
+    root.innerHTML = '<header class="pr-topo"><div class="pr-marca">A</div><div><h1>' + esc(opts.titulo) + '</h1><p>' + esc(opts.subtitulo || '') + '</p></div>'
+      + '<div class="pr-data">Paulo Xavier · CRP-20/09816<br>Gerado em ' + esc(data) + '</div></header>' + opts.html
+      + '<footer class="pr-rodape">' + esc((window.AnonaPDF && window.AnonaPDF.AVISO_LGPD) || '') + '</footer>';
+    document.body.appendChild(root);
+    const st = document.createElement('style'); st.id = 'anonaPrintPage';
+    // A4 + número de página no rodapé (os navegadores que não entendem a regra de rodapé simplesmente a ignoram).
+    st.textContent = '@page{size:A4 ' + (opts.orientacao === 'landscape' ? 'landscape' : 'portrait') + ';margin:12mm 12mm 14mm}'
+      + '@page{@bottom-right{content:"Página " counter(page) " de " counter(pages);font:8pt Arial;color:#64748b}}';
+    document.head.appendChild(st);
+    tituloOriginal = document.title; document.title = 'Anona - ' + opts.titulo;     // vira o nome sugerido ao "Salvar como PDF"
+    document.body.classList.add('anona-imprimindo'); ativo = true;
+    setTimeout(() => { try { window.print(); } catch (e) { limpar(); } }, 80);
+  }
+  window.addEventListener('afterprint', limpar);
+  // Ctrl+P "puro" (sem passar pelos botões Imprimir) nunca deve imprimir uma folha antiga que ficou para trás.
+  window.addEventListener('beforeprint', () => { if (!ativo) limpar(); });
+  return { imprimir, limpar, esc };
 })();
 </script>
 <!-- FIREBASE -->
@@ -2860,7 +2909,7 @@ window.AnonaPDF = (function () {
   // não usar vírgula nem "nº" antes do número da casa).
   function relatorioIndividualNumeroEndereco(textoEndereco) {
     const texto = String(textoEndereco || '');
-    let m = texto.match(/n[ºo°.]{0,2}\s*(\d+)/i);
+    let m = texto.match(/\bn[ºo°.]{0,2}\s*(\d+)/i);
     if (m) return parseInt(m[1], 10);
     m = texto.match(/,\s*(\d+)/);
     if (m) return parseInt(m[1], 10);
@@ -3074,6 +3123,10 @@ window.AnonaPDF = (function () {
 
   async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo, tecnicoInfo, opcoes) {
     const { jsPDF } = window.jspdf;
+    // Emoji, setas e letras fora do alfabeto da fonte do PDF saíam como lixo e desalinhavam as colunas: limpa tudo antes de medir.
+    { const limpo = window.AnonaPDF.texto;
+      headers = headers.map(limpo); dataRows = dataRows.map(r => r.map(limpo)); mesTexto = limpo(mesTexto);
+      if (tecnicoInfo) tecnicoInfo = { ...tecnicoInfo, nome: limpo(tecnicoInfo.nome), formacao: limpo(tecnicoInfo.formacao) }; }
     // Coluna opcional "Visita": uma caixinha por família (na 1ª linha dela)
     // para marcar à mão em campo. Entra logo depois de "Família".
     const incluirVisita = (opcoes && opcoes.colunaVisita != null) ? !!opcoes.colunaVisita : relIndIncluirVisita();
@@ -5362,7 +5415,7 @@ async function exportNotesPDF(){
     // desenhava em normal 10, o que podia deixar linhas fora da margem).
     docPdf.setFont('helvetica','normal');
     docPdf.setFontSize(10);
-    const lines = docPdf.splitTextToSize(String(noteObj.text), pageW - margin*2 - 20);
+    const lines = docPdf.splitTextToSize(window.AnonaPDF.texto(String(noteObj.text)), pageW - margin*2 - 20);
     const linhasPorPagina = Math.max(1, Math.floor((pageH - 50 - 120 - 34) / 13));
     // Nota muito longa: continua na página seguinte em vez de sair da folha.
     const parte = lines.slice(0, linhasPorPagina);
@@ -5447,6 +5500,74 @@ window.changeMonth = changeMonth;
 window.irParaHoje = irParaHoje;
 window.saveNote = saveNote;
 window.exportNotesPDF = exportNotesPDF;
+
+/* ---- IMPRESSÃO: calendário do mês, anotações e calculadora (usa AnonaImpressao, definido acima) ---- */
+function __prNotasHtml(keys, notes, comMes){
+  const e = window.AnonaImpressao.esc;
+  let mesAnt = '', out = '';
+  keys.forEach(key => {
+    const n = getNoteObj(notes, key), d = new Date(key + 'T00:00:00');
+    if (comMes && key.slice(0, 7) !== mesAnt) {
+      mesAnt = key.slice(0, 7);
+      const m = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(d);
+      out += '<h2 class="pr-h">' + e(m.charAt(0).toUpperCase() + m.slice(1)) + '</h2>';
+    }
+    const rot = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(d);
+    out += '<div class="pr-nota' + (n.emphasis ? ' imp' : '') + '"><b>' + e(rot.charAt(0).toUpperCase() + rot.slice(1)) + (n.emphasis ? ' — IMPORTANTE' : '') + '</b><div>' + e(n.text) + '</div></div>';
+  });
+  return out;
+}
+function imprimirMes(){
+  const e = window.AnonaImpressao.esc;
+  const monthIdx = currentMonth.getMonth(), year = currentMonth.getFullYear();
+  const dadosAno = dadosDoAno(year), notes = window.__getNotes ? window.__getNotes() : {};
+  const payday = paydayForMonth(monthIdx, year), nis = document.getElementById('nisInput').value;
+  const tit = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(currentMonth);
+  const titulo = tit.charAt(0).toUpperCase() + tit.slice(1);
+  const primeiro = new Date(year, monthIdx, 1).getDay(), dias = new Date(year, monthIdx + 1, 0).getDate();
+  let linhas = '<tr>', col = 0;
+  for (let i = 0; i < primeiro; i++) { linhas += '<td class="vazio"></td>'; col++; }
+  const chavesNota = [];
+  for (let d = 1; d <= dias; d++) {
+    const key = formatDate(new Date(year, monthIdx, d)), evs = dadosAno.officialEvents[key] || [], n = getNoteObj(notes, key);
+    let c = '<span class="dia">' + d + '</span>';
+    if (payday === d) c += '<span class="pag">Pagamento NIS ' + e(nis) + '</span>';
+    evs.forEach(ev => { c += '<span class="ev">' + e(ev.title) + '</span>'; });
+    if (n && n.text) {
+      chavesNota.push(key);
+      const t = String(n.text).replace(/\s+/g, ' ').trim();
+      c += '<span class="nt' + (n.emphasis ? ' imp' : '') + '">' + (n.emphasis ? '★ ' : '') + e(t.length > 110 ? t.slice(0, 107) + '… (íntegra abaixo)' : t) + '</span>';
+    }
+    linhas += '<td>' + c + '</td>'; col++;
+    if (col === 7 && d < dias) { linhas += '</tr><tr>'; col = 0; }
+  }
+  while (col > 0 && col < 7) { linhas += '<td class="vazio"></td>'; col++; }
+  linhas += '</tr>';
+  let html = '<table class="pr-cal"><thead><tr>' + ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x => '<th>' + x + '</th>').join('') + '</tr></thead><tbody>' + linhas + '</tbody></table>';
+  const prazos = dadosAno.monthHighlights[monthIdx] || [];
+  if (payday || prazos.length) {
+    html += '<h2 class="pr-h">Prazos e datas do mês</h2><ul class="pr-lista">' + (payday ? '<li><b>Pagamento</b> — dia ' + payday + ' (NIS final ' + e(nis) + ')</li>' : '')
+      + prazos.map(p => '<li><b>' + e(p.type) + '</b> — ' + e(p.title) + (p.desc ? ': ' + e(p.desc) : '') + '</li>').join('') + '</ul>';
+  }
+  if (chavesNota.length) html += '<h2 class="pr-h">Anotações do mês</h2>' + __prNotasHtml(chavesNota, notes, false);
+  window.AnonaImpressao.imprimir({ titulo: 'Calendário — ' + titulo, subtitulo: 'Anona · calendário, prazos e anotações de ' + titulo, html, orientacao: 'landscape' });
+}
+function imprimirNotas(){
+  const notes = window.__getNotes ? window.__getNotes() : {};
+  const filtro = document.getElementById('pdfMonthFilter').value;
+  const nomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const keys = Object.keys(notes).filter(k => {
+    const n = getNoteObj(notes, k);
+    return n && n.text && (filtro === 'all' || parseInt(k.split('-')[1], 10) - 1 === parseInt(filtro, 10));
+  }).sort();
+  if (!keys.length) { alert(filtro === 'all' ? 'Você ainda não tem nenhuma anotação salva.' : `Você não tem anotações em ${nomes[parseInt(filtro, 10)]}.`); return; }
+  window.AnonaImpressao.imprimir({
+    titulo: 'Minhas anotações' + (filtro === 'all' ? '' : ' — ' + nomes[parseInt(filtro, 10)]),
+    subtitulo: 'Anona · anotações de famílias e atendimentos — podem conter dados sensíveis (LGPD)',
+    html: __prNotasHtml(keys, notes, filtro === 'all'), orientacao: 'portrait'
+  });
+}
+window.imprimirMes = imprimirMes; window.imprimirNotas = imprimirNotas;
 
 // LEGENDA DE MOTIVOS (frequência escolar) — Sistema Presença/MDS, usada nos
 // relatórios de condicionalidades e no recurso on-line (ex.: motivo "20a").
@@ -6069,6 +6190,29 @@ async function cfCopiarResumo(){
     } catch (e2) { flash('Não foi possível copiar'); }
   }
 }
+function cfImprimir(){
+  const T = window.AnonaTabelas, e = window.AnonaImpressao.esc;
+  if (!T) { alert('O módulo de tabelas ainda não carregou. Tente de novo em instantes.'); return; }
+  let c = null;
+  try { c = cfPanoramaContexto(); } catch (err) { console.warn('Panorama indisponível para impressão:', err); }
+  const temPanorama = !!(c && c.d.res.totais.mesesLancados);
+  if (!__cfResumo && !temPanorama) { alert('Informe as faltas antes de imprimir.'); return; }
+  const nome = cfEl('cfNome').value.trim();
+  let html = '';
+  if (__cfResumo) html += '<h2 class="pr-h">Resultado</h2><pre class="pr-pre">' + e(__cfResumo) + '</pre>';
+  if (temPanorama) {
+    const m = T.panoramaParaMatriz(c.d.res, { unidade: cfUn().aulas ? 'aulas' : 'dias', nomesMes: CF_MESES, repercussao: c.repercussao, dias: c.dias }, c.d.lim);
+    html += '<h2 class="pr-h">Panorama do ano — mês a mês</h2>' + T.tabelaImpressao(m, { ultimaLinhaTotal: !!c.d.res.totais.geral, colunasNumero: [1, 2, 3, 4, 5, 6, 7] })
+      + '<p class="pr-peq">Folga = quantas faltas ainda cabem no mês sem baixa frequência (negativo = faltas além do limite). A linha de total é informativa: o Sistema Presença avalia cada mês separadamente.</p>';
+  }
+  html += '<p class="pr-peq">Estimativa para orientação, pelo método do Sistema Presença: vale sempre o registro oficial da escola.</p>';
+  window.AnonaImpressao.imprimir({
+    titulo: 'Frequência escolar — cálculo de orientação',
+    subtitulo: (nome ? 'Estudante: ' + nome + ' · ' : '') + (c ? c.rede + ' · ' + c.ano : 'Calculadora de Faltas'),
+    html, orientacao: temPanorama ? 'landscape' : 'portrait'
+  });
+}
+window.cfImprimir = cfImprimir;
 function cfLimpar(){
   cfEl('cfNome').value = '';
   ['cfFaltasM0', 'cfFaltasM1', 'cfFaltas'].forEach(id => { cfEl(id).value = ''; });
