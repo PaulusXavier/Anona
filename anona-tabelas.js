@@ -200,7 +200,12 @@
 
   const aspas = n => "'" + String(n).replace(/'/g, "''") + "'";
   // Célula com FÓRMULA e o valor já calculado (para visualizadores que não recalculam, como o prévia do celular).
-  const celulaFormula = (f, v) => ({ t: typeof v === 'number' ? 'n' : 's', f, v });
+  // Valor calculado que não é número de verdade (NaN, Infinity) NUNCA pode ir para o arquivo: o .xlsx ficaria
+  // com <v>NaN</v> e o Excel avisa que o arquivo está corrompido. Nesse caso grava texto vazio.
+  const celulaFormula = (f, v) => {
+    if (typeof v === 'number' && !Number.isFinite(v)) v = '';
+    return { t: typeof v === 'number' ? 'n' : 's', f, v };
+  };
 
   // Aba de resumo com contagens VIVAS: =COUNTA('Aba'!A:A)-1 para cada aba de dados (linhas − cabeçalho).
   // itens: [{ rotulo, aba, linhas, coluna:'A', extras:[...] }]; devolve também a linha de total (=SOMA).
@@ -299,7 +304,8 @@
   // Monta o .xlsx do panorama com FÓRMULAS: presenças, % e situação recalculam se a pessoa mudar dias/faltas.
   // ctx: { nome, rede, ano, faixaTxt, lim, unidade:'dias letivos'|'aulas', repercussao:{mes:'Maio/2026'}, linhas:[{mes,mesNome,dias,faltas}] }
   function panoramaWorkbook(ctx) {
-    const X = root.XLSX, lim = ctx.lim, rows = ctx.linhas.filter(l => Number.isFinite(lerInteiro(l.dias)));
+    // Só entram meses com dias letivos (> 0): com 0 dias a fórmula do % dividia por zero (#DIV/0!), como o Excel mostraria.
+    const X = root.XLSX, lim = ctx.lim, rows = ctx.linhas.filter(l => lerInteiro(l.dias) > 0);
     const cab = ['Mês', ctx.unidade === 'aulas' ? 'Aulas dadas' : 'Dias letivos', 'Faltas', 'Presenças', '% de faltas', '% de frequência', 'Máx. de faltas (' + lim + '%)', 'Folga de faltas', 'Situação', 'Repercussão'];
     const aoa = [cab];
     rows.forEach(l => aoa.push([l.mesNome, lerInteiro(l.dias), Number.isFinite(lerInteiro(l.faltas)) ? lerInteiro(l.faltas) : null, null, null, null, null, null, null, ctx.repercussao[l.mes] || '']));
@@ -310,29 +316,33 @@
       // `=""` vale tanto para célula realmente vazia quanto para texto vazio ("")
       // — o estilizar() grava células vazias como texto vazio, e ISBLANK() daria
       // FALSO nelas (o Excel então calcularia D = B − "" → #VALOR!).
-      const vazio = f + '=""';
+      const vazio = 'OR(' + f + '="",' + f + '>' + d + ')';      // sem lançamento OU faltas maiores que os dias (inválido)
       // O mínimo usa inteiros: ceil(lim×dias/100) = INT((lim×dias+99)/100), igual ao cálculo da tela.
       const minP = 'INT((' + lim + '*' + d + '+99)/100)';
-      ws['D' + r] = celulaFormula('IF(' + vazio + ',"",' + d + '-' + f + ')', av ? av.presencas : '');
-      ws['E' + r] = celulaFormula('IF(' + vazio + ',"",' + f + '/' + d + ')', av ? av.pctFaltas / 100 : '');
-      ws['F' + r] = celulaFormula('IF(' + vazio + ',"",(' + d + '-' + f + ')/' + d + ')', av ? av.pctFreq / 100 : '');
-      ws['G' + r] = celulaFormula(d + '-' + minP, av ? av.faltasMax : (lerInteiro(l.dias) - minPresencas(lerInteiro(l.dias), lim)));
-      ws['H' + r] = celulaFormula('IF(' + vazio + ',"",G' + r + '-' + f + ')', av ? av.folga : '');
-      ws['I' + r] = celulaFormula('IF(' + vazio + ',"",IF(' + f + '>' + d + ',"Conferir valores",IF(' + d + '-' + f + '>=' + minP + ',"Frequência regular","Baixa frequência")))',
-        av ? (av.cumpriu ? 'Frequência regular' : 'Baixa frequência') : '');
+      const valido = av && av.estado === 'ok';
+      ws['D' + r] = celulaFormula('IF(' + vazio + ',"",' + d + '-' + f + ')', valido ? av.presencas : '');
+      ws['E' + r] = celulaFormula('IF(' + vazio + ',"",' + f + '/' + d + ')', valido ? av.pctFaltas / 100 : '');
+      ws['F' + r] = celulaFormula('IF(' + vazio + ',"",(' + d + '-' + f + ')/' + d + ')', valido ? av.pctFreq / 100 : '');
+      ws['G' + r] = celulaFormula(d + '-' + minP, valido ? av.faltasMax : (lerInteiro(l.dias) - minPresencas(lerInteiro(l.dias), lim)));
+      ws['H' + r] = celulaFormula('IF(' + vazio + ',"",G' + r + '-' + f + ')', valido ? av.folga : '');
+      ws['I' + r] = celulaFormula('IF(' + f + '="","",IF(' + f + '>' + d + ',"Conferir valores",IF(' + d + '-' + f + '>=' + minP + ',"Frequência regular","Baixa frequência")))',
+        !av ? '' : (av.estado === 'erro' ? 'Conferir valores' : (av.cumpriu ? 'Frequência regular' : 'Baixa frequência')));
     });
     const last = rows.length + 1, tot = last + 1;
     // Linha de totais (informativa: o Presença avalia mês a mês).
     ws['A' + tot] = { t: 's', v: 'Total / visão geral' };
-    const soma = col => 'SUM(' + col + '2:' + col + last + ')';
-    const ok = rows.filter(l => Number.isFinite(lerInteiro(l.faltas)));
-    const dT = ok.reduce((a, l) => a + lerInteiro(l.dias), 0), fT = ok.reduce((a, l) => a + lerInteiro(l.faltas), 0);
-    ws['B' + tot] = celulaFormula('SUMPRODUCT(ISNUMBER(C2:C' + last + ')*B2:B' + last + ')', dT);       // só os meses já lançados
-    ws['C' + tot] = celulaFormula(soma('C'), fT);
+    // Totais SÓ com meses válidos: lançados e com faltas <= dias (mês com "Conferir valores" fica de fora,
+    // igual ao panorama da tela). SUMPRODUCT com vírgula trata o texto vazio como 0, sem dar #VALOR!.
+    const rng = c => c + '2:' + c + last;
+    const validos = 'SUMPRODUCT(--ISNUMBER(' + rng('C') + '),--(' + rng('C') + '<=' + rng('B') + '),';
+    const avs = rows.map(l => ({ l, av: Number.isFinite(lerInteiro(l.faltas)) ? avaliar(lerInteiro(l.dias), lerInteiro(l.faltas), lim) : null })).filter(x => x.av && x.av.estado === 'ok');
+    const dT = avs.reduce((a, x) => a + x.av.dias, 0), fT = avs.reduce((a, x) => a + x.av.faltas, 0);
+    ws['B' + tot] = celulaFormula(validos + rng('B') + ')', dT);
+    ws['C' + tot] = celulaFormula(validos + rng('C') + ')', fT);
     ws['D' + tot] = celulaFormula('B' + tot + '-C' + tot, dT - fT);
     ws['E' + tot] = celulaFormula('IF(B' + tot + '=0,"",C' + tot + '/B' + tot + ')', dT ? fT / dT : '');
     ws['F' + tot] = celulaFormula('IF(B' + tot + '=0,"",D' + tot + '/B' + tot + ')', dT ? (dT - fT) / dT : '');
-    const nBaixa = ok.filter(l => !avaliar(lerInteiro(l.dias), lerInteiro(l.faltas), lim).cumpriu).length;
+    const nBaixa = avs.filter(x => !x.av.cumpriu).length;
     ws['I' + tot] = celulaFormula('COUNTIF(I2:I' + last + ',"Baixa frequência")&" mês(es) com baixa frequência"', nBaixa + ' mês(es) com baixa frequência');
     ws['!ref'] = 'A1:J' + tot;
     estilizar(ws, { cor: '159947', formatos: { 4: '0.0%', 5: '0.0%' }, filtro: false, altLinha: 26, larguraMax: 30 });
