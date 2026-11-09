@@ -92,7 +92,7 @@
     el.appendChild(texto);
     el.appendChild(fechar);
     container.appendChild(el);
-    var duracao = tipo === 'error' ? 9000 : 5000;
+    var duracao = Math.max(tipo === 'error' ? 9000 : 5000, Math.min(30000, String(mensagem == null ? '' : mensagem).length * 55));   // aviso longo (lista de bairros, falhas) precisa de mais tempo para ser lido
     var timer = setTimeout(remover, duracao);
     function remover() {
       clearTimeout(timer);
@@ -1982,9 +1982,10 @@ window.AnonaImpressao = (function () {
     const out = XLSX.utils.book_new();
     const used = new Set();
     const sheetName = name => {
-      const base = String(name || 'Dados').replace(/[\\/?*\[\]:]/g,' ').slice(0,31).trim() || 'Dados';
-      let clean=base,n=2; while(used.has(clean)) clean=(base.slice(0,28)+' '+n++).slice(0,31);
-      used.add(clean); return clean;
+      const limpar = t => String(t || '').replace(/[\\/?*\[\]:]/g,' ').replace(/\s+/g,' ').slice(0,31).replace(/^['\s]+|['\s]+$/g,'');
+      const base = limpar(name) || 'Dados';
+      let clean=base,n=2; while(used.has(clean.toLowerCase())) clean=limpar(base.slice(0,28)+' '+n++);
+      used.add(clean.toLowerCase()); return clean;
     };
     const ordemTecnicos = ['Fernanda Gomes','Cléo Sousa','Bárbara Parente','Susy Andrade','Paloma de Assis','Rafaela Garcia','Território Volante'];
     const gruposOrdenados = [...groups.entries()].sort((a,b) => ordemTecnicos.indexOf(a[0]) - ordemTecnicos.indexOf(b[0]));
@@ -2212,6 +2213,22 @@ window.AnonaImpressao = (function () {
       if (cpfRespIdx >= 0 && String(row[cpfRespIdx] || '').trim()) return 'cpf:' + String(row[cpfRespIdx]).trim();
       return 'nome:' + normalizeText(row[nameIdx]);
     };
+    // Relatório bruto do MDS: as linhas dos OUTROS integrantes vêm sem NIS/CPF/nome do responsável. Sem completar,
+    // todas caíam num grupo "sem nome" só, que ia inteiro (e ordenado primeiro) para o primeiro técnico — integrantes
+    // separados da família e uma "família" a mais na contagem. Agora a linha herda os dados da família da linha de cima.
+    {
+      const vazio = v => String(v == null ? '' : v).trim() === '';
+      const idsResp = [nisRespIdx, cpfRespIdx, headerNorm[nameIdx] && headerNorm[nameIdx].includes('nome') ? nameIdx : -1].filter(i => i >= 0);
+      const achar = fn => headerNorm.findIndex(fn);
+      const colsFam = [...idsResp, achar(h => h === 'bairro'), achar(h => h === 'endereco'), achar(h => h.includes('referencia') && h.includes('endereco')),
+        achar(h => h === 'efeito'), achar(h => h.includes('mes') && h.includes('repercuss'))].filter(i => i >= 0);
+      if (idsResp.length) {
+        for (let k = 1; k < dataRows.length; k++) {
+          const r = dataRows[k];
+          if (idsResp.every(i => vazio(r[i])) && r.some(v => !vazio(v))) colsFam.forEach(i => { if (vazio(r[i])) r[i] = dataRows[k - 1][i]; });
+        }
+      }
+    }
     const grupos = new Map();
     dataRows.forEach(row => {
       const k = chaveFam(row);
@@ -2356,6 +2373,7 @@ window.AnonaImpressao = (function () {
 
       let gerados = 0;
       const semRegistros = [];
+      const falharam = [];
       const arquivosGerados = [];
       for (const nomeTecnico of tecnicos) {
         const dados = relatorioIndividualExtrairDadosDoWorkbook(wb, [nomeTecnico]);
@@ -2363,20 +2381,26 @@ window.AnonaImpressao = (function () {
         // O nome da aba vem como "Paulo Xavier - Psicólogo"; separa nome e
         // formação para exibir corretamente no cabeçalho do PDF.
         const { nome, formacao } = relatorioIndividualSepararNomeFormacao(nomeTecnico, dados.formacao);
-        const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
-          dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome, formacao }, { retornarBytes: true }
-        );
-        arquivosGerados.push({ nomeArquivo, bytes });
-        gerados++;
+        // Como no envio em lote por técnico: se um falhar, os outros continuam (antes, um erro cancelava todos).
+        try {
+          const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
+            dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome, formacao }, { retornarBytes: true }
+          );
+          arquivosGerados.push({ nomeArquivo, bytes });
+          gerados++;
+        } catch (eTec) {
+          console.error('Falha ao gerar o relatório de ' + nome + ':', eTec);
+          falharam.push(`${nome} (${eTec && eTec.message ? eTec.message : 'erro desconhecido'})`);
+        }
       }
       if (gerados) {
         const dataArquivo = new Intl.DateTimeFormat('pt-BR').format(new Date()).replace(/\//g, '-');
         await baixarPdfsComoZip(arquivosGerados, `Relatorios Individuais - Equipe Volante - ${dataArquivo}.zip`);
       }
 
-      if (!gerados) throw new Error('Nenhum dos três técnicos tinha registros com a coluna "Efeito" para gerar relatório.');
+      if (!gerados) throw new Error(falharam.length ? 'Nenhum relatório foi gerado: ' + falharam.join(' | ') : 'Nenhum dos três técnicos tinha registros com a coluna "Efeito" para gerar relatório.');
       const avisoSemRegistros = semRegistros.length ? ` (${semRegistros.join(', ')} sem registros, pulado(s))` : '';
-      alert(`${gerados} relatório(s) individual(is) da equipe volante gerado(s) e baixado(s)${avisoSemRegistros}.`);
+      alert(`${gerados} relatório(s) individual(is) da equipe volante gerado(s) e baixado(s)${avisoSemRegistros}.` + (falharam.length ? `\n\nNão consegui gerar: ${falharam.join(', ')}.` : ''));
     } catch (e) {
       console.error(e);
       alert('Não consegui gerar os relatórios individuais da equipe volante. ' + (e && e.message ? e.message : ''));
@@ -3640,7 +3664,7 @@ window.AnonaImpressao = (function () {
       if (idxVisita >= 0 && (rIdx === 0 || linhasRota[rIdx-1].row[idxFamilia] !== row[idxFamilia] || linhasRota[rIdx-1].bloco !== bloco)) {
         // caixinha para marcar à mão (só na 1ª linha de cada família)
         docPdf.setDrawColor(...azulDeep); docPdf.setLineWidth(0.9);
-        docPdf.rect(colX[idxVisita] + colWidths[idxVisita]/2 - 5, ty + 3.5, 10, 10, 'S');
+        docPdf.rect(colX[idxVisita] + colWidths[idxVisita]/2 - 4.5, ty + 2.5, 9, 9, 'S');
         docPdf.setLineWidth(0.4);
       }
       linesPerCol.forEach((lines,i) => {
@@ -3660,7 +3684,8 @@ window.AnonaImpressao = (function () {
 
     window.AnonaPDF.rodape(docPdf, { margem: margin });
 
-    const sufixoTecnico = (tecnicoInfo && tecnicoInfo.nome) ? ` - ${tecnicoInfo.nome}` : '';
+    // Barra, dois-pontos etc. no nome do técnico viravam pasta dentro do ZIP ou faziam o download falhar.
+    const sufixoTecnico = (tecnicoInfo && tecnicoInfo.nome) ? ` - ${String(tecnicoInfo.nome).replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim()}` : '';
     // Sem mês identificado (texto "—"), não põe o traço no nome do arquivo.
     const mesNomeArq = /[\p{L}\d]/u.test(String(mesTexto || '')) ? ` - ${String(mesTexto).replace(/[\\/:*?"<>|]/g,'-')}` : '';
     const nomeArquivo = `Relatorio Repercussao Individual${sufixoTecnico}${mesNomeArq}.pdf`;
@@ -4694,10 +4719,13 @@ window.AnonaImpressao = (function () {
   };
 
   function safeSheetName(name, used) {
-    let clean = String(name || 'Dados').replace(/[\/?*\[\]:]/g, ' ').slice(0,31).trim() || 'Dados';
-    let base = clean, n = 2;
-    while (used.has(clean)) { clean = (base.slice(0, 28) + ' ' + n++).slice(0,31); }
-    used.add(clean); return clean;
+    // O Excel recusa \ / ? * [ ] : no nome da aba, apóstrofo no começo/fim, e trata "Ana" e "ana" como a MESMA aba
+    // (o arquivo abria com aviso de "conteúdo ilegível"): por isso a conferência de repetidos ignora maiúsculas.
+    const limpar = t => String(t || '').replace(/[\\\/?*\[\]:]/g, ' ').replace(/\s+/g, ' ').slice(0,31).replace(/^['\s]+|['\s]+$/g, '');
+    let clean = limpar(name) || 'Dados';
+    const base = clean; let n = 2;
+    while (used.has(clean.toLowerCase())) { clean = limpar(base.slice(0, 28) + ' ' + n++); }
+    used.add(clean.toLowerCase()); return clean;
   }
 
   window.downloadFilteredReport = async () => {
