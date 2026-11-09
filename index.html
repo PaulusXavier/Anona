@@ -2122,6 +2122,18 @@ window.AnonaImpressao = (function () {
     return { dataBase64: AnonaTabelas.bytesParaBase64(bytes), bairrosNaoMapeados };
   };
 
+  // Lê "Período da Repercussão: Setembro/2026" nas linhas de título do relatório
+  // bruto do MDS (as que vêm ANTES dos nomes das colunas). Devolve '' se não houver.
+  function periodoRepercussaoNoTopo(linhasTopo) {
+    for (const row of (linhasTopo || [])) {
+      for (const v of row) {
+        const m = String(v == null ? '' : v).match(/Per[ií]odo da Repercuss[ãa]o\s*:\s*(.+)/i);
+        if (m && m[1].trim()) return m[1].trim();
+      }
+    }
+    return '';
+  }
+
   // Divide uma tabela de condicionalidades só do Território Volante em três
   // partes iguais, respeitando a ordem alfabética (A a Z), e monta uma
   // planilha nova com uma aba por técnico: 1ª parte = Paulo Xavier,
@@ -2130,23 +2142,32 @@ window.AnonaImpressao = (function () {
     const wb = XLSX.read(bytesFromBase64(base64), {type:'array'});
     let header = null;
     let dataRows = [];
+    let periodoNoTopo = '';
+    // Procura a aba com a tabela de famílias. Antes pegava a PRIMEIRA aba com
+    // qualquer conteúdo: se o arquivo fosse a planilha organizada do CRAS (que
+    // começa pela aba "Resumo do território"), o resumo era tratado como se
+    // fosse a tabela e a divisão saía errada, sem nenhum aviso. Agora abas de
+    // resumo são ignoradas, só vale aba em que se acha a linha de títulos
+    // (tem "nome" e "efeito"/"bairro"/"NIS") nas primeiras 25 linhas, e, havendo
+    // mais de uma, a aba chamada "Território Volante" tem preferência.
+    const candidatas = [];
     for (const sheetName of wb.SheetNames) {
+      if (normalizeText(sheetName).startsWith('resumo')) continue;
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''})
         .filter(row => row.some(v => String(v).trim() !== ''));
       if (!rows.length) continue;
-      // Planilhas vindas direto do sistema trazem linhas de título (programa,
-      // período...) ANTES dos nomes das colunas. Antes, a 1ª linha era sempre
-      // tomada como cabeçalho: a divisão saía sem cabeçalho e ordenada pela
-      // coluna errada, sem nenhum aviso. Agora procura a linha de títulos
-      // (tem "nome" e "efeito"/"bairro"/"NIS") nas primeiras 25 linhas.
-      let hi = rows.slice(0, 25).findIndex(row => {
+      const hi = rows.slice(0, 25).findIndex(row => {
         const l = row.map(v => normalizeText(v));
         return l.some(v => v.includes('nome')) && l.some(v => v === 'efeito' || v === 'bairro' || v.includes('nis'));
       });
-      if (hi < 0) hi = 0;
-      header = rows[hi];
-      dataRows = rows.slice(hi + 1);
-      break;
+      if (hi < 0) continue;
+      candidatas.push({ sheetName, rows, hi });
+    }
+    const escolhida = candidatas.find(c => normalizeText(c.sheetName).includes('volante')) || candidatas[0];
+    if (escolhida) {
+      header = escolhida.rows[escolhida.hi];
+      dataRows = escolhida.rows.slice(escolhida.hi + 1);
+      periodoNoTopo = periodoRepercussaoNoTopo(escolhida.rows.slice(0, escolhida.hi));
     }
     if (!header || !dataRows.length) throw new Error('Não encontrei dados na tabela enviada.');
     // NIS/CPF lidos como número perdem o zero à esquerda: restaura como texto de 11 dígitos.
@@ -2163,6 +2184,9 @@ window.AnonaImpressao = (function () {
       const linhaComMes = dataRows.find(row => String(row[mesIdx] || '').trim());
       if (linhaComMes) mesRepercussao = String(linhaComMes[mesIdx]).trim();
     }
+    // Sem a coluna, usa o "Período da Repercussão: ..." das linhas de título do
+    // relatório bruto do MDS (acima da tabela), quando existir.
+    if (!mesRepercussao) mesRepercussao = periodoNoTopo;
 
     // Descobre qual coluna tem o NOME da família/responsável para ordenar de A a Z.
     // Importante: procurar "nome" PRIMEIRO — senão colunas como "NIS do
@@ -2241,8 +2265,17 @@ window.AnonaImpressao = (function () {
       // (integrantes), não famílias.
       out.Sheets['Resumo da divisão'][cel] = { t:'n', v:p.nFamilias };
     });
+    // Linha de total do resumo (soma viva das famílias) — dá para conferir de relance
+    // que nenhuma família ficou de fora da divisão.
+    {
+      const wsR = out.Sheets['Resumo da divisão'], rTot = profissionais.length + 1;
+      wsR[XLSX.utils.encode_cell({ r: rTot, c: 0 })] = { t: 's', v: 'Total' };
+      wsR[XLSX.utils.encode_cell({ r: rTot, c: 2 })] = AnonaTabelas.celulaFormula(`SUM(C2:C${rTot})`, profissionais.reduce((a, p) => a + p.nFamilias, 0));
+      wsR['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rTot, c: 4 } });
+    }
     out.SheetNames.forEach(name => {
-      AnonaTabelas.estilizar(out.Sheets[name], { cor: corPorAba(name), colunaNome: name === 'Resumo da divisão' ? -1 : nameIdx, tamFonte: 12, altCab: 50, altLinha: 34, larguraMax: 42 });
+      const ehResumo = name === 'Resumo da divisão';
+      AnonaTabelas.estilizar(out.Sheets[name], { cor: corPorAba(name), colunaNome: ehResumo ? -1 : nameIdx, tamFonte: 12, altCab: 50, altLinha: 34, larguraMax: 42, filtro: !ehResumo, congelar: !ehResumo });
     });
     out.Workbook = out.Workbook || {};
     out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
@@ -2552,7 +2585,9 @@ window.AnonaImpressao = (function () {
     };
 
     // Números do resumo viram fórmulas vivas (contam as linhas das abas de dados).
-    const wsRes = out.Sheets['Resumo'], contar = (aba, n) => AnonaTabelas.celulaFormula(`COUNTA('${aba.replace(/'/g, "''")}'!A:A)-1`, n);
+    // Conta pela coluna B (NIS, sempre preenchido — vira "—" quando não existe): a coluna A (nome)
+    // pode vir vazia numa família e a contagem ficaria menor que o número real de linhas.
+    const wsRes = out.Sheets['Resumo'], contar = (aba, n) => AnonaTabelas.celulaFormula(`COUNTA('${aba.replace(/'/g, "''")}'!B:B)-1`, n);
     wsRes['B3'] = contar('Todas as famílias', linhas.length);
     wsRes['B4'] = linhasMudaram.length ? contar(ABA_MUDARAM, linhasMudaram.length) : wsRes['B4'];
     tecnicosOrdenados.forEach((t, i) => { wsRes[XLSX.utils.encode_cell({ r: 6 + i, c: 1 })] = contar(abasTecnico.get(t), porTecnico.get(t).length); });
@@ -2688,6 +2723,7 @@ window.AnonaImpressao = (function () {
     let headerGlobal = [];
     const headerIndexGlobal = new Map(); // normalizado -> posição em headerGlobal
     const linhas = [];
+    let periodoNoTopo = '';              // "Período da Repercussão: ..." das linhas de título (relatório bruto)
 
     function registrarColuna(nomeOriginal) {
       // Chave "solta" (sem acento, sem numeração "(1)/(2)/(3)"): abas com
@@ -2708,6 +2744,7 @@ window.AnonaImpressao = (function () {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
       const headerIndex = relatorioIndividualDetectarCabecalho(rows);
       if (headerIndex < 0) return;
+      if (!periodoNoTopo) periodoNoTopo = periodoRepercussaoNoTopo(rows.slice(0, headerIndex));
       const header = rows[headerIndex];
       const posicoes = header.map(h => registrarColuna(h));
       rows.slice(headerIndex + 1).forEach(row => {
@@ -2773,7 +2810,9 @@ window.AnonaImpressao = (function () {
     {
       const nh = headersFinais.map(h => normalizeText(h));
       const idsResp = nh.map((h, i) => ((h.includes('nis') && h.includes('responsavel')) || h.includes('cpf') || (h.includes('nome') && h.includes('responsavel'))) ? i : -1).filter(i => i >= 0);
-      const colsFam = nh.map((h, i) => (idsResp.includes(i) || h === 'endereco' || h === 'bairro' || (h.includes('referencia') && h.includes('endereco'))) ? i : -1).filter(i => i >= 0);
+      // "Efeito" também é da família (o gráfico e os cartões já contam por família):
+      // sem herdar, os outros integrantes saíam sem efeito (e sem a cor) no PDF.
+      const colsFam = nh.map((h, i) => (idsResp.includes(i) || h === 'endereco' || h === 'bairro' || h === 'efeito' || (h.includes('referencia') && h.includes('endereco'))) ? i : -1).filter(i => i >= 0);
       const vazio = v => String(v == null ? '' : v).trim() === '';
       if (idsResp.length) {
         for (let k = 1; k < dataRowsFinais.length; k++) {
@@ -2790,8 +2829,8 @@ window.AnonaImpressao = (function () {
     // "Repercussão de Setembro/2026" no título e no cabeçalho do relatório.
     const idxMesCompleto = headers.findIndex(h => normalizeText(h).includes('mes') && normalizeText(h).includes('repercuss'));
     const mesTexto = idxMesCompleto >= 0
-      ? (dataRows.map(r => String(r[idxMesCompleto] || '').trim()).find(Boolean) || '—')
-      : '—';
+      ? (dataRows.map(r => String(r[idxMesCompleto] || '').trim()).find(Boolean) || periodoNoTopo || '—')
+      : (periodoNoTopo || '—');
 
     // Coluna "Família", na primeira posição: numera 1, 2, 3... na ordem em
     // que cada família aparece; linhas (integrantes) da MESMA família
@@ -2893,8 +2932,17 @@ window.AnonaImpressao = (function () {
 
   // Nome da rua (endereço sem o número) — usado para agrupar visitas da
   // mesma rua juntas dentro de um bairro.
+  // Importante: números que fazem parte do NOME da rua (comuns em Boa Vista:
+  // "Rua 7 de Setembro", "Av. 13 de Setembro") ficam no nome. Antes TODOS os
+  // números eram apagados, e "Rua 7 de Setembro, 245" e "Rua 9 de Setembro, 12"
+  // viravam a mesma rua — a ordem da rota saía misturada. Agora o nome vai só
+  // até o número do imóvel (depois de vírgula ou de "nº"; ou o último número solto).
   function relatorioIndividualNomeRua(textoEndereco) {
-    return normalizeText(textoEndereco).replace(/\d+/g, '').replace(/\s+/g, ' ').trim();
+    let s = normalizeText(textoEndereco);
+    const corte = s.search(/,\s*\d|\s+n[ºo°.]{0,2}\s*\d|\s+numero\s*\d|\s+s\/n\b/);
+    if (corte >= 0) s = s.slice(0, corte);
+    else s = s.replace(/\s+\d+\s*[a-z]?$/, '');      // "rua sete 245" -> "rua sete"
+    return s.replace(/[.,;]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   // Extrai o número do imóvel para ordenar as visitas em sequência dentro
