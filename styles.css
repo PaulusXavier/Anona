@@ -501,7 +501,7 @@
     pointer-events:auto; max-width:460px; width:calc(100% - 8px);
     color:#fff; font:600 13px/1.5 Inter, system-ui, sans-serif;
     padding:12px 14px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.28);
-    display:flex; align-items:flex-start; gap:10px; white-space:pre-line;
+    display:flex; align-items:flex-start; gap:10px; white-space:pre-line; max-height:70vh; overflow-y:auto;   /* aviso longo rola em vez de sair da tela */
     animation:anonaToastIn .18s ease;
   }
   .anona-toast[data-tipo="success"]{ background:var(--verde); }
@@ -884,6 +884,8 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
 @media print{
   html, body{ background:#fff !important; }
   body{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  /* as marcas d'água de fundo (casa + família, position:fixed) se repetiam em TODA página impressa, por cima do texto */
+  body::before, body::after{ display:none !important; content:none !important; background:none !important; }
 
   /* modo 1 — folha de impressão do app */
   body.anona-imprimindo > *:not(#anonaPrintRoot){ display:none !important; }
@@ -892,7 +894,7 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
   .pr-marca{ width:32px; height:32px; flex:none; border-radius:8px; background:#0D2E63; border:1.5px solid #1B8259; color:#FFFDF8; font:700 20px/30px Georgia, serif; text-align:center; }
   .pr-topo h1{ margin:0; font:700 16pt/1.15 Fraunces, Georgia, serif; color:#0B2F7A; }
   .pr-topo p{ margin:1px 0 0; font-size:9pt; color:#475569; }
-  .pr-data{ margin-left:auto; text-align:right; font-size:8.5pt; color:#475569; }
+  .pr-data{ margin-left:auto; flex:none; white-space:nowrap; text-align:right; font-size:8.5pt; color:#475569; }   /* nowrap: em A4 retrato o CRP quebrava em 3 linhas */
   .pr-rodape{ margin-top:14px; padding-top:5px; border-top:1px solid #cbd5e1; font-size:8pt; color:#64748b; }
   .pr-h{ margin:14px 0 6px; padding-bottom:2px; border-bottom:1.5px solid #FFCC29; font:700 12pt Inter, Arial, sans-serif; color:#0B2F7A; break-after:avoid; }
   .pr-peq{ margin:8px 0 0; font-size:8.5pt; color:#64748b; }
