@@ -907,6 +907,10 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
   .pr-tab th{ background:#0B2F7A; color:#fff; padding:4px 6px; border:1px solid #0B2F7A; text-align:left; }
   .pr-tab td{ padding:4px 6px; border:1px solid #cbd5e1; vertical-align:top; }
   .pr-tab tr{ break-inside:avoid; }
+  .pr-tab th, .pr-tab td{ overflow-wrap:anywhere; }
+  .pr-tab.peq{ font-size:8.6pt; } .pr-tab.peq th, .pr-tab.peq td{ padding:3px 5px; }
+  .pr-tab.mini{ font-size:7.6pt; } .pr-tab.mini th, .pr-tab.mini td{ padding:2px 4px; }
+  .pr-tab th{ vertical-align:bottom; }
   .pr-tab tbody tr:nth-child(even){ background:#EEF3FB; }
   .pr-tab .n{ text-align:right; }
   .pr-tab td.bad{ color:#B91C1C; font-weight:700; } .pr-tab td.ok{ color:#047857; font-weight:700; }
@@ -917,13 +921,14 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
   .pr-cal th{ background:#0B2F7A; color:#fff; padding:3px; font-size:9pt; border:1px solid #0B2F7A; }
   .pr-cal td{ height:23mm; padding:3px 4px; border:1px solid #94a3b8; vertical-align:top; overflow:hidden; font-size:7.5pt; line-height:1.25; break-inside:avoid; }
   .pr-cal td.vazio{ background:#f1f5f9; }
+  .pr-cal td:nth-child(1):not(.vazio), .pr-cal td:nth-child(7):not(.vazio){ background:#F8FAFC; }   /* fim de semana levemente sombreado */
   .pr-cal tr{ break-inside:avoid; }
   .pr-cal .dia{ display:block; font:800 11pt/1.1 Inter, Arial, sans-serif; color:#0B2F7A; }
   .pr-cal .pag{ display:block; margin:1px 0; padding:0 3px; background:#FFCC29; color:#4a3500; font-weight:700; border-radius:3px; }
   .pr-cal .ev{ display:block; color:#334155; font-weight:600; }
   .pr-cal .nt{ display:block; margin-top:2px; padding:1px 3px; border-left:3px solid #0B2F7A; background:#EEF3FB; overflow-wrap:anywhere; }
   .pr-cal .nt.imp{ border-left-color:#FFCC29; background:#FFF3C4; font-weight:700; }
-  .pr-nota{ break-inside:avoid; margin:0 0 8px; padding:2px 0 2px 9px; border-left:4px solid #0B2F7A; }
+  .pr-nota{ break-inside:avoid; orphans:3; widows:3; margin:0 0 8px; padding:2px 0 2px 9px; border-left:4px solid #0B2F7A; }
   .pr-nota.imp{ border-left-color:#FFCC29; background:#FFF8DF; }
   .pr-nota > div{ margin-top:2px; white-space:pre-wrap; overflow-wrap:anywhere; }
 
