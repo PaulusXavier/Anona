@@ -1382,6 +1382,7 @@ window.AnonaPDF = (function () {
    imprimir() monta a folha, esconde o resto só na hora de imprimir (ver "IMPRESSÃO" no styles.css) e limpa tudo depois. */
 window.AnonaImpressao = (function () {
   let ativo = false, tituloOriginal = null;
+  const margemPorPagina = (() => { try { const m = /(?:Chrome|Chromium|Edg)\/(\d+)/.exec(navigator.userAgent || ''); return !!m && +m[1] >= 131 && !/OPR\//.test(navigator.userAgent); } catch (e) { return false; } })();
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function limpar() {
     ativo = false;
@@ -1401,8 +1402,12 @@ window.AnonaImpressao = (function () {
     document.body.appendChild(root);
     const st = document.createElement('style'); st.id = 'anonaPrintPage';
     // A4 + número de página no rodapé (os navegadores que não entendem a regra de rodapé simplesmente a ignoram).
-    st.textContent = '@page{size:A4 ' + (opts.orientacao === 'landscape' ? 'landscape' : 'portrait') + ';margin:12mm 12mm 14mm}'
-      + '@page{@bottom-right{content:"Página " counter(page) " de " counter(pages);font:8pt Arial;color:#64748b}}';
+    // O aviso de dados pessoais (LGPD) precisa sair em TODA folha, não só no fim do documento: nos navegadores que
+    // entendem caixas de margem (Chrome/Edge 131+) vai no rodapé de cada página; nos demais, continua no fim da última.
+    const lgpd = ((window.AnonaPDF && window.AnonaPDF.AVISO_LGPD) || '').replace(/["\\]/g, '');
+    st.textContent = '@page{size:A4 ' + (opts.orientacao === 'landscape' ? 'landscape' : 'portrait') + ';margin:12mm 12mm 16mm}'
+      + '@page{@bottom-right{content:"Página " counter(page) " de " counter(pages);font:8pt Arial;color:#64748b}}'
+      + (margemPorPagina && lgpd ? '@page{@bottom-left{content:"' + lgpd + '";font:7pt Arial;color:#64748b;width:70%;vertical-align:top;padding-top:3mm}} body.anona-imprimindo .pr-rodape{display:none !important}' : '');
     document.head.appendChild(st);
     tituloOriginal = document.title; document.title = 'Anona - ' + opts.titulo;     // vira o nome sugerido ao "Salvar como PDF"
     document.body.classList.add('anona-imprimindo'); ativo = true;
@@ -1873,6 +1878,19 @@ window.AnonaImpressao = (function () {
     return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
   }
 
+  // Cor da guia de cada técnico/equipe: a MESMA em todas as planilhas (organizada, filtrada...). A planilha filtrada tentava ler
+  // a cor da planilha original, mas a biblioteca não devolve esse dado — todas as guias saíam azuis.
+  const CORES_ABAS_TECNICO = {
+    'Resumo do território': '0B2F7A',
+    'Fernanda Gomes': '159947',
+    'Cléo Sousa': '7C3AED',
+    'Bárbara Parente': 'DB2777',
+    'Susy Andrade': 'D97706',
+    'Paloma de Assis': '0891B2',
+    'Rafaela Garcia': '4F46E5',
+    'Território Volante': '65A30D'
+  };
+
   async function makeCrasFormattedWorkbook(base64) {
     const source = XLSX.read(bytesFromBase64(base64), {type:'array'});
     const mapaBairros = {
@@ -2043,16 +2061,7 @@ window.AnonaImpressao = (function () {
       ...estiloCelula,
       fill: { patternType: 'solid', fgColor: { rgb: 'F3F6FA' } }
     };
-    const coresAbas = {
-      'Resumo do território': '0B2F7A',
-      'Fernanda Gomes': '159947',
-      'Cléo Sousa': '7C3AED',
-      'Bárbara Parente': 'DB2777',
-      'Susy Andrade': 'D97706',
-      'Paloma de Assis': '0891B2',
-      'Rafaela Garcia': '4F46E5',
-      'Território Volante': '65A30D'
-    };
+    const coresAbas = CORES_ABAS_TECNICO;
     const coresResumo = {
       'Fernanda Gomes': 'E8F5E9',
       'Cléo Sousa': 'F3E8FF',
@@ -2071,7 +2080,6 @@ window.AnonaImpressao = (function () {
       ws['!tabColor'] = { rgb: corAba };
       ws['!rows'] = [];
       for (let r = range.s.r; r <= range.e.r; r++) {
-        ws['!rows'][r] = { hpt: r === range.s.r ? 46 : 36 };
         for (let c = range.s.c; c <= range.e.c; c++) {
           // linhas de "INFORMAÇÕES": só a coluna A existe (as vazias ao lado impediriam o texto de se estender)
           if (name === 'Resumo do território' && r > linhaInfoTitulo && c > 0) continue;
@@ -2098,18 +2106,14 @@ window.AnonaImpressao = (function () {
       if (name !== 'Resumo do território') ws['!autofilter'] = { ref: ws['!ref'] };
       ws['!freeze'] = { xSplit: 0, ySplit: 1 };
       ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 };
-      ws['!cols'] = [];
-      for (let c = range.s.c; c <= range.e.c; c++) {
-        let max = 12;
-        // No resumo, as linhas de "INFORMAÇÕES" são texto corrido (não contam para a largura da coluna A).
-        for (let r = range.s.r; r <= (name === 'Resumo do território' ? Math.min(range.e.r, linhaInfoTitulo - 1) : range.e.r); r++) {
-          const cell = ws[XLSX.utils.encode_cell({r,c})];
-          const value = cell && cell.v != null ? String(cell.v) : '';
-          max = Math.max(max, value.length);
-        }
-        const headerValue = String(ws[XLSX.utils.encode_cell({r: range.s.r, c})]?.v || '').toLowerCase();
-        const isLongText = /endereço|nome|motivo|tipo|referência|bairros agrupados|informações/.test(headerValue);
-        ws['!cols'][c] = { wch: Math.min(max + 4, isLongText ? 90 : 38) };
+      // Larguras e alturas pelo conteúdo real (antes: altura fixa de 36 pt cortava endereços de 3 linhas e a largura
+      // por "nº de caracteres + 4" deixava as colunas estreitas demais para Arial 12; a folha impressa saía ilegível).
+      // No resumo, as linhas de "INFORMAÇÕES" são texto corrido e não entram na medida das colunas.
+      AnonaTabelas.ajustarMedidas(ws, { sz: 12, larguraMax: name === 'Resumo do território' ? 60 : 40, altMin: 30, altCab: 46, ate: name === 'Resumo do território' ? linhaInfoTitulo - 1 : undefined, altTexto: 22 });
+      if (name === 'Resumo do território') {
+        ws['!cols'][0].wch = Math.max(ws['!cols'][0].wch, 28);           // cabe "INFORMAÇÕES DO RELATÓRIO" numa linha
+        ws['!cols'][2].wch = Math.min(60, Math.max(ws['!cols'][2].wch, 30));
+        ws['!rows'][linhaInfoTitulo] = { hpt: 26 };
       }
       ws['!margins'] = { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 };
     });
@@ -2269,7 +2273,11 @@ window.AnonaImpressao = (function () {
     XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(summary), safeSheetName('Resumo da divisão', used));
     profissionais.forEach(p => {
       const rows = [header, ...p.rows];
-      p.sheetName = safeSheetName(`${p.nome} - ${p.formacao}`, used);
+      // Nome da aba tem no máximo 31 caracteres: "Keomara Teles - Assistente Social" saía cortado ("...Assistente Soci").
+      // Quando não cabe, abrevia a formação (relatorioIndividualSepararNomeFormacao sabe desfazer a abreviação).
+      let nomeAba = `${p.nome} - ${p.formacao}`;
+      if (nomeAba.length > 31) nomeAba = `${p.nome} - ${p.formacao.replace(/Assistente Social/i, 'Assist. Social')}`;
+      p.sheetName = safeSheetName(nomeAba, used);
       XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(rows), p.sheetName);
     });
 
@@ -2292,7 +2300,7 @@ window.AnonaImpressao = (function () {
     }
     out.SheetNames.forEach(name => {
       const ehResumo = name === 'Resumo da divisão';
-      AnonaTabelas.estilizar(out.Sheets[name], { cor: corPorAba(name), colunaNome: ehResumo ? -1 : nameIdx, tamFonte: 12, altCab: 50, altLinha: 34, larguraMax: 42, filtro: !ehResumo, congelar: !ehResumo });
+      AnonaTabelas.estilizar(out.Sheets[name], { cor: corPorAba(name), colunaNome: ehResumo ? -1 : nameIdx, tamFonte: 12, altCab: 50, altLinha: 30, larguraMax: ehResumo ? 40 : 38, filtro: !ehResumo, congelar: !ehResumo, centralizar: ehResumo ? [2, 3] : [], totalUltimaLinha: ehResumo });
     });
     out.Workbook = out.Workbook || {};
     out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
@@ -2617,7 +2625,7 @@ window.AnonaImpressao = (function () {
     tecnicosOrdenados.forEach((t, i) => { wsRes[XLSX.utils.encode_cell({ r: 6 + i, c: 1 })] = contar(abasTecnico.get(t), porTecnico.get(t).length); });
     out.SheetNames.forEach(name => {
       const ws = out.Sheets[name], resumo = name === 'Resumo';
-      AnonaTabelas.estilizar(ws, { cor: corPorAba(name), tamFonte: 11, altCab: 46, altLinha: 30, larguraMax: 42, filtro: !resumo, congelar: !resumo, semCabecalho: resumo });
+      AnonaTabelas.estilizar(ws, { cor: corPorAba(name), tamFonte: 11, altCab: 46, altLinha: 26, larguraMax: 40, filtro: !resumo, congelar: !resumo, semCabecalho: resumo, centralizar: resumo ? [] : [7, 10] });
     });
     out.Workbook = out.Workbook || {};
     out.Workbook.Sheets = out.SheetNames.map(name => ({ name, Hidden:0, TabColor:{rgb:corPorAba(name)} }));
@@ -2879,6 +2887,7 @@ window.AnonaImpressao = (function () {
     const nome = partes[0].trim();
     let formacao = partes.length > 1 ? partes.slice(1).join(' - ').trim() : '';
     if (formacao) {
+      formacao = formacao.replace(/^assist\.?\s*social$/i, 'Assistente Social');     // abreviação usada quando o nome da aba passaria de 31 caracteres
       const f = normalizeText(formacao);
       const completa = RELATORIO_FORMACOES_CONHECIDAS.find(k => normalizeText(k) === f)
         || RELATORIO_FORMACOES_CONHECIDAS.find(k => f.length >= 3 && normalizeText(k).startsWith(f));
@@ -4758,7 +4767,7 @@ window.AnonaImpressao = (function () {
         const filtered = idx < 0 ? rows.slice(1) : rows.slice(1).filter(row => !selected.length || selected.includes(String(row[idx]).trim()));
         if (!filtered.length) return;
         const sheetName = safeSheetName(name, used);
-        coresPorAba[sheetName] = coresOriginais[name] || '0B2F7A';
+        coresPorAba[sheetName] = CORES_ABAS_TECNICO[name] || coresOriginais[name] || '0B2F7A';
         abasDados.push({ sheetName, aoa: [header, ...filtered] });
         const formacao = filtered[0] && filtered[0][2] || '';
         const bairroSet = idx < 0 ? [] : [...new Set(filtered.map(row => String(row[idx] || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'pt-BR'));
@@ -5623,7 +5632,7 @@ function imprimirMes(){
   const prazos = dadosAno.monthHighlights[monthIdx] || [];
   if (payday || prazos.length) {
     html += '<h2 class="pr-h">Prazos e datas do mês</h2><ul class="pr-lista">' + (payday ? '<li><b>Pagamento</b> — dia ' + payday + ' (NIS final ' + e(nis) + ')</li>' : '')
-      + prazos.map(p => '<li><b>' + e(p.type) + '</b> — ' + e(p.title) + (p.desc ? ': ' + e(p.desc) : '') + '</li>').join('') + '</ul>';
+      + prazos.map(p => '<li><b>' + e(({ saude: 'Saúde', edu: 'Educação', sicon: 'SICON', interrupt: 'Interrupção temporária' })[p.type] || p.type) + '</b> — ' + e(p.title) + (p.desc ? ': ' + e(p.desc) : '') + '</li>').join('') + '</ul>';
   }
   if (chavesNota.length) html += '<h2 class="pr-h">Anotações do mês</h2>' + __prNotasHtml(chavesNota, notes, false);
   window.AnonaImpressao.imprimir({ titulo: 'Calendário — ' + titulo, subtitulo: 'Anona · calendário, prazos e anotações de ' + titulo, html, orientacao: 'landscape' });
@@ -6278,7 +6287,9 @@ function cfImprimir(){
   if (__cfResumo) html += '<h2 class="pr-h">Resultado</h2><pre class="pr-pre">' + e(__cfResumo) + '</pre>';
   if (temPanorama) {
     const m = T.panoramaParaMatriz(c.d.res, { unidade: cfUn().aulas ? 'aulas' : 'dias', nomesMes: CF_MESES, repercussao: c.repercussao, dias: c.dias }, c.d.lim);
-    html += '<h2 class="pr-h">Panorama do ano — mês a mês</h2>' + T.tabelaImpressao(m, { ultimaLinhaTotal: !!c.d.res.totais.geral, colunasNumero: [1, 2, 3, 4, 5, 6, 7] })
+    html += '<h2 class="pr-h">Panorama do ano — mês a mês</h2>' + T.tabelaImpressao(m, { ultimaLinhaTotal: !!c.d.res.totais.geral, colunasNumero: [1, 2, 3, 4, 5, 6, 7],
+      // situação em cor (não só texto: continua legível em impressão preto e branco) e folga negativa em vermelho
+      classeCelula: (v, i) => i === 8 ? (/baixa|conferir/i.test(v) ? 'bad' : (/regular/i.test(v) ? 'ok' : '')) : (i === 7 && Number(v) < 0 ? 'bad' : '') })
       + '<p class="pr-peq">Folga = quantas faltas ainda cabem no mês sem baixa frequência (negativo = faltas além do limite). A linha de total é informativa: o Sistema Presença avalia cada mês separadamente.</p>';
   }
   html += '<p class="pr-peq">Estimativa para orientação, pelo método do Sistema Presença: vale sempre o registro oficial da escola.</p>';
