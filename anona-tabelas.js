@@ -134,7 +134,9 @@
     };
     const [cab, ...corpo] = aoa;
     const total = opts.ultimaLinhaTotal && corpo.length ? corpo.pop() : null;
-    return '<table class="pr-tab"><thead><tr>' + cab.map((v, i) => cel('th', v, i)).join('') + '</tr></thead><tbody>'
+    // muitas colunas: letra menor para a tabela caber na largura da folha em vez de espremer/cortar
+    const tam = cab.length >= 11 ? ' mini' : (cab.length >= 8 ? ' peq' : '');
+    return '<table class="pr-tab' + tam + '"><thead><tr>' + cab.map((v, i) => cel('th', v, i)).join('') + '</tr></thead><tbody>'
       + corpo.map(l => '<tr>' + l.map((v, i) => cel('td', v, i, l)).join('') + '</tr>').join('') + '</tbody>'
       + (total ? '<tfoot><tr>' + total.map((v, i) => cel('td', v, i, total)).join('') + '</tr></tfoot>' : '') + '</table>';
   }
@@ -260,6 +262,27 @@
     return ws;
   }
 
+  // Cores do "Efeito" da repercussão (as mesmas do PDF do Relatório Individual): a coluna é achada pelo título
+  // ("Efeito", "Efeito atual"...) e cada célula é pintada pelo valor. Valor desconhecido fica como está.
+  const CORES_EFEITO = { alerta: ['FFF6DA', '6B4E00'], bloqueio: ['FBE7E6', 'B3261E'], suspensao: ['E7ECFB', '0B2F7A'], cancelamento: ['E2E8F0', '334155'] };
+  const chaveEfeito = v => String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+  function destacarEfeitos(ws, range, opts) {
+    if (opts.semCabecalho || opts.destacarEfeitos === false) return;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const h = ws[endereco(range.s.r, c)];
+      if (!h || !/^efeito/.test(chaveEfeito(h.v))) continue;
+      for (let r = range.s.r + 1; r <= range.e.r; r++) {
+        const cel = ws[endereco(r, c)]; if (!cel || cel.t === 'n') continue;
+        const cor = CORES_EFEITO[chaveEfeito(cel.v)]; if (!cor) continue;
+        cel.s = Object.assign({}, cel.s, {
+          font: Object.assign({}, cel.s && cel.s.font, { bold: true, color: { rgb: cor[1] } }),
+          fill: { patternType: 'solid', fgColor: { rgb: cor[0] } },
+          alignment: Object.assign({}, cel.s && cel.s.alignment, { horizontal: 'center' })
+        });
+      }
+    }
+  }
+
   function estilizar(ws, opts) {
     opts = opts || {};
     const cor = opts.cor || '0B2F7A', sz = opts.tamFonte || 11, fmt = opts.formatos || {};
@@ -294,6 +317,7 @@
         if (fmt[c] && numero) ws[a].z = fmt[c];
       }
     }
+    destacarEfeitos(ws, range, opts);
     ajustarMedidas(ws, { sz, larguraMax: opts.larguraMax || 42, larguraMin: opts.larguraMin, altMin: opts.altLinha || 24, altCab: opts.altCab || 40, semCabecalho: opts.semCabecalho });
     if (opts.filtro !== false) ws['!autofilter'] = { ref: ws['!ref'] };
     if (opts.congelar !== false) ws['!freeze'] = { xSplit: 0, ySplit: 1 };
@@ -517,7 +541,7 @@
   root.AnonaTabelas = {
     lerInteiro, minPresencas, avaliar, panorama, fmtPct,
     csv, tabelaHTML, tabelaImpressao, textoParaPdf, tsv, copiarTabela,
-    estilizar, ajustarMedidas, alturaTexto, linhasDoTexto, larguraTexto, fmtNum, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, escreverPolido, polirXlsx, bytesParaBase64, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
+    estilizar, destacarEfeitos, ajustarMedidas, alturaTexto, linhasDoTexto, larguraTexto, fmtNum, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, escreverPolido, polirXlsx, bytesParaBase64, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
     panoramaWorkbook, panoramaParaMatriz
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.AnonaTabelas;
