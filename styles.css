@@ -909,6 +909,7 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
   .pr-tab tr{ break-inside:avoid; }
   .pr-tab tbody tr:nth-child(even){ background:#EEF3FB; }
   .pr-tab .n{ text-align:right; }
+  .pr-tab td.bad{ color:#B91C1C; font-weight:700; } .pr-tab td.ok{ color:#047857; font-weight:700; }
   .pr-tab tfoot td{ font-weight:700; background:#E8F5EC; border-top:2px solid #0B2F7A; }
 
   /* calendário do mês */
