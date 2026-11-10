@@ -666,6 +666,12 @@
           </div>
           <p class="tv-hint mb-2">Envie a tabela de condicionalidades <strong>só do Território Volante</strong>. O app ordena as famílias de A a Z e divide em três partes iguais.</p>
 
+          <label class="flex items-start gap-2 mb-2 text-[11px] text-slate-600 cursor-pointer">
+            <input type="checkbox" id="volanteGerarPdfsAuto" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)" onchange="try{localStorage.setItem('anonaVolantePdfsAuto', this.checked ? '1' : '0')}catch(e){}">
+            <span><b>Já gerar os PDFs dos três técnicos</b> logo depois de dividir (um passo só: envia a tabela e baixa a planilha + os relatórios).</span>
+          </label>
+          <script>try{document.getElementById('volanteGerarPdfsAuto').checked = localStorage.getItem('anonaVolantePdfsAuto') === '1';}catch(e){}</script>
+
           <label class="tv-drop ">
             <i data-lucide="upload" class="w-4 h-4"></i> <span id="volanteLabelTexto">Enviar tabela (.xlsx)</span>
             <input type="file" id="volanteInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
@@ -1524,7 +1530,10 @@ window.AnonaImpressao = (function () {
     document.head.appendChild(st);
     tituloOriginal = document.title; document.title = 'Anona - ' + opts.titulo;     // vira o nome sugerido ao "Salvar como PDF"
     document.body.classList.add('anona-imprimindo'); ativo = true;
-    setTimeout(() => { try { window.print(); } catch (e) { limpar(); } }, 80);
+    // Espera as fontes da página (e no máximo 1,5 s) antes de abrir a impressão: sem isso a 1ª impressão podia sair
+    // com a fonte reserva e quebras de página diferentes das da pré-visualização.
+    const fontes = (document.fonts && document.fonts.ready) ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]) : Promise.resolve();
+    fontes.catch(() => {}).then(() => setTimeout(() => { if (!ativo) return; try { window.print(); } catch (e) { limpar(); } }, 80));
   }
   window.addEventListener('afterprint', limpar);
   // Ctrl+P "puro" (sem passar pelos botões Imprimir) nunca deve imprimir uma folha antiga que ficou para trás.
@@ -2462,6 +2471,11 @@ window.AnonaImpressao = (function () {
       if (avisoVolante) avisoVolante.textContent = 'Pronto: gera um PDF de Relatório de Repercussão Individual para cada um dos três, com base na divisão que acabou de ser baixada.';
       input.value = '';
       alert(`Divisão gerada e baixada com sucesso: ${nomeArquivo}`);
+      // Opcional (lembrado neste aparelho): já gera os PDFs dos três técnicos, sem outro clique.
+      const auto = document.getElementById('volanteGerarPdfsAuto');
+      if (auto && auto.checked && typeof window.gerarRelatoriosVolanteIndividuaisUI === 'function') {
+        try { await window.gerarRelatoriosVolanteIndividuaisUI(); } catch (e2) { console.error(e2); }
+      }
     } catch (e) {
       console.error(e);
       alert('Não consegui dividir esta tabela. Confirme se a primeira linha tem os títulos das colunas e se há famílias nas linhas seguintes.');
@@ -3389,6 +3403,29 @@ window.AnonaImpressao = (function () {
       });
     }
 
+    // Apoio para agrupar por família: colunas que descrevem a FAMÍLIA (responsável/endereço) só aparecem na
+    // 1ª linha dela; as demais linhas são só os integrantes. Isso tira a repetição, deixa a tabela mais limpa
+    // e permite fonte maior. (Sem a coluna "Família" não dá para saber quem é quem: mantém tudo em cada linha.)
+    const CHAVES_COLUNA_FAMILIA = ['nis do responsavel familiar', 'cpf do responsavel', 'nome do responsavel familiar', 'endereco', 'bairro', 'referencia do endereco'];
+    const colunaDaFamilia = headers.map(h => CHAVES_COLUNA_FAMILIA.indexOf(relatorioIndividualChaveColuna(h)) >= 0);
+    const primeiraDaFamilia = linhasRota.map((l, k) => idxFamilia < 0 || k === 0
+      || l.row[idxFamilia] !== linhasRota[k-1].row[idxFamilia] || l.bloco !== linhasRota[k-1].bloco);
+    const linhaExibida = (k, forcarCompleta) => (primeiraDaFamilia[k] || forcarCompleta)
+      ? linhasRota[k].row : linhasRota[k].row.map((v, i) => colunaDaFamilia[i] ? '' : v);
+    // famílias distintas por bloco e por efeito (quadro da capa e faixa de cada bloco)
+    const famPorBloco = blocoLabels.map(() => new Set());
+    const efeitoPorBloco = blocoLabels.map(() => ({}));
+    linhasRota.forEach((l, k) => {
+      const chave = idxFamilia >= 0 ? String(l.row[idxFamilia]) : 'linha' + k;
+      famPorBloco[l.bloco].add(chave);
+      const v = idxEfeito >= 0 ? String(l.row[idxEfeito] || '').trim() : '';
+      if (!v) return;
+      const m = efeitoPorBloco[l.bloco];
+      if (!m[v]) m[v] = new Set();
+      m[v].add(chave);
+    });
+    const blocoPagina = blocoLabels.map(() => 0);
+
     const docPdf = new jsPDF({ unit:'pt', format:'a3', orientation:'landscape' });
     window.AnonaPDF.metadados(docPdf,
       `Relatório de Repercussão Individual${(tecnicoInfo && tecnicoInfo.nome) ? ' — ' + tecnicoInfo.nome : ''} — ${mesTexto}`,
@@ -3495,31 +3532,93 @@ window.AnonaImpressao = (function () {
       y = chartTop + chartH + 42;
     }
 
-    // ---------- resumo da rota de visita ----------
+    // ---------- resumo da rota de visita (sumário com página de cada bloco) + quadro por bloco e efeito ----------
+    const yFaixaCapa = y;
     docPdf.setFont('helvetica','bold'); docPdf.setFontSize(13); docPdf.setTextColor(...azul);
     docPdf.text(usouIA ? 'Rota sugerida para as visitas (otimizada com IA · Gemini)' : 'Rota sugerida para as visitas', margin, y);
     y += 18;
     docPdf.setFont('helvetica','normal'); docPdf.setFontSize(9.5); docPdf.setTextColor(...slate);
     docPdf.text(`Partida: ${ROTA_PARTIDA}`, margin, y);
     y += 16;
+    const sumarioY = {};
+    const LARG_SUMARIO = 560;
     blocoLabels.forEach((label, bi) => {
       if (!blocoContagem[bi]) return;   // não lista bloco sem nenhum registro (ex.: "Outros bairros — 0")
       docPdf.setFillColor(...azul);
       docPdf.circle(margin+4, y-3, 4, 'F');
       docPdf.setFont('helvetica','bold'); docPdf.setFontSize(9.5); docPdf.setTextColor(...azulDeep);
-      docPdf.text(`${label} — ${blocoContagem[bi]} registro${blocoContagem[bi]===1?'':'s'}`, margin+14, y);
+      const nFam = famPorBloco[bi].size;
+      docPdf.text(`${label} — ${idxFamilia >= 0 ? nFam + ' família' + (nFam===1?'':'s') + ' · ' : ''}${blocoContagem[bi]} registro${blocoContagem[bi]===1?'':'s'}`, margin+14, y);
+      sumarioY[bi] = { y, txt: `${label} — ${idxFamilia >= 0 ? nFam + ' família' + (nFam===1?'':'s') + ' · ' : ''}${blocoContagem[bi]} registro${blocoContagem[bi]===1?'':'s'}` };      // o número da página é escrito depois, quando se sabe onde cada bloco caiu
       y += 15;
     });
-    y += 9;
+    y += 6;
+    // quadro: famílias por bloco x efeito (à direita do sumário)
+    if (labelsEf.length && idxEfeito >= 0) {
+      const qx = margin + LARG_SUMARIO + 70, qw = pageW - margin - qx;
+      const colsQ = ['Bloco', ...labelsEf, 'Total'];
+      const wPrimeira = Math.min(110, qw * 0.3), wOutra = (qw - wPrimeira) / (colsQ.length - 1);
+      let qy = yFaixaCapa - 10;
+      docPdf.setFont('helvetica','bold'); docPdf.setFontSize(11); docPdf.setTextColor(...azul);
+      docPdf.text(idxFamilia >= 0 ? 'Famílias por bloco e efeito' : 'Registros por bloco e efeito', qx, qy);
+      qy += 8;
+      docPdf.setFillColor(...azulDeep); docPdf.rect(qx, qy, qw, 18, 'F');
+      docPdf.setTextColor(255,255,255); docPdf.setFontSize(8.5);
+      colsQ.forEach((c, ci) => {
+        if (ci === 0) docPdf.text(c, qx + 5, qy + 12);
+        else docPdf.text(String(c), qx + wPrimeira + wOutra * (ci - 1) + wOutra / 2, qy + 12, { align:'center' });
+      });
+      qy += 18;
+      const totaisEf = labelsEf.map(() => 0); let totalGeral = 0, zq = 0;
+      blocoLabels.forEach((label, bi) => {
+        if (!blocoContagem[bi]) return;
+        docPdf.setFillColor(...(zq++ % 2 ? zebra : [255,255,255])); docPdf.rect(qx, qy, qw, 17, 'F');
+        docPdf.setFont('helvetica','bold'); docPdf.setFontSize(8.5); docPdf.setTextColor(...azulDeep);
+        const curto = bi < ROTA_BLOCOS_DEF.length ? 'Bloco ' + (bi + 1) : 'Outros bairros';
+        docPdf.text(curto, qx + 5, qy + 11.5);
+        let somaLinha = 0;
+        labelsEf.forEach((ef, ei) => {
+          const n = efeitoPorBloco[bi][ef] ? efeitoPorBloco[bi][ef].size : 0;
+          somaLinha += n; totaisEf[ei] += n;
+          docPdf.setFont('helvetica', n ? 'bold' : 'normal'); docPdf.setTextColor(...(n ? azulDeep : [148,163,184]));
+          docPdf.text(String(n), qx + wPrimeira + wOutra * ei + wOutra / 2, qy + 11.5, { align:'center' });
+        });
+        totalGeral += somaLinha;
+        docPdf.setFont('helvetica','bold'); docPdf.setTextColor(...azulDeep);
+        docPdf.text(String(somaLinha), qx + wPrimeira + wOutra * labelsEf.length + wOutra / 2, qy + 11.5, { align:'center' });
+        qy += 17;
+      });
+      docPdf.setFillColor(...amarelo); docPdf.rect(qx, qy, qw, 18, 'F');
+      docPdf.setFont('helvetica','bold'); docPdf.setFontSize(8.5); docPdf.setTextColor(...azulDeep);
+      docPdf.text('Total', qx + 5, qy + 12);
+      totaisEf.forEach((n, ei) => docPdf.text(String(n), qx + wPrimeira + wOutra * ei + wOutra / 2, qy + 12, { align:'center' }));
+      docPdf.text(String(totalGeral), qx + wPrimeira + wOutra * labelsEf.length + wOutra / 2, qy + 12, { align:'center' });
+      qy += 18;
+      y = Math.max(y, qy + 14);
+    }
 
+    // como ler o detalhamento
     docPdf.setFont('helvetica','bold'); docPdf.setFontSize(12); docPdf.setTextColor(...azul);
-    docPdf.text('Detalhamento por registro (próxima página)', margin, y);
+    docPdf.text('Como ler o detalhamento (a partir da próxima página)', margin, y);
+    y += 15;
+    docPdf.setFont('helvetica','normal'); docPdf.setFontSize(9.5); docPdf.setTextColor(...slate);
+    const notasLeitura = [];
+    if (idxFamilia >= 0) notasLeitura.push('Os dados da família (responsável, endereço, bairro) aparecem na primeira linha de cada família; as linhas seguintes, sem esses dados, são os demais integrantes. Se a família continuar na página seguinte, os dados são repetidos no topo dela.');
+    if (idxVisita >= 0) notasLeitura.push('A coluna "Visita" traz uma caixinha para marcar à mão durante a visita.');
+    notasLeitura.push('A ordem das famílias segue a rota sugerida acima; cada bloco começa em página própria.');
+    notasLeitura.forEach(t => {
+      const ls = docPdf.splitTextToSize('•  ' + t, pageW - margin * 2);
+      docPdf.text(ls, margin, y); y += ls.length * 12 + 3;
+    });
 
     // ---------- páginas da tabela ----------
     const usableWidth = pageW - margin*2;
-    let fontData = 6.6, fontHeader = 6.8, lineH = 7.8;
+    // Fonte de partida maior (antes 6,6 pt): numa folha A3 impressa em A4 (escala ~70%) ela ficava ilegível.
+    // O ajuste abaixo só reduz quando as colunas realmente não cabem.
+    const FONT_INICIAL = 8.4;
+    let fontData = FONT_INICIAL, fontHeader = FONT_INICIAL + 0.2, lineH = FONT_INICIAL * 1.18;
     const FONT_DATA_MIN = 5.0; // nunca deixa a fonte da tabela ficar menor que isso
-    const cellPad = 3.5, minRowH = 14, minColW = 26;
+    const cellPad = 3.5, minRowH = 15, minColW = 26;
     // Respiro extra reservado ENTRE colunas (além do cellPad de cada lado),
     // para garantir uma folga visível de verdade entre o fim do texto de
     // uma coluna e o começo da próxima — mesmo na linha com o valor mais
@@ -3636,8 +3735,8 @@ window.AnonaImpressao = (function () {
     }
     // fonte do cabeçalho e altura de linha acompanham a redução, mantendo a
     // mesma proporção que tinham no tamanho original
-    fontHeader = Math.max(fontData + 0.2, +(fontHeader - (6.6 - fontData)).toFixed(2));
-    lineH = Math.max(6.6, +(lineH - (6.6 - fontData)).toFixed(2));
+    fontHeader = Math.max(fontData + 0.2, +(fontHeader - (FONT_INICIAL - fontData)).toFixed(2));
+    lineH = Math.max(6.6, +(fontData * 1.18).toFixed(2));
 
     const colWidths = distribuirLargura(weights, minWordWidths, usableWidth);
     const colX = []; let acc = margin; colWidths.forEach(w => { colX.push(acc); acc += w; });
@@ -3685,8 +3784,9 @@ window.AnonaImpressao = (function () {
       docPdf.rect(margin, yStart, usableWidth, rowH, 'S');
       docPdf.setLineWidth(0.4);
       docPdf.setFont('helvetica','bold'); docPdf.setFontSize(11); docPdf.setTextColor(...azulDeep);
-      const qtd = blocoContagem[blocoIdx];
-      docPdf.text(`${blocoLabels[blocoIdx]} — ${qtd} registro${qtd===1?'':'s'}`, margin+cellPad+3, yStart+rowH/2+3.8);
+      const qtd = blocoContagem[blocoIdx], nFam = famPorBloco[blocoIdx].size;
+      docPdf.text(`${blocoLabels[blocoIdx]} — ${idxFamilia >= 0 ? nFam + ' família' + (nFam===1?'':'s') + ' · ' : ''}${qtd} registro${qtd===1?'':'s'}`, margin+cellPad+3, yStart+rowH/2+3.8);
+      if (!blocoPagina[blocoIdx]) blocoPagina[blocoIdx] = docPdf.internal.getNumberOfPages();
       return yStart + rowH + 6;
     }
 
@@ -3712,7 +3812,7 @@ window.AnonaImpressao = (function () {
       for (let k = linhasRota.length - 1; k >= 0; k--) {
         const igualProx = k + 1 < linhasRota.length && linhasRota[k+1].row[idxFamilia] === linhasRota[k].row[idxFamilia]
           && linhasRota[k+1].bloco === linhasRota[k].bloco;
-        alturaFamiliaAPartir[k] = alturaLinha(linhasRota[k].row) + (igualProx ? alturaFamiliaAPartir[k+1] : 0);
+        alturaFamiliaAPartir[k] = alturaLinha(linhaExibida(k)) + (igualProx ? alturaFamiliaAPartir[k+1] : 0);
       }
     }
 
@@ -3720,10 +3820,9 @@ window.AnonaImpressao = (function () {
       if (k > 0 && (idxFamilia < 0 || l.row[idxFamilia] !== linhasRota[k-1].row[idxFamilia])) z++;
       zebraIdx.push(z);
     }); }
-    linhasRota.forEach(({row, bloco}, rIdx) => {
-      docPdf.setFont('helvetica','normal'); docPdf.setFontSize(fontData);
-      const efeitoVal = idxEfeito >= 0 ? String(row[idxEfeito] || '').trim() : '';
-      const badge = badgeCores[chaveEfeito(efeitoVal)];
+    let inicioDePagina = true;      // 1ª linha logo abaixo do cabeçalho: repete os dados da família (a família pode ter vindo da página anterior)
+    const medirLinha = row => {
+      docPdf.setFontSize(fontData);
       const linesPerCol = headers.map((h,i) => {
         const bold = i === idxNome || i === idxFamilia;
         docPdf.setFont('helvetica', bold ? 'bold' : 'normal');
@@ -3731,7 +3830,11 @@ window.AnonaImpressao = (function () {
         return docPdf.splitTextToSize(String(row[i] ?? ''), larguraTexto).map(l => truncarLinha(l, larguraTexto));
       });
       const maxLines = Math.max(1, ...linesPerCol.map(l => l.length));
-      const rowH = Math.max(minRowH, maxLines*lineH + cellPad*2);
+      return { linesPerCol, rowH: Math.max(minRowH, maxLines*lineH + cellPad*2) };
+    };
+    linhasRota.forEach(({bloco}, rIdx) => {
+      let row = linhaExibida(rIdx, inicioDePagina);
+      let { linesPerCol, rowH } = medirLinha(row);
       const precisaFaixa = bloco !== blocoAtualDesenhado;
       const primeiroBlocoDaTabela = blocoAtualDesenhado === -1;
 
@@ -3742,6 +3845,7 @@ window.AnonaImpressao = (function () {
         docPdf.addPage();
         drawTopBar();
         ty = drawTableHeader(66);
+        inicioDePagina = true;
       } else if (ty + (precisaFaixa ? 33 : 0) + rowH > pageH - 40
         || (idxFamilia >= 0 && rIdx > 0 && linhasRota[rIdx-1].row[idxFamilia] !== row[idxFamilia]
             && ty + alturaFamiliaAPartir[rIdx] > pageH - 40 && alturaFamiliaAPartir[rIdx] < pageH - 66 - 60)) {
@@ -3755,7 +3859,15 @@ window.AnonaImpressao = (function () {
         docPdf.setFont('helvetica','bolditalic'); docPdf.setFontSize(8); docPdf.setTextColor(...amareloText);
         docPdf.text(`${blocoLabels[bloco]} (continuação)`, margin + cellPad, ty + 9);
         ty += 13;
+        inicioDePagina = true;
       }
+      // Linha que abre uma página (família que veio da anterior): mostra os dados completos da família de novo.
+      if (inicioDePagina && !primeiraDaFamilia[rIdx]) {
+        row = linhaExibida(rIdx, true);
+        ({ linesPerCol, rowH } = medirLinha(row));
+      }
+      const efeitoVal = idxEfeito >= 0 ? String(row[idxEfeito] || '').trim() : '';
+      const badge = badgeCores[chaveEfeito(efeitoVal)];
 
       if (precisaFaixa) {
         ty = drawBlocoFaixa(ty, bloco);
@@ -3782,8 +3894,14 @@ window.AnonaImpressao = (function () {
       }
       docPdf.setDrawColor(217,224,240);
       docPdf.rect(margin, ty, usableWidth, rowH, 'S');
+      if (primeiraDaFamilia[rIdx] && idxFamilia >= 0) {
+        // linha mais forte separando uma família da outra (dentro da família as linhas continuam leves)
+        docPdf.setDrawColor(100,116,139); docPdf.setLineWidth(0.9);
+        docPdf.line(margin, ty, margin + usableWidth, ty);
+        docPdf.setLineWidth(0.4);
+      }
 
-      if (idxVisita >= 0 && (rIdx === 0 || linhasRota[rIdx-1].row[idxFamilia] !== row[idxFamilia] || linhasRota[rIdx-1].bloco !== bloco)) {
+      if (idxVisita >= 0 && primeiraDaFamilia[rIdx]) {
         // caixinha para marcar à mão (só na 1ª linha de cada família)
         docPdf.setDrawColor(...azulDeep); docPdf.setLineWidth(0.9);
         docPdf.rect(colX[idxVisita] + colWidths[idxVisita]/2 - 4.5, ty + 2.5, 9, 9, 'S');
@@ -3802,7 +3920,27 @@ window.AnonaImpressao = (function () {
         }
       });
       ty += rowH;
+      inicioDePagina = false;
     });
+
+    // Sumário da capa: agora que se sabe em que página cada bloco caiu, escreve o número (e um link clicável).
+    try {
+      docPdf.setPage(1);
+      Object.keys(sumarioY).forEach(bi => {
+        const pg = blocoPagina[bi]; if (!pg) return;
+        const { y: yy, txt } = sumarioY[bi];
+        docPdf.setFont('helvetica','bold'); docPdf.setFontSize(9.5);
+        const xFim = margin + 14 + docPdf.getTextWidth(txt) + 6, xPag = margin + LARG_SUMARIO;
+        if (xPag - xFim > 20) {
+          docPdf.setDrawColor(148,163,184); docPdf.setLineWidth(0.6); docPdf.setLineDashPattern([0.6, 2.4], 0);
+          docPdf.line(xFim, yy - 1.5, xPag - 40, yy - 1.5);
+          docPdf.setLineDashPattern([], 0); docPdf.setLineWidth(0.4);
+        }
+        docPdf.setFont('helvetica','normal'); docPdf.setTextColor(...slate);
+        docPdf.text('pág. ' + pg, xPag, yy, { align:'right' });
+        try { docPdf.link(margin, yy - 10, LARG_SUMARIO, 14, { pageNumber: pg }); } catch (e) {}
+      });
+    } catch (e) { console.warn('Não consegui escrever as páginas do sumário:', e); }
 
     window.AnonaPDF.rodape(docPdf, { margem: margin });
 
