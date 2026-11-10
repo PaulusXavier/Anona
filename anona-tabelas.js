@@ -70,7 +70,18 @@
 
   /* ───────────────────────── Texto / CSV / HTML ───────────────────────── */
 
-  const fmtPct = n => (Math.round(n * 10) / 10).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+  // Mesma regra do cfFmt() da tela: 1 casa decimal, MAS se o arredondamento "encostar" em 60, 75 ou 100 sem o valor real
+  // ter chegado lá (74,96% virando "75,0%" e, ao lado, "Baixa frequência"), mostra 2 casas sem arredondar para o limite.
+  // Antes a tela mostrava 74,96% e a impressão/CSV/cópia mostravam 75,0% para o mesmo mês.
+  function fmtNum(n) {
+    const r1 = Math.round(n * 10) / 10;
+    if (r1 !== n && (r1 === 60 || r1 === 75 || r1 === 100)) {
+      const t = n < r1 ? Math.floor(n * 100) / 100 : Math.ceil(n * 100) / 100;
+      return t.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+  const fmtPct = n => fmtNum(n) + '%';
 
   // CSV que o Excel brasileiro abre direto: separador ";", vírgula decimal e BOM UTF-8 (acentos).
   function csv(aoa) {
@@ -115,12 +126,17 @@
   function tabelaImpressao(aoa, opts) {
     opts = opts || {};
     const num = opts.colunasNumero || [];
-    const cel = (tag, v, i) => '<' + tag + (num.indexOf(i) >= 0 ? ' class="n"' : '') + '>' + escHtml(v) + '</' + tag + '>';
+    // opts.classeCelula(valor, coluna, linha) -> classe extra (ex.: 'bad', 'ok'): destaca situação e valores negativos na folha.
+    const extra = (v, i, l) => { try { return opts.classeCelula ? (opts.classeCelula(v, i, l) || '') : ''; } catch (e) { return ''; } };
+    const cel = (tag, v, i, l) => {
+      const cls = ((num.indexOf(i) >= 0 ? 'n ' : '') + (tag === 'td' ? extra(v, i, l) : '')).trim();
+      return '<' + tag + (cls ? ' class="' + escHtml(cls) + '"' : '') + '>' + escHtml(v) + '</' + tag + '>';
+    };
     const [cab, ...corpo] = aoa;
     const total = opts.ultimaLinhaTotal && corpo.length ? corpo.pop() : null;
     return '<table class="pr-tab"><thead><tr>' + cab.map((v, i) => cel('th', v, i)).join('') + '</tr></thead><tbody>'
-      + corpo.map(l => '<tr>' + l.map((v, i) => cel('td', v, i)).join('') + '</tr>').join('') + '</tbody>'
-      + (total ? '<tfoot><tr>' + total.map((v, i) => cel('td', v, i)).join('') + '</tr></tfoot>' : '') + '</table>';
+      + corpo.map(l => '<tr>' + l.map((v, i) => cel('td', v, i, l)).join('') + '</tr>').join('') + '</tbody>'
+      + (total ? '<tfoot><tr>' + total.map((v, i) => cel('td', v, i, total)).join('') + '</tr></tfoot>' : '') + '</table>';
   }
   const tsv = aoa => aoa.map(l => l.map(v => String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
 
@@ -158,43 +174,132 @@
     const ws = root.XLSX.utils.aoa_to_sheet(aoa);
     return estilizar(ws, opts);
   }
+  /* ── Medidas pelo conteúdo real ──
+   * Antes a largura era "nº de caracteres + 4" e a altura da linha fixa (34/36 pt): em Arial 12 isso é ~20% estreito demais,
+   * então o texto quebrava em 3 linhas dentro de uma linha de 2 e saía CORTADO (endereço, nome do bairro), e a página
+   * impressa ficava ilegível de tão larga. Agora: largura por percentil do conteúdo (um endereço gigante não alarga a coluna
+   * inteira), nunca menor que a maior palavra (não quebra palavra no meio) e altura da linha = nº de linhas que o texto realmente ocupa. */
+  const PT_POR_UNIDADE = 5.25;                       // 1 unidade de largura de coluna do Excel ≈ 5,25 pt
+  function larguraTexto(txt, sz, negrito) {          // largura aproximada em pt (Arial)
+    let w = 0;
+    for (const ch of String(txt)) {
+      let f = 0.52;
+      if ('iljI.,;:\'!|() '.indexOf(ch) >= 0) f = 0.27;
+      else if ('mwMW@%'.indexOf(ch) >= 0) f = 0.82;
+      else if (ch >= 'A' && ch <= 'Z') f = 0.67;
+      else if (ch >= '0' && ch <= '9') f = 0.56;
+      w += f;
+    }
+    return w * sz * (negrito ? 1.07 : 1);
+  }
+  // nº de linhas que o texto ocupa numa coluna de `disponivel` pt (quebra em espaços; palavra maior que a coluna quebra em pedaços).
+  function linhasDoTexto(txt, disponivel, sz, negrito) {
+    const blocos = String(txt == null ? '' : txt).split(/\r?\n/);
+    let total = 0;
+    blocos.forEach(b => {
+      let atual = 0, n = 1;
+      const esp = larguraTexto(' ', sz, negrito);
+      b.split(/\s+/).filter(Boolean).forEach(p => {
+        let w = larguraTexto(p, sz, negrito);
+        if (w > disponivel) {                           // palavra maior que a coluna: ocupa várias linhas
+          const ocupa = Math.ceil(w / disponivel);
+          if (atual > 0) n++;
+          n += ocupa - 1; atual = w - (ocupa - 1) * disponivel; return;
+        }
+        if (atual === 0) atual = w;
+        else if (atual + esp + w <= disponivel) atual += esp + w;
+        else { n++; atual = w; }
+      });
+      total += n;
+    });
+    return Math.max(1, total);
+  }
+  const alturaParaLinhas = (n, sz) => Math.ceil(n * sz * 1.27 + 8);
+  // Altura (pt) de um texto corrido numa área de `larguraUnid` unidades de coluna (para células mescladas).
+  function alturaTexto(txt, larguraUnid, sz, negrito) {
+    return alturaParaLinhas(linhasDoTexto(txt, larguraUnid * PT_POR_UNIDADE - 8, sz, negrito), sz);
+  }
+  // Recalcula !cols e !rows de uma aba JÁ preenchida. opts: sz, larguraMin, larguraMax, altMin, altCab, cabecalho (linha de títulos; padrão: a 1ª),
+  // semCabecalho, ate (última linha considerada; as de baixo — textos corridos — ficam com altura simples), negrito (colunas em negrito).
+  function ajustarMedidas(ws, opts) {
+    opts = opts || {};
+    const X = root.XLSX, sz = opts.sz || 11, range = X.utils.decode_range(ws['!ref'] || 'A1');
+    const lMin = opts.larguraMin || 8, lMax = opts.larguraMax || 42, altMin = opts.altMin || 22, altCab = opts.altCab || 40;
+    const fim = opts.ate != null ? Math.min(opts.ate, range.e.r) : range.e.r;
+    const linhaCab = opts.semCabecalho ? -1 : (opts.cabecalho != null ? opts.cabecalho : range.s.r);
+    const texto = (r, c) => { const x = ws[endereco(r, c)]; if (!x || x.v == null || x.v === '') return ''; return (typeof x.v === 'number' && x.z && /%/.test(x.z)) ? '00,0%' : String(x.v); };
+    const negrito = c => opts.negrito != null && opts.negrito.indexOf(c) >= 0;
+    const cols = [];
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const larg = [];
+      let palavra = 0;
+      for (let r = range.s.r; r <= fim; r++) {
+        const t = texto(r, c); if (!t) continue;
+        const neg = r === linhaCab || negrito(c);
+        if (r !== linhaCab) larg.push(Math.max(...String(t).split(/\r?\n/).map(l => larguraTexto(l, sz, neg))));
+        // a maior PALAVRA nunca pode ser quebrada no meio (títulos de coluna incluídos)
+        String(t).split(/\s+/).forEach(p => { palavra = Math.max(palavra, larguraTexto(p, sz + (r === linhaCab ? 1 : 0), neg)); });
+      }
+      larg.sort((a, b) => a - b);
+      const tipico = larg.length ? larg[Math.min(larg.length - 1, Math.floor(larg.length * 0.85))] : 0;
+      const wch = Math.min(lMax, Math.max(lMin, Math.ceil((Math.max(tipico, palavra) + 12) / PT_POR_UNIDADE)));
+      cols[c] = { wch: Math.max(wch, Math.min(lMax, Math.ceil((palavra + 12) / PT_POR_UNIDADE))) };
+    }
+    ws['!cols'] = cols;
+    ws['!rows'] = ws['!rows'] || [];
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      if (r > fim) { ws['!rows'][r] = { hpt: opts.altTexto || 20 }; continue; }
+      let n = 1;
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const t = texto(r, c); if (!t) continue;
+        const disp = (cols[c].wch * PT_POR_UNIDADE) - 8;
+        n = Math.max(n, linhasDoTexto(t, disp, r === linhaCab ? sz + 1 : sz, r === linhaCab || negrito(c)));
+      }
+      ws['!rows'][r] = { hpt: Math.max(r === linhaCab ? altCab : altMin, alturaParaLinhas(n, sz)) };
+    }
+    return ws;
+  }
+
   function estilizar(ws, opts) {
     opts = opts || {};
     const cor = opts.cor || '0B2F7A', sz = opts.tamFonte || 11, fmt = opts.formatos || {};
     const range = root.XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const claro = clarear(cor, 0.90), base = clarear(cor, 0.96);
+    const centro = opts.centralizar || [], alinhar = opts.alinhar || {};
     const cab = {
       font: { name: 'Arial', sz: sz + 1, bold: true, color: { rgb: 'FFFFFF' } }, fill: { patternType: 'solid', fgColor: { rgb: cor } },
       alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
       border: { top: { style: 'thin', color: { rgb: cor } }, bottom: { style: 'medium', color: { rgb: cor } }, left: { style: 'thin', color: { rgb: cor } }, right: { style: 'thin', color: { rgb: cor } } }
     };
-    ws['!rows'] = [];
+    const rTotal = opts.totalUltimaLinha ? range.e.r : -1;
     for (let r = range.s.r; r <= range.e.r; r++) {
-      ws['!rows'][r] = { hpt: r === range.s.r && !opts.semCabecalho ? (opts.altCab || 40) : (opts.altLinha || 24) };
       for (let c = range.s.c; c <= range.e.c; c++) {
         const a = endereco(r, c);
         if (!ws[a]) ws[a] = { v: '', t: 's' };
         if (r === range.s.r && !opts.semCabecalho) { ws[a].s = cab; continue; }
-        const nome = c === opts.colunaNome, numero = ws[a].t === 'n' || ws[a].f;
-        ws[a].s = {
+        const nome = c === opts.colunaNome;
+        // Só é "número" (alinhado à direita) quando o valor é de fato numérico: antes TODA célula com fórmula ia para a direita,
+        // inclusive as que devolvem texto ("Frequência regular"), que ficavam coladas na coluna ao lado.
+        const numero = typeof ws[a].v === 'number';
+        const horizontal = alinhar[c] || (centro.indexOf(c) >= 0 ? 'center' : (numero ? 'right' : 'left'));
+        ws[a].s = r === rTotal ? {
+          font: { name: 'Arial', sz, bold: true, color: { rgb: '1F2937' } },
+          alignment: { vertical: 'center', wrapText: true, horizontal },
+          border: { top: { style: 'medium', color: { rgb: cor } }, bottom: BORDA, left: BORDA, right: BORDA }, fill: { patternType: 'solid', fgColor: { rgb: clarear(cor, 0.82) } }
+        } : {
           font: { name: 'Arial', sz, bold: nome, color: { rgb: nome ? '000000' : '1F2937' } },
-          alignment: { vertical: 'center', wrapText: true, horizontal: numero ? 'right' : 'left' },
+          alignment: { vertical: 'center', wrapText: true, horizontal },
           border: BORDAS, fill: { patternType: 'solid', fgColor: { rgb: r % 2 === 0 ? claro : base } }
         };
         if (fmt[c] && numero) ws[a].z = fmt[c];
       }
     }
-    ws['!cols'] = [];
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      let max = 10;
-      for (let r = range.s.r; r <= range.e.r; r++) { const x = ws[endereco(r, c)]; max = Math.max(max, x && x.v != null ? String(x.v).length : 0); }
-      ws['!cols'][c] = { wch: Math.min(max + 4, opts.larguraMax || 42) };
-    }
+    ajustarMedidas(ws, { sz, larguraMax: opts.larguraMax || 42, larguraMin: opts.larguraMin, altMin: opts.altLinha || 24, altCab: opts.altCab || 40, semCabecalho: opts.semCabecalho });
     if (opts.filtro !== false) ws['!autofilter'] = { ref: ws['!ref'] };
     if (opts.congelar !== false) ws['!freeze'] = { xSplit: 0, ySplit: 1 };
     ws['!tabColor'] = { rgb: cor };
     ws['!margins'] = { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 };
-    ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1, fitToHeight: 0 };
+    ws['!pageSetup'] = { orientation: opts.orientacao || 'landscape', fitToWidth: 1, fitToHeight: 0 };
     return ws;
   }
 
@@ -275,7 +380,7 @@
         }
         if (ps && !/<pageSetup\b/.test(xml)) {
           // paperSize 9 = A4 (sem isso, o Excel imprime em "Carta" em alguns computadores). Rodapé: aba, página X de Y e data.
-          const tag = '<pageSetup paperSize="9" orientation="' + (ps.orientation === 'portrait' ? 'portrait' : 'landscape') + '" fitToWidth="' + (ps.fitToWidth != null ? ps.fitToWidth : 1) + '" fitToHeight="' + (ps.fitToHeight != null ? ps.fitToHeight : 0) + '"/>'
+          const tag = '<pageSetup paperSize="' + (ps.paperSize || 9) + '" orientation="' + (ps.orientation === 'portrait' ? 'portrait' : 'landscape') + '" fitToWidth="' + (ps.fitToWidth != null ? ps.fitToWidth : 1) + '" fitToHeight="' + (ps.fitToHeight != null ? ps.fitToHeight : 0) + '"/>'
             + (/<headerFooter\b/.test(xml) ? '' : '<headerFooter><oddFooter>&amp;L&amp;8Anona · &amp;A&amp;C&amp;8Página &amp;P de &amp;N&amp;R&amp;8Impresso em &amp;D</oddFooter></headerFooter>');
           xml = /<pageMargins\b[^>]*\/>/.test(xml) ? xml.replace(/(<pageMargins\b[^>]*\/>)/, '$1' + tag) : xml.replace('</worksheet>', tag + '</worksheet>');
         }
@@ -345,16 +450,16 @@
     const nBaixa = avs.filter(x => !x.av.cumpriu).length;
     ws['I' + tot] = celulaFormula('COUNTIF(I2:I' + last + ',"Baixa frequência")&" mês(es) com baixa frequência"', nBaixa + ' mês(es) com baixa frequência');
     ws['!ref'] = 'A1:J' + tot;
-    estilizar(ws, { cor: '159947', formatos: { 4: '0.0%', 5: '0.0%' }, filtro: false, altLinha: 26, larguraMax: 30 });
+    estilizar(ws, { cor: '159947', formatos: { 4: '0.0#%', 5: '0.0#%' }, alinhar: { 8: 'center' }, filtro: false, altLinha: 26, larguraMax: 36 });
     // Cor condicional simples nas situações já calculadas + formatação % na linha de total.
     for (let r = 2; r <= tot; r++) {
-      ['E', 'F'].forEach(c => { if (ws[c + r]) ws[c + r].z = '0.0%'; });
+      ['E', 'F'].forEach(c => { if (ws[c + r]) ws[c + r].z = '0.0#%'; });
       const cel = ws['I' + r]; if (!cel) continue;
       if (r === tot) continue;
       const baixa = cel.v === 'Baixa frequência', reg = cel.v === 'Frequência regular';
       if (baixa || reg) cel.s = Object.assign({}, cel.s, { font: { name: 'Arial', sz: 11, bold: true, color: { rgb: baixa ? 'B91C1C' : '047857' } }, fill: { patternType: 'solid', fgColor: { rgb: baixa ? 'FEE2E2' : 'D1FAE5' } } });
     }
-    for (let c = 0; c < 10; c++) { const a = endereco(tot - 1, c); if (!ws[a]) ws[a] = { t: 's', v: '' }; ws[a].s = { font: { name: 'Arial', sz: 11, bold: true }, border: { top: { style: 'medium', color: { rgb: '159947' } }, bottom: BORDA, left: BORDA, right: BORDA }, alignment: { vertical: 'center', horizontal: c === 0 || c === 8 ? 'left' : 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E8F5EC' } } }; if (c === 4 || c === 5) ws[a].z = '0.0%'; }
+    for (let c = 0; c < 10; c++) { const a = endereco(tot - 1, c); if (!ws[a]) ws[a] = { t: 's', v: '' }; ws[a].s = { font: { name: 'Arial', sz: 11, bold: true }, border: { top: { style: 'medium', color: { rgb: '159947' } }, bottom: BORDA, left: BORDA, right: BORDA }, alignment: { vertical: 'center', horizontal: c === 0 || c === 8 ? 'left' : 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E8F5EC' } } }; if (c === 4 || c === 5) ws[a].z = '0.0#%'; }
 
     const info = [
       ['Frequência escolar — Bolsa Família (cálculo de orientação, método do Sistema Presença)'],
@@ -365,9 +470,29 @@
       ['Estimativa para orientação: vale sempre o registro oficial da escola no Sistema Presença.']
     ].filter(Boolean);
     const wsInfo = X.utils.aoa_to_sheet(info);
-    wsInfo['!cols'] = [{ wch: 22 }, { wch: 80 }];
-    wsInfo['A1'].s = { font: { name: 'Arial', sz: 13, bold: true, color: { rgb: '0B2F7A' } } };
+    // Aba de texto: antes saía sem quebra de linha nem ajuste de página — o texto longo atravessava a folha e a impressão
+    // era cortada em duas páginas. Agora: rótulo em negrito, valor com quebra de linha, frases longas mescladas na largura toda
+    // (altura calculada) e página A4 em pé ajustada à largura.
+    const LARG_A = 22, LARG_B = 78, mesclas = [];
+    wsInfo['!cols'] = [{ wch: LARG_A }, { wch: LARG_B }];
+    wsInfo['!rows'] = [];
+    info.forEach((linha, r) => {
+      const a = endereco(r, 0), b = endereco(r, 1);
+      if (!linha.length) { wsInfo['!rows'][r] = { hpt: 8 }; return; }
+      if (linha.length === 1) {                                           // frase corrida: mescla A:B
+        wsInfo[a].s = { font: { name: 'Arial', sz: r === 0 ? 13 : 10.5, bold: r === 0, color: { rgb: r === 0 ? '0B2F7A' : '374151' } }, alignment: { wrapText: true, vertical: 'top' } };
+        mesclas.push({ s: { r, c: 0 }, e: { r, c: 1 } });
+        wsInfo['!rows'][r] = { hpt: Math.max(r === 0 ? 24 : 18, alturaTexto(linha[0], LARG_A + LARG_B, r === 0 ? 13 : 10.5, r === 0)) };
+        return;
+      }
+      wsInfo[a].s = { font: { name: 'Arial', sz: 11, bold: true, color: { rgb: '1F2937' } }, alignment: { wrapText: true, vertical: 'top' } };
+      if (wsInfo[b]) wsInfo[b].s = { font: { name: 'Arial', sz: 11, color: { rgb: '1F2937' } }, alignment: { wrapText: true, vertical: 'top' } };
+      wsInfo['!rows'][r] = { hpt: Math.max(18, alturaTexto(linha[1], LARG_B, 11, false)) };
+    });
+    wsInfo['!merges'] = mesclas;
     wsInfo['!tabColor'] = { rgb: '0B2F7A' };
+    wsInfo['!margins'] = { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 };
+    wsInfo['!pageSetup'] = { orientation: 'portrait', fitToWidth: 1, fitToHeight: 0 };
     const wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, ws, 'Panorama do ano');
     X.utils.book_append_sheet(wb, wsInfo, 'Informações');
@@ -392,7 +517,7 @@
   root.AnonaTabelas = {
     lerInteiro, minPresencas, avaliar, panorama, fmtPct,
     csv, tabelaHTML, tabelaImpressao, textoParaPdf, tsv, copiarTabela,
-    estilizar, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, escreverPolido, polirXlsx, bytesParaBase64, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
+    estilizar, ajustarMedidas, alturaTexto, linhasDoTexto, larguraTexto, fmtNum, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, escreverPolido, polirXlsx, bytesParaBase64, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
     panoramaWorkbook, panoramaParaMatriz
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.AnonaTabelas;
