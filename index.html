@@ -557,366 +557,479 @@
     </div>
   </div>
 
-  <!-- PLANILHAS DO TERRITÓRIO VOLANTE — em destaque, fora do mosaico, com os
-       passos em duas colunas (em vez de uma coluna só) para não ficar um
-       cartão gigante e difícil de escanear no aplicativo. -->
-  <div class="panel-tool p-5 mb-6">
-      <h2 class="eyebrow mb-1">
+  <!-- PLANILHAS DO TERRITÓRIO VOLANTE — em destaque, fora do mosaico.
+       Cada passo é um <details> recolhível (o estado fica salvo no aparelho),
+       com atalhos numerados no topo, e os passos são agrupados em duas
+       colunas: planilhas/relatórios (1–4) e rota/abrigos (5–6). Todos os
+       ids/handlers abaixo são usados pelo JavaScript — não renomear. -->
+  <section id="territorioVolante" class="panel-tool p-5 mb-6" aria-labelledby="tvTitulo">
+    <div class="tv-head">
+      <h2 class="eyebrow mb-1" id="tvTitulo">
         <span class="chip"><i data-lucide="folder-kanban" class="w-4 h-4" style="color:var(--verde)"></i></span> Planilhas do Território Volante
       </h2>
-      <p class="text-xs text-slate-500 mb-1">O fluxo mensal, do recebimento da planilha do MDS ao relatório final — na ordem em que você normalmente usa.</p>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-10">
-      <div>
-      <div class="tool-step" data-step="1">
-        <h3><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Repercussão de Condicionalidades</h3>
-        <p class="text-xs text-slate-500 mb-3">Guarde aqui a planilha que o MDS manda todo mês ímpar. <strong>Fica guardada só neste navegador/aparelho</strong> (não é enviada à nuvem) — troque de aparelho ou de navegador e ela não vai estar lá; baixe uma cópia para outro lugar seguro se precisar dela em outro dispositivo.</p>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-3" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> <span id="reportUploadLabelTexto">Enviar planilha (.xlsx)</span>
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleReportUpload(this)">
-        </label>
-        <select id="reportAnoFilter" onchange="renderReports()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold mb-3 focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
-          <option value="all">Todos os anos</option>
-        </select>
-        <div class="border-t border-slate-100 pt-3 mt-1 space-y-2">
-          <label class="text-[11px] font-semibold text-slate-500">Filtrar planilha por bairro</label>
-          <select id="reportFileFilter" onchange="loadReportFilterOptions()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)">
-            <option value="">Escolha uma planilha</option>
-          </select>
-          <select id="reportBairroFilter" multiple size="5" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2" style="--tw-ring-color:var(--verde)" disabled></select>
-          <p class="text-[10px] text-slate-400">Use Ctrl (Windows) ou Command (Mac) para selecionar vários bairros. Sem seleção, baixa todos.</p>
-          <button onclick="downloadFilteredReport()" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--verde)">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar planilha filtrada
-          </button>
-        </div>
-
-        <div class="border-t border-slate-100 pt-3 mt-3 space-y-2">
-          <p class="text-[11px] font-bold text-slate-600">Relatórios individuais — técnicos gerais</p>
-          <button onclick="gerarRelatoriosIndividuaisPorTecnicoUI()" id="gerarRelatoriosIndividuaisBtn" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait" style="background:var(--azul)">
-            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span>Gerar relatórios individuais por técnico</span>
-          </button>
-          <p class="text-[10px] text-slate-400">Gera um PDF de Relatório de Repercussão Individual para cada aba de técnico da planilha escolhida acima (um PDF por técnico), sem incluir o <strong>Território Volante</strong> — a equipe volante tem sua própria seção de relatórios individuais, no bloco "Divisão por técnico" ao lado.</p>
-        </div>
-        <div class="border-t border-slate-100 pt-3 mt-3 space-y-2">
-          <p class="text-[11px] font-bold text-slate-600">Backup das planilhas guardadas neste aparelho</p>
-          <div class="flex gap-2">
-            <button type="button" onclick="baixarBackupRepercussao()" class="flex-1 text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--verde)">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar backup (.json)
-            </button>
-            <label class="flex-1 flex items-center justify-center gap-2 border-2 border-dashed rounded-xl px-3 py-2 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--azul); color:var(--azul)">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i> <span id="restaurarBackupLabelTexto">Restaurar backup</span>
-              <input type="file" accept=".json,application/json" class="hidden" onchange="restaurarBackupRepercussao(this)">
-            </label>
-          </div>
-          <p class="text-[10px] text-slate-400">Essas planilhas ficam só neste navegador (sem nuvem) — baixe esse backup de vez em quando e guarde num lugar seguro (pen drive, e-mail para você mesmo, nuvem pessoal). Restaurar não apaga o que já está guardado, só adiciona o que faltar.</p>
-        </div>
-        <p id="reportsStorageStatus" class="text-[10px] text-slate-400 mb-2"></p>
-        <div id="reportsList" class="space-y-2"></div>
-      </div>
-
-      <div class="tool-step" data-step="2">
-        <h3><i data-lucide="users" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Divisão por técnico</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie aqui a tabela de condicionalidades só do Território Volante. O app ordena as famílias de A a Z e divide em três partes iguais: a primeira parte para o <strong>Paulo Xavier</strong>, a segunda para o <strong>Danilo Braga</strong> e a terceira para a <strong>Keomara Teles</strong>.</p>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> <span id="volanteLabelTexto">Enviar tabela (.xlsx)</span>
-          <input type="file" id="volanteInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
-        </label>
-        <p class="text-[10px] text-slate-400 mt-2">Gera e baixa na hora uma planilha com 3 abas: <strong>Paulo Xavier</strong> (Psicólogo), <strong>Danilo Braga</strong> (Psicólogo) e <strong>Keomara Teles</strong> (Assistente Social) — nada é guardado na nuvem, o arquivo original não é alterado.</p>
-
-        <div class="border-t border-slate-100 pt-3 mt-3 space-y-2">
-          <p class="text-[11px] font-bold text-slate-600">Relatórios individuais — equipe volante</p>
-          <button onclick="gerarRelatoriosVolanteIndividuaisUI()" id="gerarRelatoriosVolanteBtn" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed" style="background:var(--azul)" disabled>
-            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span>Gerar relatórios individuais (Paulo, Danilo e Keomara)</span>
-          </button>
-          <p id="gerarRelatoriosVolanteAviso" class="text-[10px] text-slate-400">Envie a tabela acima primeiro; depois de dividida, este botão fica liberado para gerar um PDF de Relatório de Repercussão Individual para cada um dos três (Paulo Xavier, Danilo Braga e Keomara Teles), sem precisar enviar a tabela de novo.</p>
-        </div>
-      </div>
-
-      <div class="tool-step" data-step="3">
-        <h3><i data-lucide="repeat" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Famílias Recorrentes</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável e gera um relatório só com as que se repetiram, com os dados dos dois meses lado a lado — e com <strong>uma aba por técnico</strong> (só quem ficou com o mesmo técnico nos dois meses) e uma aba separada <strong>"Mudaram de técnico"</strong> para quem trocou de mão na divisão.</p>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2 text-center" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
-        </label>
-        <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50 text-center" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAtualLabel">Planilha do mês atual</span>
-          <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'atual')">
-        </label>
-        <p class="text-[10px] text-slate-400 mt-2">Assim que os dois arquivos forem enviados, a comparação é gerada e baixada automaticamente. Nada é guardado — os arquivos originais não são alterados.</p>
-      </div>
-      <div class="tool-step" data-step="4">
-        <h3><i data-lucide="file-text" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatório Individual</h3>
-        <p class="text-xs text-slate-500 mb-3">Envie a tabela de condicionalidades (com uma linha por integrante/efeito) e o app gera na hora um <strong>PDF</strong> com todos os registros, um gráfico da quantidade de efeitos e uma rota de visita sugerida. Se a planilha já vier <strong>dividida por técnico</strong> (uma aba por pessoa, como a gerada em "Divisão por técnico" do Território Volante), o app gera automaticamente um PDF separado para cada um.</p>
-
-        <div class="rounded-xl px-3 py-2.5 mb-3" style="background:var(--line-soft)">
-          <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer mb-2">
-            <input type="checkbox" id="relIndColunaVisita" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)" onchange="try{localStorage.setItem('anonaRelIndColunaVisita', this.checked ? '1' : '0')}catch(e){}">
-            <span>Incluir a coluna <strong>Visita</strong> (☐) nos PDFs — uma caixinha por família para marcar à mão durante as visitas</span>
-          </label>
-          <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer">
-            <input type="checkbox" id="geminiRotaToggle" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
-            <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
-          </label>
-          <div id="geminiConfigWrap" class="hidden mt-2 space-y-1.5">
-            <input type="password" id="geminiApiKeyInput" placeholder="Cole aqui sua chave de API do Gemini" class="access-input w-full text-xs" style="padding:.5rem .7rem;">
-            <p class="text-[10px] text-slate-500 leading-relaxed">
-              A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.
-              Só o bairro/endereço de cada família é enviado ao Gemini — nunca nome, NIS ou CPF. Sem internet ou sem chave, o app usa normalmente a ordenação por proximidade (bairro/rua).
-              <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.
-            </p>
-          </div>
-        </div>
-
-        <label id="relatorioIndividualLabel" class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-xs font-bold cursor-pointer hover:bg-slate-50" style="border-color:var(--verde); color:var(--verde)">
-          <i data-lucide="upload" class="w-4 h-4"></i> <span id="relatorioIndividualLabelTexto">Enviar tabela (.xlsx)</span>
-          <input type="file" id="relatorioIndividualInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
-        </label>
-        <p id="relatorioIndividualStatus" class="text-[10px] font-semibold mt-2 hidden" style="color:var(--verde)"></p>
-        <p class="text-[10px] text-slate-400 mt-2">Todas as colunas ficam numa página só (na horizontal); as linhas continuam nas páginas seguintes. Nada é guardado — o arquivo original não é alterado.</p>
-      </div>
-
-      </div>
-      <div class="lg:border-l lg:pl-10" style="border-color:var(--line)">
-      <div class="tool-step" data-step="5">
-        <h3><i data-lucide="route" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Unificar Folhas de Família — Rota de Visita</h3>
-        <p class="text-xs text-slate-500 mb-2">Envie aqui as folhas resumo (PDF) das famílias que você vai visitar. O app junta tudo num único PDF, na ordem da melhor rota: primeiro o Bloco 1 inteiro, depois o Bloco 2.</p>
-        <div class="rounded-xl px-3 py-2 mb-3 text-[11px] text-slate-600" style="background:var(--line-soft)">
-          <p><strong>Partida:</strong> <span id="unificarPartidaTexto">Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</span></p>
-        </div>
-
-        <div class="rounded-xl px-3 py-2.5 mb-3" style="background:var(--line-soft)">
-          <label class="flex items-start gap-2 text-[11px] font-semibold text-slate-700 cursor-pointer">
-            <input type="checkbox" id="geminiRotaToggleUnificar" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
-            <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
-          </label>
-          <div id="geminiConfigWrapUnificar" class="hidden mt-2 space-y-1.5">
-            <input type="password" id="geminiApiKeyInputUnificar" placeholder="Cole aqui sua chave de API do Gemini" class="access-input w-full text-xs" style="padding:.5rem .7rem;">
-            <p class="text-[10px] text-slate-500 leading-relaxed">
-              A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.
-              Preencha o endereço de referência de cada família abaixo (rua/bairro) — só isso é enviado ao Gemini, nunca nome, NIS ou CPF.
-              <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.
-            </p>
-          </div>
-        </div>
-
-        <p id="unificarStatusGeral" class="text-[11px] font-semibold text-slate-500 mb-3">0/30 arquivos · 0,0 MB de 50 MB</p>
-
-        <div class="border rounded-xl p-3 mb-3" style="border-color:var(--line)">
-          <p class="text-xs font-bold text-slate-700 mb-2">Bloco 1 · Bairro Professora Araceli Souto Maior</p>
-          <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-2.5 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2" style="border-color:var(--verde); color:var(--verde)">
-            <i data-lucide="upload" class="w-4 h-4"></i> Adicionar folhas (PDF)
-            <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleUnificarUpload(this,0)">
-          </label>
-          <ol id="unificarLista0" class="space-y-1.5 text-xs"></ol>
-          <p id="unificarVazio0" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada ainda.</p>
-          <button type="button" onclick="unificarSugerirOrdemIA(0,event)" class="w-full mt-2 px-2 py-1.5 rounded-lg text-[11px] font-bold border transition hover:bg-slate-50 flex items-center justify-center gap-1.5" style="border-color:var(--verde); color:var(--verde)">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
-          </button>
-        </div>
-
-        <div class="border rounded-xl p-3 mb-3" style="border-color:var(--line)">
-          <p class="text-xs font-bold text-slate-700 mb-2">Bloco 2 · Bairro 13 de Setembro</p>
-          <label class="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-2.5 text-xs font-bold cursor-pointer hover:bg-slate-50 mb-2" style="border-color:var(--verde); color:var(--verde)">
-            <i data-lucide="upload" class="w-4 h-4"></i> Adicionar folhas (PDF)
-            <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleUnificarUpload(this,1)">
-          </label>
-          <ol id="unificarLista1" class="space-y-1.5 text-xs"></ol>
-          <p id="unificarVazio1" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada ainda.</p>
-          <button type="button" onclick="unificarSugerirOrdemIA(1,event)" class="w-full mt-2 px-2 py-1.5 rounded-lg text-[11px] font-bold border transition hover:bg-slate-50 flex items-center justify-center gap-1.5" style="border-color:var(--verde); color:var(--verde)">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
-          </button>
-        </div>
-
-        <p class="text-[10px] text-slate-400 mb-2">Preencha o endereço de referência de cada família e clique em "Sugerir ordem": o app organiza por rua e depois pela numeração do imóvel (funciona offline, sem precisar da IA) e, se a opção de IA acima estiver marcada e configurada, refina ainda mais essa ordem com o Gemini. Você também pode usar as setinhas para reordenar manualmente a qualquer momento (a rua de partida é só uma referência). Nada é enviado à internet além do texto do endereço, e só quando a IA está ativada — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
-        <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait" style="background:var(--azul)">
-          <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
-        </button>
-      </div>
-
-      <div class="tool-step" data-step="6">
-        <h3><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatórios dos Abrigos (Operação Acolhida)</h3>
-        <p class="text-xs text-slate-500 mb-2">Envie aqui as folhas resumo (PDF) das famílias de cada abrigo, já separadas por efeito. Selecione o mês de repercussão e gere um relatório independente por vez — cada abrigo tem seu próprio botão, com uma capa contendo as informações da equipe de proteção social e as folhas organizadas por efeito (Alerta → Bloqueio → Suspensão).</p>
-        <p id="abrigoStatusGeral" class="text-[11px] font-semibold text-slate-500 mb-3">0/60 arquivos · 0,0 MB de 80 MB</p>
-
-        <div class="mb-3">
-          <label id="abrigoMesRepercussaoLabel" class="text-[11px] font-bold text-slate-600 block mb-1">Mês de repercussão</label>
-          <select id="abrigoMesRepercussao" class="w-full text-xs border rounded-lg px-2 py-1.5" style="border-color:var(--line)">
-            <option value="">Selecione o mês de repercussão…</option>
-          </select>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 items-start">
-
-          <div class="border rounded-xl p-3" style="border-color:var(--line)">
-            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 1</p>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,0)">
-                </label>
-              </div>
-              <ol id="abrigoLista0" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio0" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,1)">
-                </label>
-              </div>
-              <ol id="abrigoLista1" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio1" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,2)">
-                </label>
-              </div>
-              <ol id="abrigoLista2" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio2" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <button onclick="abrigoGerarPDFUnico(0,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Rondon 1</span>
-            </button>
-          </div>
-
-          <div class="border rounded-xl p-3" style="border-color:var(--line)">
-            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 5</p>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,3)">
-                </label>
-              </div>
-              <ol id="abrigoLista3" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio3" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,4)">
-                </label>
-              </div>
-              <ol id="abrigoLista4" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio4" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,5)">
-                </label>
-              </div>
-              <ol id="abrigoLista5" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio5" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <button onclick="abrigoGerarPDFUnico(1,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Rondon 5</span>
-            </button>
-          </div>
-
-          <div class="border rounded-xl p-3" style="border-color:var(--line)">
-            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> PRA</p>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,6)">
-                </label>
-              </div>
-              <ol id="abrigoLista6" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio6" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,7)">
-                </label>
-              </div>
-              <ol id="abrigoLista7" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio7" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,8)">
-                </label>
-              </div>
-              <ol id="abrigoLista8" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio8" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <button onclick="abrigoGerarPDFUnico(2,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — PRA</span>
-            </button>
-          </div>
-
-          <div class="border rounded-xl p-3" style="border-color:var(--line)">
-            <p class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Tuaronoko</p>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#6B4E00">● Alerta</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,9)">
-                </label>
-              </div>
-              <ol id="abrigoLista9" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio9" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div class="mb-2">
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#DC2626">● Bloqueio</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,10)">
-                </label>
-              </div>
-              <ol id="abrigoLista10" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio10" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <p class="text-[11px] font-bold" style="color:#475569">● Suspensão</p>
-                <label class="text-[10px] font-bold cursor-pointer flex items-center gap-1" style="color:var(--verde)">
-                  <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
-                  <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,11)">
-                </label>
-              </div>
-              <ol id="abrigoLista11" class="space-y-1 text-[11px]"></ol>
-              <p id="abrigoVazio11" class="text-[10px] text-slate-400 italic">Nenhuma folha adicionada.</p>
-            </div>
-            <button onclick="abrigoGerarPDFUnico(3,event)" class="w-full mt-1 text-white px-2 py-1.5 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
-              <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Tuaronoko</span>
-            </button>
-          </div>
-
-        </div>
-
-        <p class="text-[10px] text-slate-400 mb-2">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — a geração do PDF acontece no seu aparelho, e os arquivos originais não são alterados. Cada abrigo é gerado e baixado de forma independente, um de cada vez, com a sua própria capa de informações.</p>
-      </div>
+      <div class="tv-tools">
+        <button type="button" id="tvExpandir" class="tv-mini">Expandir tudo</button>
+        <button type="button" id="tvRecolher" class="tv-mini">Recolher tudo</button>
       </div>
     </div>
-  </div>
+    <p class="text-xs text-slate-500 mb-3">O fluxo mensal, do recebimento da planilha do MDS ao relatório final — na ordem em que você normalmente usa.</p>
+    <p class="tv-privacidade"><i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0" style="color:var(--verde)"></i> <span>Tudo é processado no seu aparelho e os arquivos originais nunca são alterados. A única exceção é a otimização de rota com IA (opcional), que envia só o texto do endereço.</span></p>
+    <nav class="tv-nav" aria-label="Etapas do fluxo mensal"><a href="#tvPasso1" data-tv-nav="1"><b>1</b> Planilha do MDS</a><a href="#tvPasso2" data-tv-nav="2"><b>2</b> Divisão da equipe</a><a href="#tvPasso3" data-tv-nav="3"><b>3</b> Recorrentes</a><a href="#tvPasso4" data-tv-nav="4"><b>4</b> Relatório individual</a><a href="#tvPasso5" data-tv-nav="5"><b>5</b> Rota de visita</a><a href="#tvPasso6" data-tv-nav="6"><b>6</b> Abrigos</a></nav>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-10">
+      <div class="tv-col">
+        <p class="tv-colhead">Planilhas e relatórios</p>
+
+      <details class="tool-step tv-first" id="tvPasso1" data-step="1" open>
+        <summary>
+          <span class="tv-sumtxt">
+            <h3><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Planilha do MDS (Repercussão de Condicionalidades)</h3>
+            <span class="tv-sub">Guarde a planilha que o MDS manda todo mês ímpar.</span>
+          </span>
+          <i data-lucide="chevron-down" class="tv-chevron w-4 h-4" aria-hidden="true"></i>
+        </summary>
+        <div class="tv-body">
+          <p class="tv-note"><strong>Fica guardada só neste aparelho/navegador</strong> (não vai para a nuvem). Em outro aparelho ou navegador ela não aparece — baixe o backup (no fim deste passo) para ter uma cópia em lugar seguro.</p>
+
+          <label class="tv-drop ">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span id="reportUploadLabelTexto">Enviar planilha (.xlsx)</span>
+            <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleReportUpload(this)">
+          </label>
+
+          <div class="tv-block">
+            <div class="tv-rowhead">
+              <p class="tv-sub-h">Planilhas guardadas</p>
+              <select id="reportAnoFilter" onchange="renderReports()" aria-label="Filtrar planilhas guardadas por ano" class="tv-select tv-select-sm" style="--tw-ring-color:var(--verde)">
+                <option value="all">Todos os anos</option>
+              </select>
+            </div>
+            <p id="reportsStorageStatus" class="tv-hint mb-2"></p>
+            <div id="reportsList" class="space-y-2"></div>
+          </div>
+
+          <div class="tv-block">
+            <p class="tv-sub-h">Usar uma planilha guardada</p>
+            <label for="reportFileFilter" class="tv-label">Escolha a planilha</label>
+            <select id="reportFileFilter" onchange="loadReportFilterOptions()" class="tv-select" style="--tw-ring-color:var(--verde)">
+              <option value="">Escolha uma planilha</option>
+            </select>
+
+            <div class="tv-sub-card">
+              <p class="tv-card-title">Filtrar por bairro</p>
+              <label for="reportBairroFilter" class="tv-label">Bairros <span class="font-normal text-slate-400">(opcional)</span></label>
+              <select id="reportBairroFilter" multiple size="5" class="tv-select" style="--tw-ring-color:var(--verde)" disabled></select>
+              <p class="tv-hint mb-2">Use Ctrl (Windows) ou Command (Mac) para selecionar vários bairros. Sem seleção, baixa todos.</p>
+              <button onclick="downloadFilteredReport()" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--verde)">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar planilha filtrada
+              </button>
+            </div>
+
+            <div class="tv-sub-card">
+              <p class="tv-card-title">Relatórios individuais — técnicos gerais</p>
+              <button onclick="gerarRelatoriosIndividuaisPorTecnicoUI()" id="gerarRelatoriosIndividuaisBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait" style="background:var(--azul)">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span>Gerar relatórios individuais por técnico</span>
+              </button>
+              <p class="tv-hint mt-2">Gera um PDF de Relatório de Repercussão Individual para cada aba de técnico da planilha escolhida (um PDF por técnico). O <strong>Território Volante</strong> fica de fora — a equipe volante tem os relatórios dela no passo 2.</p>
+            </div>
+          </div>
+
+          <details class="tv-more tv-block">
+            <summary>Backup das planilhas guardadas neste aparelho</summary>
+            <div class="flex gap-2 mt-2">
+              <button type="button" onclick="baixarBackupRepercussao()" class="tv-btn flex-1 text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2" style="background:var(--verde)">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Baixar backup (.json)
+              </button>
+              <label class="tv-drop azul sm flex-1">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i> <span id="restaurarBackupLabelTexto">Restaurar backup</span>
+                <input type="file" accept=".json,application/json" class="hidden" onchange="restaurarBackupRepercussao(this)">
+              </label>
+            </div>
+            <p class="tv-hint mt-2">Baixe o backup de vez em quando e guarde num lugar seguro (pen drive, e-mail para você mesmo, nuvem pessoal). Restaurar não apaga o que já está guardado, só adiciona o que faltar.</p>
+          </details>
+        </div>
+      </details>
+
+
+      <details class="tool-step" id="tvPasso2" data-step="2" open>
+        <summary>
+          <span class="tv-sumtxt">
+            <h3><i data-lucide="users" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Divisão por técnico — equipe volante</h3>
+            <span class="tv-sub">Divide as famílias, de A a Z, em três partes iguais.</span>
+          </span>
+          <i data-lucide="chevron-down" class="tv-chevron w-4 h-4" aria-hidden="true"></i>
+        </summary>
+        <div class="tv-body">
+          <div class="tv-team" aria-label="Como as famílias são divididas">
+            <div class="tv-person"><span class="tv-ord">1ª parte</span><b>Paulo Xavier</b><small>Psicólogo</small></div>
+            <div class="tv-person"><span class="tv-ord">2ª parte</span><b>Danilo Braga</b><small>Psicólogo</small></div>
+            <div class="tv-person"><span class="tv-ord">3ª parte</span><b>Keomara Teles</b><small>Assistente Social</small></div>
+          </div>
+          <p class="tv-hint mb-2">Envie a tabela de condicionalidades <strong>só do Território Volante</strong>. O app ordena as famílias de A a Z e divide em três partes iguais.</p>
+
+          <label class="tv-drop ">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span id="volanteLabelTexto">Enviar tabela (.xlsx)</span>
+            <input type="file" id="volanteInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleVolanteUpload(this)">
+          </label>
+          <p class="tv-hint mt-2">Baixa na hora uma planilha com 3 abas, uma por técnico. Nada é guardado na nuvem e o arquivo original não é alterado.</p>
+
+          <div class="tv-block">
+            <p class="tv-sub-h">Relatórios individuais — equipe volante</p>
+            <button onclick="gerarRelatoriosVolanteIndividuaisUI()" id="gerarRelatoriosVolanteBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed" style="background:var(--azul)" disabled>
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span>Gerar relatórios individuais (Paulo, Danilo e Keomara)</span>
+            </button>
+            <p id="gerarRelatoriosVolanteAviso" class="tv-hint mt-2">Envie a tabela acima primeiro; depois de dividida, este botão fica liberado para gerar um PDF de Relatório de Repercussão Individual para cada um dos três, sem precisar enviar a tabela de novo.</p>
+          </div>
+        </div>
+      </details>
+
+
+      <details class="tool-step" id="tvPasso3" data-step="3" open>
+        <summary>
+          <span class="tv-sumtxt">
+            <h3><i data-lucide="repeat" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Famílias Recorrentes</h3>
+            <span class="tv-sub">Cruza dois meses pelo NIS e lista quem se repetiu.</span>
+          </span>
+          <i data-lucide="chevron-down" class="tv-chevron w-4 h-4" aria-hidden="true"></i>
+        </summary>
+        <div class="tv-body">
+          <p class="tv-hint mb-2">Envie a planilha de condicionalidades do <strong>mês anterior</strong> e a do <strong>mês atual</strong> (relatório bruto do MDS ou já dividida por técnico). O app cruza as famílias pelo NIS do responsável.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+          <label class="tv-drop ">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAnteriorLabel">Planilha do mês anterior</span>
+            <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'anterior')">
+          </label>
+
+          <label class="tv-drop ">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span id="comparacaoAtualLabel">Planilha do mês atual</span>
+            <input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleComparacaoUpload(this,'atual')">
+          </label>
+          </div>
+          <p class="tv-hint mt-2">Assim que os dois arquivos forem enviados, a comparação é gerada e baixada automaticamente. Nada é guardado — os originais não são alterados.</p>
+          <details class="tv-more">
+            <summary>O que vem no relatório</summary>
+            <p class="tv-hint">Só as famílias que se repetiram, com os dados dos dois meses lado a lado; <strong>uma aba por técnico</strong> (só quem ficou com o mesmo técnico nos dois meses) e uma aba separada <strong>“Mudaram de técnico”</strong> para quem trocou de mão na divisão.</p>
+          </details>
+        </div>
+      </details>
+
+
+      <details class="tool-step" id="tvPasso4" data-step="4" open>
+        <summary>
+          <span class="tv-sumtxt">
+            <h3><i data-lucide="file-text" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatório Individual</h3>
+            <span class="tv-sub">PDF com os registros, gráfico de efeitos e rota sugerida.</span>
+          </span>
+          <i data-lucide="chevron-down" class="tv-chevron w-4 h-4" aria-hidden="true"></i>
+        </summary>
+        <div class="tv-body">
+          <p class="tv-hint mb-2">Envie a tabela de condicionalidades (uma linha por integrante/efeito). Se a planilha já vier <strong>dividida por técnico</strong> (uma aba por pessoa, como a gerada no passo 2), sai um PDF separado para cada um.</p>
+
+          <div class="tv-opcoes">
+            <label class="tv-check">
+              <input type="checkbox" id="relIndColunaVisita" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)" onchange="try{localStorage.setItem('anonaRelIndColunaVisita', this.checked ? '1' : '0')}catch(e){}">
+              <span>Incluir a coluna <strong>Visita</strong> (☐) nos PDFs — uma caixinha por família para marcar à mão durante as visitas</span>
+            </label>
+          </div>
+
+          <div class="tv-opcoes">
+            <label class="tv-check">
+              <input type="checkbox" id="geminiRotaToggle" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
+              <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
+            </label>
+            <div id="geminiConfigWrap" class="hidden mt-2 space-y-1.5">
+              <input type="password" id="geminiApiKeyInput" placeholder="Cole aqui sua chave de API do Gemini" autocomplete="off" class="access-input w-full text-xs" style="padding:.5rem .7rem;">
+              <p class="tv-hint">A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.</p>
+              <details class="tv-more">
+                <summary>Privacidade e computador compartilhado</summary>
+                <p class="tv-hint">Só o bairro/endereço de cada família é enviado ao Gemini — nunca nome, NIS ou CPF. Sem internet ou sem chave, o app usa normalmente a ordenação por proximidade (bairro/rua).
+                  <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.</p>
+              </details>
+            </div>
+          </div>
+
+          <label class="tv-drop " id="relatorioIndividualLabel">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span id="relatorioIndividualLabelTexto">Enviar tabela (.xlsx)</span>
+            <input type="file" id="relatorioIndividualInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="__handleRelatorioIndividualUpload(this)">
+          </label>
+          <p id="relatorioIndividualStatus" class="text-[11px] font-semibold mt-2 hidden" style="color:var(--verde)"></p>
+          <p class="tv-hint mt-2">Todas as colunas ficam numa página só (na horizontal); as linhas continuam nas páginas seguintes. Nada é guardado — o arquivo original não é alterado.</p>
+        </div>
+      </details>
+
+      </div>
+      <div class="tv-col lg:border-l lg:pl-10" style="border-color:var(--line)">
+        <p class="tv-colhead">Rota de visita e abrigos</p>
+
+      <details class="tool-step tv-first" id="tvPasso5" data-step="5" open>
+        <summary>
+          <span class="tv-sumtxt">
+            <h3><i data-lucide="route" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Unificar Folhas de Família — Rota de Visita</h3>
+            <span class="tv-sub">Junta as folhas (PDF) num só, na ordem da melhor rota.</span>
+          </span>
+          <i data-lucide="chevron-down" class="tv-chevron w-4 h-4" aria-hidden="true"></i>
+        </summary>
+        <div class="tv-body">
+          <p class="tv-hint mb-2">Envie as folhas resumo (PDF) das famílias que você vai visitar. O app junta tudo num único PDF, na ordem da melhor rota: primeiro o <strong>Bloco 1</strong> inteiro, depois o <strong>Bloco 2</strong>.</p>
+          <p class="tv-partida"><strong>Partida:</strong> <span id="unificarPartidaTexto">Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</span></p>
+
+          <div class="tv-opcoes">
+            <label class="tv-check">
+              <input type="checkbox" id="geminiRotaToggleUnificar" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
+              <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
+            </label>
+            <div id="geminiConfigWrapUnificar" class="hidden mt-2 space-y-1.5">
+              <input type="password" id="geminiApiKeyInputUnificar" placeholder="Cole aqui sua chave de API do Gemini" autocomplete="off" class="access-input w-full text-xs" style="padding:.5rem .7rem;">
+              <p class="tv-hint">A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.</p>
+              <details class="tv-more">
+                <summary>Privacidade e computador compartilhado</summary>
+                <p class="tv-hint">Preencha o endereço de referência de cada família abaixo (rua/bairro) — só isso é enviado ao Gemini, nunca nome, NIS ou CPF.
+                  <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.</p>
+              </details>
+            </div>
+          </div>
+          <p id="unificarStatusGeral" class="tv-status">0/30 arquivos · 0,0 MB de 50 MB</p>
+
+          <div class="tv-sub-card">
+            <div class="tv-rowhead">
+              <p class="tv-card-title">Bloco 1 · Bairro Professora Araceli Souto Maior</p>
+              <span class="tv-count" id="unificarCont0" aria-label="Folhas neste bloco">0</span>
+            </div>
+
+          <label class="tv-drop sm">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span>Adicionar folhas (PDF)</span>
+            <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleUnificarUpload(this,0)">
+          </label>
+            <ol id="unificarLista0" class="space-y-1.5 text-xs mt-2"></ol>
+            <p id="unificarVazio0" class="text-[11px] text-slate-400 italic mt-2">Nenhuma folha adicionada ainda.</p>
+            <button type="button" onclick="unificarSugerirOrdemIA(0,event)" class="tv-btn-ghost w-full mt-2">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
+            </button>
+          </div>
+
+          <div class="tv-sub-card">
+            <div class="tv-rowhead">
+              <p class="tv-card-title">Bloco 2 · Bairro 13 de Setembro</p>
+              <span class="tv-count" id="unificarCont1" aria-label="Folhas neste bloco">0</span>
+            </div>
+
+          <label class="tv-drop sm">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span>Adicionar folhas (PDF)</span>
+            <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleUnificarUpload(this,1)">
+          </label>
+            <ol id="unificarLista1" class="space-y-1.5 text-xs mt-2"></ol>
+            <p id="unificarVazio1" class="text-[11px] text-slate-400 italic mt-2">Nenhuma folha adicionada ainda.</p>
+            <button type="button" onclick="unificarSugerirOrdemIA(1,event)" class="tv-btn-ghost w-full mt-2">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
+            </button>
+          </div>
+          <details class="tv-more">
+            <summary>Como a ordem é sugerida</summary>
+            <p class="tv-hint">Preencha o endereço de referência de cada família e clique em “Sugerir ordem”: o app organiza por rua e depois pela numeração do imóvel (funciona offline, sem precisar da IA) e, se a opção de IA acima estiver marcada e configurada, refina ainda mais essa ordem com o Gemini. Você também pode usar as setinhas para reordenar manualmente a qualquer momento (a rua de partida é só uma referência). Nada é enviado à internet além do texto do endereço, e só quando a IA está ativada — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
+          </details>
+          <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait mt-3" style="background:var(--azul)">
+            <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
+          </button>
+        </div>
+      </details>
+
+
+      <details class="tool-step" id="tvPasso6" data-step="6" open>
+        <summary>
+          <span class="tv-sumtxt">
+            <h3><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Relatórios dos Abrigos (Operação Acolhida)</h3>
+            <span class="tv-sub">Um PDF por abrigo, com capa e folhas por efeito.</span>
+          </span>
+          <i data-lucide="chevron-down" class="tv-chevron w-4 h-4" aria-hidden="true"></i>
+        </summary>
+        <div class="tv-body">
+          <p class="tv-hint mb-2">Envie as folhas resumo (PDF) das famílias de cada abrigo, <strong>já separadas por efeito</strong>. Escolha o mês de repercussão e gere um relatório por vez — cada abrigo tem seu botão, com capa da equipe de proteção social e as folhas na ordem Alerta → Bloqueio → Suspensão.</p>
+          <p id="abrigoStatusGeral" class="tv-status">0/60 arquivos · 0,0 MB de 80 MB</p>
+          <div class="mb-3">
+            <label id="abrigoMesRepercussaoLabel" for="abrigoMesRepercussao" class="tv-label">Mês de repercussão</label>
+            <select id="abrigoMesRepercussao" class="tv-select" style="border-color:var(--line)">
+              <option value="">Selecione o mês de repercussão…</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 items-start">
+            <div class="tv-sub-card tv-abrigo">
+              <div class="tv-rowhead">
+                <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 1</p>
+                <span class="tv-count tv-count-wide" id="abrigoTotal0">0 folhas</span>
+              </div>
+              <div class="tv-efeito" style="--c:#B7791F">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#B7791F">Alerta <span class="tv-count" id="abrigoCont0" aria-label="Folhas de Alerta">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,0)">
+                  </label>
+                </div>
+                <ol id="abrigoLista0" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio0" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#DC2626">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#DC2626">Bloqueio <span class="tv-count" id="abrigoCont1" aria-label="Folhas de Bloqueio">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,1)">
+                  </label>
+                </div>
+                <ol id="abrigoLista1" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio1" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#475569">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#475569">Suspensão <span class="tv-count" id="abrigoCont2" aria-label="Folhas de Suspensão">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,2)">
+                  </label>
+                </div>
+                <ol id="abrigoLista2" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio2" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <button onclick="abrigoGerarPDFUnico(0,event)" class="tv-btn w-full mt-1 text-white px-2 py-2 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+                <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Rondon 1</span>
+              </button>
+            </div>
+            <div class="tv-sub-card tv-abrigo">
+              <div class="tv-rowhead">
+                <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 5</p>
+                <span class="tv-count tv-count-wide" id="abrigoTotal1">0 folhas</span>
+              </div>
+              <div class="tv-efeito" style="--c:#B7791F">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#B7791F">Alerta <span class="tv-count" id="abrigoCont3" aria-label="Folhas de Alerta">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,3)">
+                  </label>
+                </div>
+                <ol id="abrigoLista3" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio3" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#DC2626">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#DC2626">Bloqueio <span class="tv-count" id="abrigoCont4" aria-label="Folhas de Bloqueio">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,4)">
+                  </label>
+                </div>
+                <ol id="abrigoLista4" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio4" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#475569">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#475569">Suspensão <span class="tv-count" id="abrigoCont5" aria-label="Folhas de Suspensão">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,5)">
+                  </label>
+                </div>
+                <ol id="abrigoLista5" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio5" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <button onclick="abrigoGerarPDFUnico(1,event)" class="tv-btn w-full mt-1 text-white px-2 py-2 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+                <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Rondon 5</span>
+              </button>
+            </div>
+            <div class="tv-sub-card tv-abrigo">
+              <div class="tv-rowhead">
+                <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> PRA</p>
+                <span class="tv-count tv-count-wide" id="abrigoTotal2">0 folhas</span>
+              </div>
+              <div class="tv-efeito" style="--c:#B7791F">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#B7791F">Alerta <span class="tv-count" id="abrigoCont6" aria-label="Folhas de Alerta">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,6)">
+                  </label>
+                </div>
+                <ol id="abrigoLista6" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio6" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#DC2626">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#DC2626">Bloqueio <span class="tv-count" id="abrigoCont7" aria-label="Folhas de Bloqueio">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,7)">
+                  </label>
+                </div>
+                <ol id="abrigoLista7" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio7" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#475569">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#475569">Suspensão <span class="tv-count" id="abrigoCont8" aria-label="Folhas de Suspensão">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,8)">
+                  </label>
+                </div>
+                <ol id="abrigoLista8" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio8" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <button onclick="abrigoGerarPDFUnico(2,event)" class="tv-btn w-full mt-1 text-white px-2 py-2 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+                <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — PRA</span>
+              </button>
+            </div>
+            <div class="tv-sub-card tv-abrigo">
+              <div class="tv-rowhead">
+                <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Tuaronoko</p>
+                <span class="tv-count tv-count-wide" id="abrigoTotal3">0 folhas</span>
+              </div>
+              <div class="tv-efeito" style="--c:#B7791F">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#B7791F">Alerta <span class="tv-count" id="abrigoCont9" aria-label="Folhas de Alerta">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,9)">
+                  </label>
+                </div>
+                <ol id="abrigoLista9" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio9" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#DC2626">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#DC2626">Bloqueio <span class="tv-count" id="abrigoCont10" aria-label="Folhas de Bloqueio">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,10)">
+                  </label>
+                </div>
+                <ol id="abrigoLista10" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio10" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <div class="tv-efeito" style="--c:#475569">
+                <div class="tv-rowhead">
+                  <p class="tv-efeito-nome" style="color:#475569">Suspensão <span class="tv-count" id="abrigoCont11" aria-label="Folhas de Suspensão">0</span></p>
+                  <label class="tv-add">
+                    <i data-lucide="upload" class="w-3 h-3"></i> Adicionar
+                    <input type="file" accept="application/pdf" multiple class="hidden" onchange="__handleAbrigoUpload(this,11)">
+                  </label>
+                </div>
+                <ol id="abrigoLista11" class="space-y-1 text-[11px]"></ol>
+                <p id="abrigoVazio11" class="text-[11px] text-slate-400 italic">Nenhuma folha adicionada.</p>
+              </div>
+              <button onclick="abrigoGerarPDFUnico(3,event)" class="tv-btn w-full mt-1 text-white px-2 py-2 rounded-lg text-[11px] font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5" style="background:var(--azul)">
+                <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF — Tuaronoko</span>
+              </button>
+            </div>
+          </div>
+          <p class="tv-hint">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — o PDF é gerado no seu aparelho e os originais não são alterados. Cada abrigo é gerado e baixado de forma independente, com a sua própria capa.</p>
+        </div>
+      </details>
+
+      </div>
+    </div>
+  </section>
 </main>
 
 
@@ -3913,6 +4026,8 @@ window.AnonaImpressao = (function () {
     const lista = unificarListas[bloco];
     if (!ol) return;
     vazio.style.display = lista.length ? 'none' : '';
+    const contU = document.getElementById(`unificarCont${bloco}`);
+    if (contU) { contU.textContent = lista.length; contU.classList.toggle('has', lista.length > 0); }
     ol.innerHTML = lista.map((item, i) => `
       <li class="bg-slate-50 rounded-lg px-2 py-1.5">
         <div class="flex items-center gap-1.5">
@@ -4355,6 +4470,15 @@ window.AnonaImpressao = (function () {
     const lista = abrigoUnificarListas[grupo];
     if (!ol) return;
     vazio.style.display = lista.length ? 'none' : '';
+    const contA = document.getElementById(`abrigoCont${grupo}`);
+    if (contA) { contA.textContent = lista.length; contA.classList.toggle('has', lista.length > 0); }
+    const abrigoIdx = Math.floor(grupo / 3);
+    const totalA = document.getElementById(`abrigoTotal${abrigoIdx}`);
+    if (totalA) {
+      const n = [0, 1, 2].reduce((soma, k) => soma + ((abrigoUnificarListas[abrigoIdx * 3 + k] || []).length), 0);
+      totalA.textContent = `${n} ${n === 1 ? 'folha' : 'folhas'}`;
+      totalA.classList.toggle('has', n > 0);
+    }
     ol.innerHTML = lista.map((item, i) => `
       <li class="flex items-center gap-1.5 bg-slate-50 rounded-lg px-2 py-1">
         <span class="text-slate-400 font-bold w-4 text-center flex-shrink-0">${i + 1}</span>
@@ -6596,6 +6720,79 @@ if ('serviceWorker' in navigator) {
   setInterval(verificarAtualizacao, 3 * 60 * 1000); // repete a cada 3 min
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') verificarAtualizacao();
+  });
+})();
+</script>
+
+<script>
+/* Seção "Planilhas do Território Volante": passos recolhíveis (estado salvo no
+   aparelho), atalhos numerados e arrastar-e-soltar/teclado nas áreas de envio. */
+(function () {
+  const sec = document.getElementById('territorioVolante');
+  if (!sec) return;
+  const CHAVE = 'anonaTvPassos';
+  const passos = Array.from(sec.querySelectorAll('details.tool-step'));
+  let salvo = {};
+  try { salvo = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch (e) { salvo = {}; }
+  const gravar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(salvo)); } catch (e) {} };
+
+  passos.forEach((d) => {
+    const n = d.dataset.step;
+    if (salvo[n] === false) d.open = false;
+    d.addEventListener('toggle', () => { salvo[n] = d.open; gravar(); });
+  });
+  const todos = (abrir) => passos.forEach((d) => { d.open = abrir; });
+  const bExp = document.getElementById('tvExpandir');
+  const bRec = document.getElementById('tvRecolher');
+  if (bExp) bExp.addEventListener('click', () => todos(true));
+  if (bRec) bRec.addEventListener('click', () => todos(false));
+
+  sec.querySelectorAll('[data-tv-nav]').forEach((a) => {
+    a.addEventListener('click', (ev) => {
+      const alvo = document.getElementById('tvPasso' + a.dataset.tvNav);
+      if (!alvo) return;
+      ev.preventDefault();
+      alvo.open = true;
+      const reduz = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      alvo.scrollIntoView({ behavior: reduz ? 'auto' : 'smooth', block: 'start' });
+      const sum = alvo.querySelector('summary');
+      if (sum) sum.focus({ preventScroll: true });
+    });
+  });
+
+  function aceito(arquivo, accept) {
+    const regras = String(accept || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (!regras.length) return true;
+    const nome = arquivo.name.toLowerCase();
+    const tipo = (arquivo.type || '').toLowerCase();
+    return regras.some((r) => r.startsWith('.') ? nome.endsWith(r) : (r.endsWith('/*') ? tipo.startsWith(r.slice(0, -1)) : tipo === r));
+  }
+
+  sec.querySelectorAll('label.tv-drop').forEach((lb) => {
+    const input = lb.querySelector('input[type="file"]');
+    if (!input) return;
+    lb.tabIndex = 0;
+    lb.setAttribute('role', 'button');
+    lb.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); input.click(); }
+    });
+    ['dragenter', 'dragover'].forEach((nome) => lb.addEventListener(nome, (ev) => {
+      ev.preventDefault();
+      lb.classList.add('is-over');
+    }));
+    lb.addEventListener('dragleave', () => lb.classList.remove('is-over'));
+    lb.addEventListener('drop', (ev) => {
+      ev.preventDefault();
+      lb.classList.remove('is-over');
+      const soltos = Array.from((ev.dataTransfer && ev.dataTransfer.files) || []).filter((f) => aceito(f, input.accept));
+      if (!soltos.length) return;
+      try {
+        const dt = new DataTransfer();
+        (input.multiple ? soltos : soltos.slice(0, 1)).forEach((f) => dt.items.add(f));
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (e) { /* navegador sem DataTransfer: o clique normal continua funcionando */ }
+    });
   });
 })();
 </script>
