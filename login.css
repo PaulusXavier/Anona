@@ -1,0 +1,213 @@
+/* Anona — TELA DE LOGIN (v3).
+ *
+ * Autocontida de propósito: não usa utilitários do Tailwind nem ícones do Lucide (ambos vêm de CDN). Se a CDN não
+ * carregar (primeiro acesso sem internet, rede da prefeitura bloqueando), a tela de entrada continua inteira e legível.
+ * Os ids do formulário (authEmail, authPass, authError…) e as classes que o JS liga/desliga (hidden, is-invalid, shake,
+ * access-leaving, lg-tab.active) continuam os mesmos — só a aparência mudou.
+ *
+ * Ideia: tela dividida em duas metades. À esquerda, o painel azul mostra a régua de pagamento do mês (dia de cada final
+ * de NIS, lida do calendário do próprio app) — o que o Anona faz, logo na entrada. À direita, o formulário sobre papel,
+ * calmo. O resto é discreto: nada se mexe sozinho, a não ser a entrada única da régua.
+ */
+#lockScreen{
+  --lg-navy:#071A3D; --lg-navy-2:#0D2E63; --lg-navy-3:#123A78;
+  --lg-paper:#FBF8F1; --lg-ink:#14203A; --lg-mute:#4A5872; --lg-line:#7F8CA3; --lg-field:#fff;
+  --lg-gold:#D89B32; --lg-gold-soft:#F3D9A3; --lg-green:#146B47; --lg-danger:#B3261E;
+  position:fixed; inset:0; z-index:9999; overflow-x:hidden; overflow-y:auto;
+  background:var(--lg-paper); color:var(--lg-ink);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif; font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  transition:opacity .4s ease, transform .4s ease;
+}
+#lockScreen *, #lockScreen *::before, #lockScreen *::after{ box-sizing:border-box; }
+#lockScreen .hidden{ display:none !important; }
+#lockScreen.access-leaving{ opacity:0; transform:scale(1.02); pointer-events:none; }
+#lockScreen .lg-ic{ width:1.1rem; height:1.1rem; flex:none; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+/* O mascote de dicas ficava por cima do formulário (principalmente no celular). Na tela de entrada ele fica quieto. */
+body:has(#lockScreen:not([style*="display: none"])) :is(#anonaMascotWrap, #offlineBanner){ display:none !important; }   /* o aviso de "sem internet" do formulário já cobre este caso */
+
+/* faixa da bandeira no topo, como no cabeçalho do app */
+.lg-ribbon{ position:absolute; z-index:3; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#159947 0 34%,#FFCC29 34% 66%,#0B2F7A 66%); }
+
+.lg-shell{ position:relative; min-height:100%; min-height:100dvh; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:auto 1fr; }
+
+/* ───────────── painel de marca (azul) ───────────── */
+.lg-brand{
+  position:relative; color:#fff; padding:1.25rem 1.25rem 1.1rem; overflow:hidden;
+  display:flex; flex-direction:column; gap:1.5rem;
+  background-color:var(--lg-navy);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255,255,255,.07) 1px, transparent 0),
+    radial-gradient(90% 70% at 0% 0%, rgba(21,153,71,.30), transparent 62%),
+    radial-gradient(80% 60% at 100% 100%, rgba(216,155,50,.20), transparent 62%),
+    linear-gradient(165deg,#0B2552 0%,var(--lg-navy) 62%);
+  background-size:18px 18px, auto, auto, auto;
+}
+.lg-id{ display:flex; align-items:center; gap:.8rem; }
+.lg-logo{ width:2.75rem; height:2.75rem; flex:none; border-radius:22%; box-shadow:0 0 0 1px rgba(255,255,255,.18), 0 8px 22px -8px rgba(0,0,0,.55); }
+.lg-logo svg{ display:block; width:100%; height:100%; border-radius:22%; }
+.lg-name{ font-family:'Fraunces',Georgia,serif; font-weight:700; font-size:1.6rem; line-height:1; letter-spacing:-.01em; margin:0; }
+.lg-year{ display:block; margin-top:.3rem; font-family:'Inter',system-ui,sans-serif; font-weight:500; font-size:.8rem; letter-spacing:0; color:#B9C8E4; }
+
+.lg-headline, .lg-lede, .lg-brand-foot{ display:none; }
+.lg-pay{ margin:0; }
+.lg-pay-head, .lg-pay-grid{ display:none; }
+
+/* "Próximo pagamento" — única linha da régua que aparece no celular */
+.lg-pay-next{ margin:0; font-size:.9rem; line-height:1.4; color:#D4DEF1; }
+.lg-pay-next strong{ color:var(--lg-gold-soft); font-weight:700; }
+.lg-pay-next:empty{ display:none; }
+
+/* ───────────── painel do formulário (papel) ───────────── */
+.lg-panel{ display:flex; justify-content:center; align-items:flex-start; padding:1.6rem 1.25rem 2rem; }
+.lg-wrap{ width:100%; max-width:25rem; }
+.lg-title{ margin:0 0 1.1rem; font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:1.9rem; line-height:1.12; letter-spacing:-.015em; color:var(--lg-navy); text-wrap:balance; }
+.lg-title #authGreeting{ display:block; color:#5B6A86; font-weight:500; }
+.lg-title #authGreeting:empty{ display:none; }
+.lg-title #authGreeting:not(:empty)::after{ content:"."; }
+
+.lg-tabs{ position:relative; display:grid; grid-template-columns:1fr 1fr; padding:.25rem; border-radius:.85rem; background:#E4EAF4; }
+.lg-tabs::before{
+  content:""; position:absolute; top:.25rem; bottom:.25rem; left:.25rem; width:calc(50% - .25rem);
+  border-radius:.62rem; background:#fff; box-shadow:0 1px 3px rgba(13,46,99,.22);
+  transition:transform .28s cubic-bezier(.3,.9,.3,1);
+}
+.lg-tabs[data-mode="signup"]::before{ transform:translateX(100%); }
+.lg-tab{
+  position:relative; z-index:1; min-height:2.75rem; padding:0 .5rem; border:0; border-radius:.62rem; background:transparent;
+  font:600 .92rem/1 'Inter',system-ui,sans-serif; color:#3E4D6A; cursor:pointer; transition:color .2s;
+}
+.lg-tab:hover{ color:var(--lg-navy-2); }
+.lg-tab.active{ color:var(--lg-navy-2); font-weight:700; }
+
+.lg-sub{ margin:.95rem 0 1.15rem; font-size:.95rem; line-height:1.5; color:var(--lg-mute); }
+
+.lg-form{ display:grid; gap:1rem; }
+.lg-field label.lg-label{ display:block; margin:0 0 .35rem; font-size:.875rem; font-weight:600; color:#2C3A57; }
+.lg-input{
+  display:block; width:100%; min-height:3rem; padding:.7rem .9rem; border:1.5px solid var(--lg-line); border-radius:.7rem;
+  background:var(--lg-field); color:var(--lg-ink); font:400 1rem/1.4 'Inter',system-ui,sans-serif; /* 16px: o iOS não dá zoom ao focar */
+  transition:border-color .15s, box-shadow .15s; -webkit-appearance:none; appearance:none;
+}
+.lg-input::placeholder{ color:#66738A; }
+.lg-input:hover:not(:focus):not(.is-invalid){ border-color:#5F6F8C; }
+.lg-input:focus{ outline:none; border-color:var(--lg-navy-2); box-shadow:0 0 0 4px rgba(13,46,99,.16); }
+.lg-input.is-invalid{ border-color:var(--lg-danger); background:#FFF8F7; }
+.lg-input.is-invalid:focus{ box-shadow:0 0 0 4px rgba(179,38,30,.16); }
+.lg-input:-webkit-autofill{ -webkit-box-shadow:0 0 0 40px #fff inset; -webkit-text-fill-color:var(--lg-ink); }
+.lg-pw{ position:relative; }
+.lg-pw .lg-input{ padding-right:3.2rem; }
+.lg-eye{
+  position:absolute; top:50%; right:.3rem; transform:translateY(-50%); width:2.5rem; height:2.5rem; border:0; border-radius:.55rem;
+  display:flex; align-items:center; justify-content:center; background:transparent; color:#4A5872; cursor:pointer; transition:background .15s, color .15s;
+}
+.lg-eye:hover{ background:#E4EAF4; color:var(--lg-navy-2); }
+.lg-eye[aria-pressed="true"]{ color:var(--lg-navy-2); }
+
+.lg-hint, .lg-caps{ display:flex; align-items:flex-start; gap:.35rem; margin:.4rem 0 0; font-size:.85rem; line-height:1.4; font-weight:500; }
+.lg-hint{ color:var(--lg-danger); }
+.lg-caps{ color:#6B4E00; }
+.lg-caps .lg-ic, .lg-hint .lg-ic{ width:.95rem; height:.95rem; margin-top:.12rem; }
+
+.lg-meter{ margin-top:.55rem; }
+.lg-meter-track{ height:.3rem; border-radius:999px; background:#DCE3EF; overflow:hidden; }
+.lg-meter-bar{ height:100%; width:0; border-radius:999px; transition:width .25s ease, background-color .25s ease; }
+.lg-meter-label{ margin:.3rem 0 0; min-height:1.1rem; font-size:.8rem; font-weight:600; color:var(--lg-mute); }
+
+.lg-row{ display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-top:-.15rem; }
+.lg-check{ display:inline-flex; align-items:center; gap:.55rem; min-height:2.5rem; cursor:pointer; user-select:none; font-size:.9rem; font-weight:500; color:#2C3A57; }
+.lg-check input{ width:1.15rem; height:1.15rem; margin:0; accent-color:var(--lg-navy-2); cursor:pointer; }
+.lg-link{ min-height:2.5rem; padding:0 .15rem; border:0; background:transparent; font:600 .9rem 'Inter',system-ui,sans-serif; color:var(--lg-navy-2); text-decoration:underline; text-decoration-color:rgba(13,46,99,.35); text-underline-offset:3px; cursor:pointer; }
+.lg-link:hover{ text-decoration-color:currentColor; }
+
+.lg-alert{ display:flex; gap:.6rem; margin:0; padding:.7rem .85rem; border-radius:.7rem; border:1px solid; font-size:.9rem; line-height:1.45; font-weight:500; }
+.lg-alert::before{ content:""; flex:none; width:1.05rem; height:1.05rem; margin-top:.15rem; background:currentColor; -webkit-mask:var(--ic) center/contain no-repeat; mask:var(--ic) center/contain no-repeat; }
+.lg-alert-error{ color:#8F1D17; background:#FEF1F0; border-color:#F3C2BE; --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 8v4M12 16h.01'/%3E%3C/svg%3E"); }
+.lg-alert-ok{ color:#0F5A3B; background:#EAF6EF; border-color:#B7DFC8; --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E"); }
+.lg-alert-warn{ color:#6B4E00; background:#FFF6E3; border-color:#EBCF93; --ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 4.2-2.7M10.7 5c4-.4 8.1.9 11.3 3.8M5 12.9a10 10 0 0 1 5.2-2.7M13.8 10.4a10 10 0 0 1 5.2 2.5M2 2l20 20'/%3E%3C/svg%3E"); }
+
+.lg-submit{
+  display:flex; align-items:center; justify-content:center; gap:.6rem; width:100%; min-height:3.2rem; margin-top:.2rem; padding:0 1rem;
+  border:0; border-radius:.75rem; background:var(--lg-navy-2); color:#fff; font:700 1rem/1 'Inter',system-ui,sans-serif; cursor:pointer;
+  box-shadow:0 1px 0 rgba(255,255,255,.14) inset, 0 10px 22px -12px rgba(13,46,99,.75);
+  transition:background-color .15s, transform .1s, box-shadow .15s;
+}
+.lg-submit:hover:not(:disabled){ background:var(--lg-navy-3); }
+.lg-submit:active:not(:disabled){ transform:scale(.99); }
+.lg-submit:disabled{ opacity:.75; cursor:progress; }
+.lg-submit .lg-ic:last-child{ color:var(--lg-gold-soft); transition:transform .2s; }
+.lg-submit:hover:not(:disabled) .lg-ic:last-child{ transform:translateX(3px); }
+.lg-spin{ animation:lgSpin .8s linear infinite; }
+@keyframes lgSpin{ to{ transform:rotate(360deg); } }
+
+/* o styles.css tem uma regra global de foco (box-shadow + border-radius:inherit) que quadrava os cantos: aqui o foco é próprio */
+#lockScreen :is(button, input):focus-visible{ box-shadow:none; }
+#lockScreen button:focus-visible, #lockScreen .lg-check input:focus-visible{ outline:3px solid var(--lg-gold); outline-offset:2px; }
+#lockScreen .lg-input:focus-visible{ outline:none; border-radius:.7rem; box-shadow:0 0 0 4px rgba(13,46,99,.16); }
+#lockScreen .lg-input.is-invalid:focus-visible{ box-shadow:0 0 0 4px rgba(179,38,30,.16); }
+#lockScreen .lg-submit:focus-visible{ border-radius:.75rem; }
+#lockScreen .lg-tab:focus-visible{ border-radius:.62rem; }
+#lockScreen .lg-eye:focus-visible{ border-radius:.55rem; }
+#lockScreen .lg-link:focus-visible{ border-radius:.3rem; }
+#lockScreen .lg-eye:active{ transform:translateY(-50%) scale(.94); }
+#lockScreen .lg-tab:active, #lockScreen .lg-link:active{ transform:none; }
+
+.lg-foot{ margin-top:1.6rem; padding-top:1.1rem; border-top:1px solid #D9DFEA; display:grid; gap:.55rem; font-size:.8rem; line-height:1.5; color:#55637C; }
+.lg-foot p{ margin:0; }
+.lg-foot .lg-ic{ width:.9rem; height:.9rem; margin:-.12rem .25rem 0 0; vertical-align:middle; }
+.lg-credit{ font-weight:600; color:#3E4D6A; }
+
+#lockCard.shake{ animation:lgShake .4s both; }
+@keyframes lgShake{ 10%,90%{ transform:translateX(-1px); } 20%,80%{ transform:translateX(2px); } 30%,50%,70%{ transform:translateX(-4px); } 40%,60%{ transform:translateX(4px); } }
+
+/* ───────────── tela larga: duas metades ───────────── */
+@media (min-width:960px){
+  .lg-shell{ grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); grid-template-rows:1fr; }
+  .lg-brand{ padding:clamp(2.25rem,5vw,4rem); justify-content:space-between; gap:2.5rem; }
+  .lg-logo{ width:3.4rem; height:3.4rem; }
+  .lg-name{ font-size:2rem; }
+  .lg-year{ font-size:.85rem; }
+  .lg-headline{ display:block; margin:0; max-width:17ch; font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:clamp(2.1rem,3.4vw,3.1rem); line-height:1.08; letter-spacing:-.02em; text-wrap:balance; }
+  .lg-lede{ display:block; margin:1.1rem 0 0; max-width:34rem; font-size:1rem; line-height:1.6; color:#C9D6EE; }
+  .lg-mid{ display:flex; flex-direction:column; gap:2rem; }
+  .lg-pay{ max-width:34rem; }
+  .lg-pay-head{ display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin:0 0 .75rem; }
+  .lg-pay-title{ margin:0; font-size:.95rem; font-weight:700; color:#fff; }
+  .lg-pay-hint{ margin:0; font-size:.8rem; color:#AFC0DD; }
+  .lg-pay-grid{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.5rem; margin:0; padding:0; list-style:none; }
+  .lg-pay-next{ margin-top:.9rem; font-size:.95rem; }
+  .lg-brand-foot{ display:block; margin:0; font-size:.85rem; color:#B9C8E4; }
+  .lg-panel{ align-items:center; padding:2.5rem clamp(1.5rem,5vw,4rem); }
+  .lg-wrap{ max-width:25rem; }
+  .lg-title{ font-size:2.2rem; margin-bottom:1.4rem; }
+  .lg-credit{ display:none; }
+}
+@media (min-width:960px) and (max-height:780px){
+  .lg-brand{ padding-top:1.75rem; padding-bottom:1.5rem; gap:1.25rem; }
+  .lg-mid{ gap:1.25rem; }
+  .lg-lede{ display:none; }
+}
+
+/* Régua de pagamento: cada li é um final de NIS */
+.lg-pay-grid li{
+  display:flex; flex-direction:column; gap:.1rem; padding:.55rem .65rem .6rem; border-radius:.65rem;
+  border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.05);
+  animation:lgTile .5s cubic-bezier(.2,.8,.2,1) both; animation-delay:calc(var(--i,0) * 45ms + 150ms);
+}
+.lg-pay-grid .nis{ font-size:.75rem; font-weight:600; color:#B9C8E4; }
+.lg-pay-grid .dia{ font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:1.7rem; line-height:1.05; color:#fff; }
+.lg-pay-grid .mes{ font-size:.75rem; color:#B9C8E4; }
+.lg-pay-grid li.passou{ background:transparent; border-color:rgba(255,255,255,.09); }
+.lg-pay-grid li.passou .dia{ color:#8FA3C6; font-weight:500; }
+.lg-pay-grid li.passou .nis, .lg-pay-grid li.passou .mes{ color:#8FA3C6; }
+.lg-pay-grid li.proximo{ background:var(--lg-gold-soft); border-color:var(--lg-gold-soft); }
+.lg-pay-grid li.proximo .nis, .lg-pay-grid li.proximo .mes{ color:#4B3500; font-weight:600; }
+.lg-pay-grid li.proximo .dia{ color:var(--lg-navy); }
+@keyframes lgTile{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+
+@media (prefers-reduced-motion: reduce){
+  #lockScreen, .lg-tabs::before, .lg-meter-bar, .lg-submit, .lg-submit .lg-ic:last-child{ transition:none; }
+  .lg-pay-grid li, #lockCard.shake{ animation:none; }
+  .lg-spin{ animation-duration:1.6s; }
+}
