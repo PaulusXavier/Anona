@@ -777,7 +777,7 @@
           <i data-lucide="chevron-down" class="tv-chevron w-4 h-4" aria-hidden="true"></i>
         </summary>
         <div class="tv-body">
-          <p class="tv-hint mb-2">Envie as folhas resumo (PDF) das famílias que você vai visitar. O app junta tudo num único PDF, na ordem da melhor rota: primeiro o <strong>Bloco 1</strong> inteiro, depois o <strong>Bloco 2</strong>.</p>
+          <p class="tv-hint mb-2">Envie as folhas resumo (PDF) das famílias que você vai visitar. O app <strong>lê o endereço de cada folha sozinho</strong>, organiza a ordem de visita e junta tudo num único PDF, com um <strong>roteiro</strong> no começo: primeiro o <strong>Bloco 1</strong> inteiro, depois o <strong>Bloco 2</strong>.</p>
           <p class="tv-partida"><strong>Partida:</strong> <span id="unificarPartidaTexto">Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</span></p>
 
           <div class="tv-opcoes">
@@ -797,6 +797,9 @@
             </div>
           </div>
           <p id="unificarStatusGeral" class="tv-status">0/30 arquivos · 0,0 MB de 50 MB</p>
+          <button type="button" id="unificarOrganizarBtn" onclick="unificarOrganizarRota(event)" class="tv-btn-ghost w-full mb-2">
+            <i data-lucide="map-pinned" class="w-3.5 h-3.5"></i> <span>Organizar rota automaticamente</span>
+          </button>
 
           <div class="tv-sub-card">
             <div class="tv-rowhead">
@@ -833,7 +836,7 @@
           </div>
           <details class="tv-more">
             <summary>Como a ordem é sugerida</summary>
-            <p class="tv-hint">Preencha o endereço de referência de cada família e clique em “Sugerir ordem”: o app organiza por rua e depois pela numeração do imóvel (funciona offline, sem precisar da IA) e, se a opção de IA acima estiver marcada e configurada, refina ainda mais essa ordem com o Gemini. Você também pode usar as setinhas para reordenar manualmente a qualquer momento (a rua de partida é só uma referência). Nada é enviado à internet além do texto do endereço, e só quando a IA está ativada — a união dos PDFs acontece no seu aparelho, e os arquivos originais não são alterados.</p>
+            <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” ordena cada bloco por rua e depois pela numeração do imóvel (funciona offline, sem IA, com a rua de partida primeiro) e, se a opção de IA estiver marcada e configurada, refina essa ordem com o Gemini — nesse caso só o texto do endereço é enviado. Você também pode usar as setinhas para reordenar manualmente. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
           </details>
           <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait mt-3" style="background:var(--azul)">
             <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
@@ -4176,7 +4179,8 @@ window.AnonaImpressao = (function () {
           <button type="button" onclick="unificarMover(${bloco},${i},1)" ${i === lista.length - 1 ? 'disabled' : ''} aria-label="Mover para baixo" title="Mover para baixo" class="p-1 rounded hover:bg-slate-200 disabled:opacity-20 flex-shrink-0"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
           <button type="button" onclick="unificarRemover(${bloco},${i})" aria-label="Remover arquivo" title="Remover arquivo" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
         </div>
-        <input type="text" value="${escapeHtml(item.endereco || '')}" oninput="unificarSetEndereco(${bloco},${i},this.value)" placeholder="Rua e número (opcional, usado em 'Sugerir ordem')" class="w-full mt-1.5 text-[11px] border rounded-lg px-2 py-1" style="border-color:var(--line)">
+        <input type="text" data-uid="${item.id}" value="${escapeHtml(item.endereco || '')}" oninput="unificarSetEndereco(${bloco},${i},this.value)" placeholder="Rua e número (lido do PDF; edite se precisar)" class="w-full mt-1.5 text-[11px] border rounded-lg px-2 py-1" style="border-color:var(--line)">
+        <p data-ustatus="${item.id}" class="text-[10px] mt-0.5 ${item.status === 'nao' || item.status === 'erro' ? 'text-amber-600' : 'text-slate-400'}">${unificarTextoStatus(item)}</p>
       </li>
     `).join('');
     if (window.lucide) lucide.createIcons();
@@ -4184,14 +4188,87 @@ window.AnonaImpressao = (function () {
   }
 
   window.unificarSetEndereco = (bloco, i, valor) => {
-    if (unificarListas[bloco] && unificarListas[bloco][i]) unificarListas[bloco][i].endereco = valor;
+    if (unificarListas[bloco] && unificarListas[bloco][i]) { unificarListas[bloco][i].endereco = valor; unificarListas[bloco][i].status = 'manual'; }
   };
+
+  function unificarTextoStatus(item) {
+    return ({
+      lendo: 'Lendo o endereço do PDF…',
+      ok: 'Endereço lido do PDF — confira.',
+      nao: 'Não achei o endereço neste PDF — digite rua e número.',
+      erro: 'Não consegui ler este PDF — digite rua e número.',
+      manual: ''
+    })[item.status] || '';
+  }
+
+  // Atualiza só o campo e o aviso de UM item (sem redesenhar a lista, para não atrapalhar quem está digitando).
+  function unificarAtualizarItemDOM(item) {
+    const inp = document.querySelector(`input[data-uid="${item.id}"]`);
+    if (inp && document.activeElement !== inp) inp.value = item.endereco || '';
+    const st = document.querySelector(`[data-ustatus="${item.id}"]`);
+    if (st) {
+      st.textContent = unificarTextoStatus(item);
+      st.className = 'text-[10px] mt-0.5 ' + (item.status === 'nao' || item.status === 'erro' ? 'text-amber-600' : 'text-slate-400');
+    }
+  }
+
+  // pdf.js só é baixado quando alguém envia uma folha (não pesa na abertura do app).
+  let unificarPdfJsPromise = null;
+  function unificarCarregarPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (unificarPdfJsPromise) return unificarPdfJsPromise;
+    unificarPdfJsPromise = new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      sc.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      };
+      sc.onerror = () => { unificarPdfJsPromise = null; reject(new Error('Não consegui carregar o leitor de PDF (sem internet?).')); };
+      document.head.appendChild(sc);
+    });
+    return unificarPdfJsPromise;
+  }
+
+  // Lê o texto das primeiras páginas da folha e procura o endereço (só rua/número/bairro; nada é enviado).
+  async function unificarLerEndereco(file) {
+    const pdfjs = await unificarCarregarPdfJs();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    try {
+      let linhas = [];
+      for (let n = 1; n <= Math.min(doc.numPages, 3); n++) {
+        const page = await doc.getPage(n);
+        const conteudo = await page.getTextContent();
+        linhas = linhas.concat(window.AnonaRota.linhasDeItens(conteudo.items));
+        const achou = window.AnonaRota.extrairEndereco(linhas);
+        if (achou) return achou;
+      }
+      return null;
+    } finally { try { doc.destroy(); } catch (e) {} }
+  }
+
+  function unificarIniciarLeitura(item) {
+    item.status = 'lendo';
+    item.leitura = (async () => {
+      try {
+        const achou = await unificarLerEndereco(item.file);
+        if (item.status === 'manual') return;   // a pessoa digitou enquanto lia: vale o que ela digitou
+        if (achou) { item.endereco = achou.texto; item.status = 'ok'; } else { item.status = 'nao'; }
+      } catch (e) {
+        console.warn('Leitura do endereço falhou:', e);
+        if (item.status !== 'manual') item.status = 'erro';
+      }
+      unificarAtualizarItemDOM(item);
+    })();
+    return item.leitura;
+  }
 
   window.__handleUnificarUpload = (input, bloco) => {
     const files = Array.from(input.files || []);
     input.value = '';
     if (!files.length) return;
     const rejeitados = [];
+    const novos = [];
     let { arquivos: totalArquivos, bytes: totalBytes } = unificarTotais();
     files.forEach(file => {
       if (file.type && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
@@ -4206,11 +4283,15 @@ window.AnonaImpressao = (function () {
         rejeitados.push(`${file.name} (passaria do limite de 50 MB)`);
         return;
       }
-      unificarListas[bloco].push({ id: unificarProximoId++, file, endereco: '' });
+      const novo = { id: unificarProximoId++, file, endereco: '', status: 'lendo', leitura: null };
+      unificarListas[bloco].push(novo);
+      novos.push(novo);
       totalArquivos += 1;
       totalBytes += file.size;
     });
     renderUnificarLista(bloco);
+    // lê um de cada vez, para não pesar em celulares mais fracos
+    (async () => { for (const n of novos) await unificarIniciarLeitura(n); })();
     if (rejeitados.length) alert(`Estes arquivos não foram adicionados:\n${rejeitados.join('\n')}`);
   };
 
@@ -4264,61 +4345,76 @@ window.AnonaImpressao = (function () {
   //    texto do endereço). Se a IA falhar por qualquer motivo (sem
   //    internet, chave inválida, fora do ar), cai automaticamente para a
   //    ordenação por rua/número calculada no passo 1, em vez de travar.
-  window.unificarSugerirOrdemIA = async (bloco, evt) => {
+  function unificarConfigIA() {
     const toggle = document.getElementById('geminiRotaToggleUnificar');
     const apiKeyInput = document.getElementById('geminiApiKeyInputUnificar');
     const apiKey = ((apiKeyInput && apiKeyInput.value) || '').trim();
     const usarIA = !!(toggle && toggle.checked) && !!apiKey;
     if (usarIA) safeStorageSet('anonaGeminiApiKey', apiKey);
+    return { usarIA, apiKey };
+  }
 
+  const unificarEsperarLeituras = () => Promise.all(unificarListas.flat().map(i => i.leitura).filter(Boolean));
+
+  // Ordena UM bloco: por rua/número (offline, sempre) e, se pedido, refina com o Gemini.
+  // Devolve um aviso quando a IA falhou e ficou só a ordenação por rua/número.
+  async function unificarOrdenarBloco(bloco, usarIA, apiKey) {
     const lista = unificarListas[bloco] || [];
-    const comEndereco = [];
-    const semEndereco = [];
-    lista.forEach(item => {
-      if (String(item.endereco || '').trim()) comEndereco.push(item);
-      else semEndereco.push(item);
-    });
-    if (comEndereco.length < 2) {
-      alert('Preencha o endereço de referência de pelo menos duas famílias neste bloco (campo abaixo do nome de cada arquivo) para poder sugerir a ordem.');
-      return;
-    }
-
-    const botao = evt && evt.currentTarget;
-    const textoOriginal = botao ? botao.innerHTML : '';
-    if (botao) {
-      botao.disabled = true;
-      botao.innerHTML = usarIA ? 'Consultando a IA…' : 'Calculando ordem…';
-    }
-    try {
-      // Passo 1: ordenação por rua e depois por número do imóvel — mesma
-      // heurística do Relatório Individual (relatorioIndividualNomeRua /
-      // relatorioIndividualNumeroEndereco), sempre disponível.
-      const porProximidade = [...comEndereco].sort((a, b) => {
-        const ruaA = relatorioIndividualNomeRua(a.endereco);
-        const ruaB = relatorioIndividualNomeRua(b.endereco);
-        if (ruaA !== ruaB) return ruaA.localeCompare(ruaB, 'pt-BR');
-        return relatorioIndividualNumeroEndereco(a.endereco) - relatorioIndividualNumeroEndereco(b.endereco);
-      });
-
-      let ordenados = porProximidade;
-      let avisoFallback = '';
-      if (usarIA) {
-        try {
-          const enderecos = comEndereco.map(item => String(item.endereco).trim());
-          const ordemIndices = await geminiSugerirOrdemVisita(UNIFICAR_PARTIDA, enderecos, apiKey);
-          ordenados = ordemIndices.map(idx => comEndereco[idx]);
-        } catch (e) {
-          console.warn('Não consegui usar a IA, usando ordenação por rua/número:', e);
-          avisoFallback = `${e && e.message ? e.message : 'Não consegui consultar o Gemini agora.'} Usei a ordenação por rua/número neste bloco.`;
-        }
+    const comEndereco = lista.filter(item => String(item.endereco || '').trim());
+    const semEndereco = lista.filter(item => !String(item.endereco || '').trim());
+    let ordenados = window.AnonaRota.ordenarPorRota(comEndereco, UNIFICAR_PARTIDA);
+    let aviso = '';
+    if (usarIA && comEndereco.length >= 2) {
+      try {
+        const ordemIndices = await geminiSugerirOrdemVisita(UNIFICAR_PARTIDA, comEndereco.map(i => String(i.endereco).trim()), apiKey);
+        ordenados = ordemIndices.map(idx => comEndereco[idx]);
+      } catch (e) {
+        console.warn('Não consegui usar a IA, usando ordenação por rua/número:', e);
+        aviso = `${UNIFICAR_BLOCOS[bloco].label}: ${e && e.message ? e.message : 'Não consegui consultar o Gemini agora.'} Usei a ordenação por rua/número.`;
       }
-
-      unificarListas[bloco] = ordenados.concat(semEndereco);
-      renderUnificarLista(bloco);
-      if (avisoFallback) alert(avisoFallback);
-    } finally {
-      if (botao) { botao.disabled = false; botao.innerHTML = textoOriginal; if (window.lucide) lucide.createIcons(); }
     }
+    unificarListas[bloco] = ordenados.concat(semEndereco);
+    renderUnificarLista(bloco);
+    return aviso;
+  }
+
+  async function unificarComBotao(botao, textoBusy, fn) {
+    const original = botao ? botao.innerHTML : '';
+    if (botao) { botao.disabled = true; botao.innerHTML = textoBusy; }
+    try { return await fn(); }
+    finally { if (botao) { botao.disabled = false; botao.innerHTML = original; if (window.lucide) lucide.createIcons(); } }
+  }
+
+  // Botão de UM bloco ("Sugerir ordem de visita")
+  window.unificarSugerirOrdemIA = async (bloco, evt) => {
+    const { usarIA, apiKey } = unificarConfigIA();
+    await unificarComBotao(evt && evt.currentTarget, usarIA ? 'Consultando a IA…' : 'Calculando ordem…', async () => {
+      await unificarEsperarLeituras();
+      if ((unificarListas[bloco] || []).filter(i => String(i.endereco || '').trim()).length < 2) {
+        alert('Preciso do endereço de pelo menos duas famílias neste bloco para sugerir a ordem. Digite o que faltar no campo abaixo do nome de cada arquivo.');
+        return;
+      }
+      const aviso = await unificarOrdenarBloco(bloco, usarIA, apiKey);
+      if (aviso) alert(aviso);
+    });
+  };
+
+  // Botão geral: ordena os dois blocos de uma vez
+  window.unificarOrganizarRota = async (evt) => {
+    if (!unificarListas.some(l => l.length)) { alert('Adicione as folhas resumo (PDF) em algum dos blocos primeiro.'); return; }
+    const { usarIA, apiKey } = unificarConfigIA();
+    await unificarComBotao(evt && evt.currentTarget, usarIA ? 'Consultando a IA…' : 'Organizando…', async () => {
+      await unificarEsperarLeituras();
+      const avisos = [];
+      for (let b = 0; b < UNIFICAR_BLOCOS.length; b++) {
+        if (!unificarListas[b].length) continue;
+        const aviso = await unificarOrdenarBloco(b, usarIA, apiKey);
+        if (aviso) avisos.push(aviso);
+      }
+      const sem = unificarListas.flat().filter(i => !String(i.endereco || '').trim()).length;
+      if (sem) avisos.push(`${sem} folha${sem === 1 ? '' : 's'} sem endereço ${sem === 1 ? 'ficou' : 'ficaram'} no fim do bloco. Digite o endereço e organize de novo, se quiser.`);
+      if (avisos.length) alert(avisos.join('\n\n'));
+    });
   };
 
   // Desenha uma página de capa/divisória simples no PDF unificado, usando
@@ -4341,11 +4437,40 @@ window.AnonaImpressao = (function () {
     let y = height - 100;
     linhas.forEach(linha => {
       const font = linha.bold ? fontBold : fontRegular;
-      page.drawText(linha.texto, { x: 32, y, size: linha.tamanho || 11, font, color: linha.cor || slate });
+      page.drawText(window.AnonaRota.textoSeguroPdf(linha.texto), { x: 32, y, size: linha.tamanho || 11, font, color: linha.cor || slate });
       y -= (linha.tamanho || 11) + 12;
     });
     page.drawText(`Gerado em ${new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date())}`, { x: 32, y: 24, size: 8, font: fontRegular, color: slate });
     page.drawText('Contém dados pessoais protegidos (LGPD) — uso restrito ao serviço.', { x: width - 32 - fontRegular.widthOfTextAtSize('Contém dados pessoais protegidos (LGPD) — uso restrito ao serviço.', 8), y: 24, size: 8, font: fontRegular, color: slate });
+  }
+
+  // Páginas de ROTEIRO: a ordem de visita de cada bloco, com o endereço lido de cada folha.
+  function unificarDesenharRoteiro(pdfDoc, fontBold, fontRegular) {
+    const azul = window.PDFLib.rgb(0x0B/255, 0x2F/255, 0x7A/255);
+    const cabe = (txt, font, size, max) => {
+      let t = window.AnonaRota.textoSeguroPdf(txt);
+      while (t.length > 4 && font.widthOfTextAtSize(t, size) > max) t = t.slice(0, -2);
+      return t;
+    };
+    const linhas = [];
+    UNIFICAR_BLOCOS.forEach((b, bi) => {
+      const lista = unificarListas[bi];
+      if (!lista.length) return;
+      linhas.push({ texto: b.label, tamanho: 12, bold: true, cor: azul });
+      lista.forEach((item, i) => {
+        const end = String(item.endereco || '').trim() || '(endereço não informado)';
+        const arq = String(item.file.name || '').replace(/\.pdf$/i, '');
+        linhas.push({ texto: cabe(`${i + 1}.  ${end}`, fontRegular, 10, 520) + '   ·   ' + cabe(arq, fontRegular, 8, 190), tamanho: 10 });
+      });
+    });
+    const POR_PAGINA = 19;
+    const paginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA));
+    for (let p = 0; p < paginas; p++) {
+      const parte = linhas.slice(p * POR_PAGINA, (p + 1) * POR_PAGINA);
+      unificarDesenharPagina(pdfDoc, fontBold, fontRegular, [
+        { texto: `Roteiro de visita${paginas > 1 ? ` (${p + 1}/${paginas})` : ''} — partida: ${UNIFICAR_PARTIDA}`, tamanho: 13, bold: true, cor: azul }
+      ].concat(parte));
+    }
   }
 
   // Metadados do PDF unificado (título que aparece na aba do leitor de PDF).
@@ -4372,6 +4497,7 @@ window.AnonaImpressao = (function () {
     if (btn) { btn.disabled = true; }
     if (btnTextoEl) { btnTextoEl.textContent = `Juntando ${totalArquivos} arquivo${totalArquivos === 1 ? '' : 's'}…`; }
     try {
+      await unificarEsperarLeituras();
       const { PDFDocument, StandardFonts } = window.PDFLib;
       const outDoc = await PDFDocument.create();
       const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
@@ -4388,6 +4514,7 @@ window.AnonaImpressao = (function () {
       });
       capaLinhas.push({ texto: `Total: ${totalArquivos} família${totalArquivos === 1 ? '' : 's'} (${totalArquivos} folha${totalArquivos === 1 ? '' : 's'} resumo)`, tamanho: 10.5, bold: true });
       unificarDesenharPagina(outDoc, fontBold, fontRegular, capaLinhas);
+      unificarDesenharRoteiro(outDoc, fontBold, fontRegular);
 
       for (let bloco = 0; bloco < UNIFICAR_BLOCOS.length; bloco++) {
         const lista = unificarListas[bloco];
@@ -6938,6 +7065,7 @@ if ('serviceWorker' in navigator) {
 <!-- Mascote do app (cartãozinho com aceno) — puramente decorativo, some
      atrás de qualquer modal. Carregado por último e sem bloquear o resto
      da página (defer). -->
+<script src="anona-rota.js" defer></script>
 <script src="anona-tabelas.js" defer></script>
 <script src="anona-mascot.js" defer></script>
 <script src="paulus.v1.js" defer></script>
