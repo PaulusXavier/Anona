@@ -2479,13 +2479,19 @@ function respostaDeRota(texto, opcoes) {
 
 const TIPOS_VISITA = {
   rua: 'rua', r: 'rua', avenida: 'avenida', av: 'avenida', travessa: 'travessa', tv: 'travessa', alameda: 'alameda',
-  estrada: 'estrada', rodovia: 'rodovia', beco: 'beco', praca: 'praca', vicinal: 'vicinal', via: 'via',
+  estrada: 'estrada', br: 'br', rr: 'rr', rodovia: 'rodovia', beco: 'beco', praca: 'praca', vicinal: 'vicinal', via: 'via',
   passagem: 'passagem', largo: 'largo', loteamento: 'loteamento', conjunto: 'conjunto', residencial: 'residencial',
   quadra: 'quadra', ramal: 'ramal'
 };
 
 function semAcentoV(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
 function compactarV(s) { return semAcentoV(s).replace(/[^a-z0-9/ ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+
+// Complemento do imóvel (apto 3, casa 2, bloco B, qd 5, lt 12): não faz parte do nome da rua nem do número.
+const KW_COMPL = '(?:apto|apt|ap|apartamento|casa|cs|bloco|bl|qd|quadra|lt|lote|sala|sl|torre|andar|fundos|frente)';
+const RE_PARTE_COMPL = new RegExp('^(?:' + KW_COMPL + '(?: ?\\d+[a-z]?| [a-z])?\\s*)+$');
+const RE_FIM_COMPL = new RegExp('(?:,|\\s)\\s*' + KW_COMPL + ' ?(?:\\d+[a-z]?|[a-z])$');
+const RE_PARTE_NUM = /^(?:n |numero |num )?(?:\d{1,6}(?: ?[a-z])?|s ?\/ ?n|sn|sem numero)$/;
 
 // "Rua Santo Agostinho, nº 193 — Centenário" -> { tipo, chave, numero, semNumero, bairro } ou null se ilegível
 function analisarEnderecoVisita(texto) {
@@ -2495,23 +2501,31 @@ function analisarEnderecoVisita(texto) {
   const partes = bruto.split(/\s+[—–-]\s+/);
   let via = partes[0];
   let bairroTxt = partes.slice(1).join(' ');
-  // sem travessão: "Rua X, 12, Bairro Y"
-  const porVirgula = via.split(/\s*,\s*/);
-  if (!bairroTxt && porVirgula.length >= 3) { via = porVirgula.slice(0, 2).join(', '); bairroTxt = porVirgula.slice(2).join(' '); }
+  // vírgulas: "Rua X, 12, casa 2, Bairro Y" / "Rua X, Bairro Y" (complemento sai; o que vem depois do número é bairro)
+  const pc = via.split(/\s*,\s*/).filter((s) => s && !RE_PARTE_COMPL.test(compactarV(s)));
+  const temVirgula = pc.length >= 2;
+  if (temVirgula) {
+    const k = pc.findIndex((s, i) => i > 0 && RE_PARTE_NUM.test(compactarV(s)));
+    if (k > 0) { via = pc.slice(0, k + 1).join(', '); if (!bairroTxt) bairroTxt = pc.slice(k + 1).join(' '); }
+    else if (!bairroTxt && !pc.slice(1).some((s) => /\d/.test(s))) { via = pc[0]; bairroTxt = pc.slice(1).join(' '); }
+    else via = pc.join(', ');
+  } else if (pc.length === 1) via = pc[0];
   const bairro = compactarV(bairroTxt.replace(/\bcep\b.*$/i, '').replace(/\bbairro\b\s*:?/i, '').replace(/\b(?:boa vista|roraima|rr)\b.*$/i, ''));
 
   let v = compactarV(via);
   const mt = /^(r|av|tv|[a-z]+)\.? /.exec(v + ' ');
   let tipo = '';
   if (mt && TIPOS_VISITA[mt[1]]) { tipo = TIPOS_VISITA[mt[1]]; v = v.slice(mt[0].length - 1).trim(); }
-  if (!tipo) return null;
+  // sem tipo ("Santo Agostinho, 193"): só vale se houver vírgula e número; senão é texto solto, ilegível
+  if (!tipo && !temVirgula) return null;
+  while (RE_FIM_COMPL.test(v)) v = v.replace(RE_FIM_COMPL, '').trim();
 
-  // número: "..., nº 193", "..., 193", "... 193", "s/n"
+  // número: "..., nº 193", "..., 193", "... 193", "10-A", "s/n"
   let numero = null; let semNumero = false;
   let m = /(?:,\s*|\s+)(?:n[o°º]?\.?\s*|numero\s*|num\s*)?(s\s*\/\s*n|sn|sem numero)$/.exec(v);
   if (m) { semNumero = true; v = v.slice(0, m.index).trim(); }
   else {
-    m = /(?:,\s*|\s+)(?:n[o°º]?\.?\s*|numero\s*|num\s*)?(\d{1,6})[a-z]?$/.exec(v);
+    m = /(?:,\s*|\s+)(?:n[o°º]?\.?\s*|numero\s*|num\s*)?(\d{1,6})(?: ?[a-z])?$/.exec(v);
     // "Rua 7 de Setembro" não tem número de imóvel; "Rua 7" (sem mais nada) também não: o 7 é o nome da rua
     if (m && v.slice(0, m.index).trim() && !/\b(?:de|da|do|das|dos|e)$/.test(v.slice(0, m.index).trim())) {
       numero = parseInt(m[1], 10); v = v.slice(0, m.index).trim();
@@ -2519,6 +2533,7 @@ function analisarEnderecoVisita(texto) {
   }
   const chave = v.replace(/,/g, ' ').replace(/\bn[o°º]?$/, '').replace(/\s+/g, ' ').trim();
   if (!chave) return null;
+  if (!tipo && numero === null && !semNumero) return null;
   return { tipo, chave, numero, semNumero: semNumero || numero === null, bairro };
 }
 
@@ -2531,15 +2546,21 @@ function ordenarVisitas(itens, partida, opcoes) {
   const legiveis = dados.filter((d) => d.a);
   const ilegiveis = dados.filter((d) => !d.a);
 
-  // ruas (por nome sem tipo), cada uma com o bairro do primeiro endereço que o informa
+  // ruas: mesmo tipo + nome + bairro. "Rua 1" do Pintolândia e "Rua 1" do Caranã são ruas diferentes;
+  // endereço sem bairro entra na única rua de mesmo nome, se houver só uma.
   const ruas = new Map();
+  const idRua = (a) => a.tipo + ' ' + a.chave + '|' + a.bairro;
   legiveis.forEach((d) => {
-    const id = d.a.tipo + ' ' + d.a.chave;
+    const id = idRua(d.a);
     let r = ruas.get(id);
-    if (!r) { r = { id, tipo: d.a.tipo, chave: d.a.chave, bairro: '', primeiro: d.i, itens: [] }; ruas.set(id, r); }
-    if (!r.bairro && d.a.bairro) r.bairro = d.a.bairro;
+    if (!r) { r = { id, tipo: d.a.tipo, chave: d.a.chave, bairro: d.a.bairro, primeiro: d.i, itens: [] }; ruas.set(id, r); }
     r.itens.push(d);
   });
+  Array.from(ruas.values()).filter((r) => !r.bairro).forEach((r) => {
+    const iguais = Array.from(ruas.values()).filter((x) => x !== r && x.tipo === r.tipo && x.chave === r.chave);
+    if (iguais.length === 1) { iguais[0].itens = iguais[0].itens.concat(r.itens); iguais[0].primeiro = Math.min(iguais[0].primeiro, r.primeiro); ruas.delete(r.id); }
+  });
+  const ehPartida = (r) => !!p && r.tipo === p.tipo && r.chave === p.chave && (!p.bairro || !r.bairro || r.bairro === p.bairro);
 
   // ordem dos bairros: o da partida primeiro; os outros na ordem em que aparecem; sem bairro por último
   const bairros = [];
@@ -2548,7 +2569,7 @@ function ordenarVisitas(itens, partida, opcoes) {
   const rangBairro = (b) => (b ? bairros.indexOf(b) : bairros.length);
 
   const listaRuas = Array.from(ruas.values()).sort((x, y) => {
-    const px = p && x.id === p.tipo + ' ' + p.chave ? 0 : 1; const py = p && y.id === p.tipo + ' ' + p.chave ? 0 : 1;
+    const px = ehPartida(x) ? 0 : 1; const py = ehPartida(y) ? 0 : 1;
     if (px !== py) return px - py;
     const bx = rangBairro(x.bairro); const by = rangBairro(y.bairro);
     if (bx !== by) return bx - by;
@@ -2565,7 +2586,7 @@ function ordenarVisitas(itens, partida, opcoes) {
       const pares = comNumero.filter((d) => d.a.numero % 2 === 0);
       let subida = impares; let volta = pares.slice().reverse();
       // rua de partida: começa pelo lado e pelo número mais próximos do ponto de partida
-      if (p && r.id === p.tipo + ' ' + p.chave && p.numero !== null) {
+      if (ehPartida(r) && p.numero !== null) {
         const lado = p.numero % 2 === 1 ? impares : pares;
         const outro = p.numero % 2 === 1 ? pares : impares;
         const ate = lado.filter((d) => d.a.numero >= p.numero);
