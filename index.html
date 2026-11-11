@@ -4286,19 +4286,21 @@ window.AnonaImpressao = (function () {
     const pdfjs = await unificarCarregarPdfJs();
     const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     try {
-      let linhas = [], caracteres = 0;
+      let linhas = [];
       for (let n = 1; n <= Math.min(doc.numPages, 3); n++) {
         const page = await doc.getPage(n);
         const conteudo = await page.getTextContent();
-        caracteres += conteudo.items.reduce((t, it) => t + String(it.str || '').trim().length, 0);
         linhas = linhas.concat(window.AnonaRota.linhasDeItens(conteudo.items));
         const achou = window.AnonaRota.extrairEndereco(linhas);
         if (achou) return Object.assign(achou, { via: 'texto' });
       }
-      const achouOcr = (await (async () => {
-        if (item) { item.status = 'ocr'; unificarAtualizarItemDOM(item); }
-        return unificarLerEnderecoOCR(doc);
-      })());
+      if (item) { item.status = 'ocr'; unificarAtualizarItemDOM(item); }
+      // Limite de tempo: se o leitor de imagem não carregar (sem internet, bloqueio de rede), a folha vai para
+      // "digite o endereço" em vez de ficar lendo para sempre e travar o botão "Organizar rota".
+      const achouOcr = await Promise.race([
+        unificarLerEnderecoOCR(doc),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('OCR demorou demais')), 120000))
+      ]);
       return achouOcr ? Object.assign(achouOcr, { via: 'ocr' }) : null;
     } finally { try { doc.destroy(); } catch (e) {} }
   }
@@ -4313,6 +4315,7 @@ window.AnonaImpressao = (function () {
       } catch (e) {
         console.warn('Leitura do endereço falhou:', e);
         if (item.status !== 'manual') item.status = 'erro';
+        if (/OCR|leitor de imagem/i.test(String(e && e.message))) unificarEncerrarOcr();
       }
       unificarAtualizarItemDOM(item);
     })();
