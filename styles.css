@@ -1047,3 +1047,48 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
   #territorioVolante *{ transition:none !important; }
 }
 @media print{ #territorioVolante .tv-tools, #territorioVolante .tv-nav{ display:none; } }
+
+
+/* =====================================================================
+   TELA DE LOGIN (v4) — leitura mais confortável e estados mais claros.
+   Textos de 10–11px passam para 12–13px e ganham contraste (WCAG AA,
+   4,5:1); subtítulo alinhado ao título no desktop; hover/desabilitado
+   nos campos e no botão; aviso de "sem internet". Só aparência: nenhum
+   id/classe usado pelo JavaScript foi alterado.
+   ===================================================================== */
+#lockScreen .access-greeting{ color:#64748B; }
+#lockScreen #authForm > div > label.block{ font-size:12.5px; color:#475569; letter-spacing:.01em; margin-bottom:.35rem; }
+#lockScreen #authModalSubtitle{ font-size:13px; line-height:1.45; color:#52607A; }
+#lockScreen .access-check{ font-size:12.5px; color:#475569; }
+#lockScreen .access-link{ font-size:12.5px; font-weight:700; text-underline-offset:3px; }
+#lockScreen .access-hint{ font-size:12px; }
+#lockScreen #authCapsWarn{ font-size:12px; }
+#lockScreen #authError, #lockScreen #authSuccess{ font-size:13px; line-height:1.4; }
+#lockScreen .access-chips li{ font-size:11px; padding:.3rem .65rem; }
+#lockScreen .access-legal p{ font-size:11.5px; color:#53627A; }
+#lockScreen .access-legal p:last-child{ font-size:11px; color:#5F6E84; }
+#lockScreen .access-sub{ font-size:11.5px; }
+
+/* campos e abas: resposta ao passar o mouse */
+.access-input:hover:not(:focus):not(.is-invalid){ border-color:#BFC9D8; background:#fff; }
+.access-tab:not(.active):hover{ opacity:.95; }
+
+/* botão principal: seta que avança no hover; desabilitado mostra "trabalhando" */
+.access-btn svg:last-child{ transition:transform .2s ease; }
+.access-btn:hover:not(:disabled) svg:last-child{ transform:translateX(3px); }
+.access-btn:disabled{ cursor:progress; }
+@media (prefers-reduced-motion: reduce){ .access-btn svg:last-child{ transition:none; } .access-btn:hover:not(:disabled) svg:last-child{ transform:none; } }
+
+/* aviso de sem internet */
+.access-offline{
+  display:flex; align-items:flex-start; gap:.5rem; margin:0; padding:.6rem .75rem;
+  font-size:12.5px; line-height:1.4; font-weight:600; color:#7A4B00;
+  background:#FFF6DD; border:1px solid #F1D58A; border-radius:.75rem;
+}
+.access-offline svg{ flex:none; width:1rem; height:1rem; margin-top:.1rem; }
+.access-offline.hidden{ display:none; }
+
+/* desktop: título e subtítulo alinhados à esquerda, como o cabeçalho */
+@media (min-width:900px){
+  #lockScreen #authModalSubtitle{ text-align:left; }
+}
