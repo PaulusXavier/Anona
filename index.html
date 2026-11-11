@@ -30,6 +30,7 @@
 <link rel="preconnect" href="https://www.gstatic.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="login.css">
 </head>
 <body>
 
@@ -193,188 +194,115 @@
 </script>
 
 <!-- TELA DE SENHA (bloqueia o app até digitar a senha correta) -->
-<div id="lockScreen" class="access-bg fixed inset-0 z-[9999] flex px-4 py-8" style="overflow-y:auto; overflow-x:hidden;">
-  <!-- fundo animado: manchas de luz (cores da bandeira) + bolhas subindo -->
-  <div class="access-fx" aria-hidden="true">
-    <span class="access-blob b1"></span><span class="access-blob b2"></span><span class="access-blob b3"></span>
-    <span class="access-bokeh" style="left:8%;  --s:14px; --d:19s; --t:0s;   --c:var(--amarelo)"></span>
-    <span class="access-bokeh" style="left:22%; --s:8px;  --d:15s; --t:-6s;  --c:var(--verde)"></span>
-    <span class="access-bokeh" style="left:37%; --s:18px; --d:24s; --t:-11s; --c:#fff"></span>
-    <span class="access-bokeh" style="left:52%; --s:10px; --d:17s; --t:-3s;  --c:var(--amarelo)"></span>
-    <span class="access-bokeh" style="left:66%; --s:16px; --d:22s; --t:-14s; --c:var(--verde)"></span>
-    <span class="access-bokeh" style="left:79%; --s:9px;  --d:16s; --t:-8s;  --c:#fff"></span>
-    <span class="access-bokeh" style="left:91%; --s:13px; --d:21s; --t:-2s;  --c:var(--amarelo)"></span>
-  </div>
-  <div class="brand-seal" aria-hidden="true" style="left:50%; top:8%; transform:translateX(-50%); opacity:.07; background-image:url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgNDIwIj4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjIwNSIgcj0iMTg4IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTEiLz4KICAgIDxwYXRoIGQ9Ik04NiAxOTAgTDIwMCA5NiBMMzE0IDE5MCIvPgogICAgPHBhdGggZD0iTTEyMCAxNzggVjI5OCBIMjgwIFYxNzgiLz4KICAgIDxwYXRoIGQ9Ik0xNzQgMjk4IFYyNTggQTI2IDI4IDAgMCAxIDIyNiAyNTggVjI5OCIvPgogIDwvZz4KICA8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNjcgMTU4IEgyMzMgVjIwMiBIMTY3IFogTTE2NyAxNzggSDIzMyBWMTgyIEgxNjcgWiBNMTg2IDEzOCBIMjE0IFYxNTggSDE4NiBaIE0xOTEgMTQyIEgyMDkgVjE1OCBIMTkxIFoiIGZpbGw9IiNGRkNDMjkiIHN0cm9rZT0ibm9uZSIvPgogIDxnIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI4IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPgogICAgPHBhdGggZD0iTTExMiAzNzIgUTE1OCA0MDAgMjAwIDM4MiBRMjQyIDQwMCAyODggMzcyIi8+CiAgICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSIzNDYiIHI9IjE3Ii8+CiAgICA8cGF0aCBkPSJNOTUgMzY2IEM5MyAzODQgOTEgNDAyIDkxIDQxMCBMMTMzIDQxMCBDMTMzIDQwMiAxMzEgMzg0IDEyOSAzNjYiLz4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjM1OCIgcj0iMTMiLz4KICAgIDxwYXRoIGQ9Ik0xODYgMzc0IEMxODUgMzg4IDE4NCA0MDQgMTg0IDQxMCBMMjE2IDQxMCBDMjE2IDQwNCAyMTUgMzg4IDIxNCAzNzQiLz4KICAgIDxjaXJjbGUgY3g9IjI4OCIgY3k9IjM0NiIgcj0iMTciLz4KICAgIDxwYXRoIGQ9Ik0yNzEgMzY2IEMyNjkgMzg0IDI2NyA0MDIgMjY3IDQxMCBMMzA5IDQxMCBDMzA5IDQwMiAzMDcgMzg4IDMwNSAzNjYiLz4KICA8L2c+Cjwvc3ZnPgo=');"></div>
+<div id="lockScreen">
+  <!-- Ícones e logotipo desta tela são SVG embutido (sem Lucide/CDN): a entrada funciona mesmo se a CDN não carregar. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="lgMarkBg" x1="2" y1="0" x2="62" y2="64" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1B8259"/><stop offset=".55" stop-color="#0D2E63"/><stop offset="1" stop-color="#071A3D"/></linearGradient>
+      <radialGradient id="lgMarkGold" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#D89B32" stop-opacity=".9"/><stop offset="1" stop-color="#D89B32" stop-opacity="0"/></radialGradient>
+      <radialGradient id="lgMarkShade" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#030F26" stop-opacity=".5"/><stop offset="1" stop-color="#030F26" stop-opacity="0"/></radialGradient>
+    </defs>
+    <symbol id="lg-i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="lg-i-eye-off" viewBox="0 0 24 24"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 8 10 8a13.2 13.2 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3.5 8 10 8a9.7 9.7 0 0 0 5.39-1.61"/><path d="M2 2l20 20"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></symbol>
+    <symbol id="lg-i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+    <symbol id="lg-i-loader" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></symbol>
+    <symbol id="lg-i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="lg-i-caps" viewBox="0 0 24 24"><path d="M9 18v-6H5l7-7 7 7h-4v6H9z"/></symbol>
+    <symbol id="lg-logo" viewBox="0 0 64 64">
+      <rect width="64" height="64" fill="url(#lgMarkBg)"/><circle cx="50" cy="12" r="26" fill="url(#lgMarkGold)"/><circle cx="9" cy="55" r="24" fill="url(#lgMarkShade)"/>
+      <path d="M-4 18 L70 -8 L70 3 L-4 27 Z" fill="#FFFFFF" opacity=".06"/>
+      <text x="24.6" y="46" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#071A3D" opacity=".3">A</text>
+      <text x="24" y="45" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#FFFDF8">A</text>
+      <circle cx="46.6" cy="44.6" r="3.6" fill="#030F26" opacity=".25"/><circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
+    </symbol>
+  </svg>
 
-  <div class="ring-seal" aria-hidden="true" style="width:min(50vw,220px); right:-8%; top:-6%; transform:rotate(-20deg);"></div>
-  <div class="ring-seal" aria-hidden="true" style="width:min(38vw,170px); left:-6%; bottom:-4%; transform:rotate(155deg);"></div>
-  <div class="ring-seal" aria-hidden="true" style="width:min(22vw,110px); right:8%; bottom:10%; transform:rotate(60deg); border-color:rgba(255,255,255,.08);"></div>
+  <div class="lg-ribbon" aria-hidden="true"></div>
+  <main id="lockCard" class="lg-shell">
 
-  <div class="access-dot" aria-hidden="true" style="width:5px; height:5px; left:14%; top:22%; background:var(--amarelo); color:var(--amarelo); opacity:.55;"></div>
-  <div class="access-dot" aria-hidden="true" style="width:4px; height:4px; right:18%; top:16%; background:var(--verde); color:var(--verde); opacity:.5;"></div>
-  <div class="access-dot" aria-hidden="true" style="width:6px; height:6px; right:12%; bottom:24%; background:var(--amarelo); color:var(--amarelo); opacity:.4;"></div>
-  <div class="access-dot" aria-hidden="true" style="width:4px; height:4px; left:20%; bottom:18%; background:var(--verde); color:var(--verde); opacity:.45;"></div>
-
-  <div class="access-card access-card-in w-full" id="lockCard" style="margin:auto; z-index:1;">
-    <div class="flag-ribbon"></div>
-    <div class="access-split">
-    <!-- painel de marca (só aparece em telas largas) -->
-    <aside class="access-hero" aria-hidden="true">
-      <span class="ring-seal" style="width:280px; right:-110px; top:-110px; transform:rotate(-20deg);"></span>
-      <span class="ring-seal" style="width:200px; left:-80px; bottom:-70px; transform:rotate(150deg);"></span>
-      <div class="access-hero-top">
-        <div class="logo-mark" style="width:4rem; height:4rem;"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="aMarkBgHero" x1="2" y1="0" x2="62" y2="64" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#1B8259"/>
-              <stop offset=".55" stop-color="#0D2E63"/>
-              <stop offset="1" stop-color="#071A3D"/>
-            </linearGradient>
-            <radialGradient id="aMarkGoldHero" cx="50%" cy="50%" r="50%">
-              <stop offset="0" stop-color="#D89B32" stop-opacity=".9"/>
-              <stop offset="1" stop-color="#D89B32" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="aMarkShadeHero" cx="50%" cy="50%" r="50%">
-              <stop offset="0" stop-color="#030F26" stop-opacity=".5"/>
-              <stop offset="1" stop-color="#030F26" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <rect width="64" height="64" fill="url(#aMarkBgHero)"/>
-          <circle cx="50" cy="12" r="26" fill="url(#aMarkGoldHero)"/>
-          <circle cx="9" cy="55" r="24" fill="url(#aMarkShadeHero)"/>
-          <path d="M-4 18 L70 -8 L70 3 L-4 27 Z" fill="#FFFFFF" opacity=".06"/>
-          <text x="24.6" y="46" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#071A3D" opacity=".3">A</text>
-          <text x="24" y="45" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#FFFDF8">A</text>
-          <circle cx="46.6" cy="44.6" r="3.6" fill="#030F26" opacity=".25"/>
-          <circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
-        </svg></div>
-        <span class="access-hero-name display">Anona</span>
-      </div>
-      <div class="access-hero-body">
-        <p class="access-hero-eyebrow">Bolsa Família · <span id="lockYearHero">2026</span></p>
-        <h2 class="display">Condicionalidades sob controle, o ano inteiro.</h2>
-        <ul class="access-hero-list">
-          <li><i data-lucide="calendar-days"></i><span>Calendário de condicionalidades e pagamentos</span></li>
-          <li><i data-lucide="calculator"></i><span>Calculadora de faltas e relatórios em PDF e planilha</span></li>
-          <li><i data-lucide="cloud"></i><span>Anotações sincronizadas entre seus aparelhos</span></li>
-          <li><i data-lucide="wifi-off"></i><span>Continua funcionando sem internet</span></li>
-        </ul>
-      </div>
-      <p class="access-hero-credit"><span class="psi-mini" aria-hidden="true">Ψ</span> Paulo Xavier · CRP-20/09816 · Psicólogo</p>
-    </aside>
-
-    <div class="access-main">
-    <div class="access-head px-7 pt-6 pb-4">
-      <div class="access-head-row">
-        <div class="logo-mark" aria-hidden="true"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="aMarkBgLogin" x1="2" y1="0" x2="62" y2="64" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#1B8259"/>
-              <stop offset=".55" stop-color="#0D2E63"/>
-              <stop offset="1" stop-color="#071A3D"/>
-            </linearGradient>
-            <radialGradient id="aMarkGoldLogin" cx="50%" cy="50%" r="50%">
-              <stop offset="0" stop-color="#D89B32" stop-opacity=".9"/>
-              <stop offset="1" stop-color="#D89B32" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="aMarkShadeLogin" cx="50%" cy="50%" r="50%">
-              <stop offset="0" stop-color="#030F26" stop-opacity=".5"/>
-              <stop offset="1" stop-color="#030F26" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <rect width="64" height="64" fill="url(#aMarkBgLogin)"/>
-          <circle cx="50" cy="12" r="26" fill="url(#aMarkGoldLogin)"/>
-          <circle cx="9" cy="55" r="24" fill="url(#aMarkShadeLogin)"/>
-          <path d="M-4 18 L70 -8 L70 3 L-4 27 Z" fill="#FFFFFF" opacity=".06"/>
-          <text x="24.6" y="46" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#071A3D" opacity=".3">A</text>
-          <text x="24" y="45" text-anchor="middle" font-family="'Fraunces',Georgia,serif" font-weight="700" font-size="34" fill="#FFFDF8">A</text>
-          <circle cx="46.6" cy="44.6" r="3.6" fill="#030F26" opacity=".25"/>
-          <circle cx="46" cy="44" r="3.3" fill="#D89B32" stroke="#6B4E00" stroke-width=".5"/>
-        </svg></div>
-        <div class="access-head-text">
-          <p id="authGreeting" class="access-greeting" aria-hidden="true"></p>
-          <h1 class="display access-title"><span class="access-title-brand">Anona</span><span class="access-title-lg">Acesse sua conta</span></h1>
-          <p id="lockYearSubtitle" class="access-sub">Condicionalidades do Bolsa Família <span class="access-year" id="lockYear">2026</span></p>
+    <!-- painel azul: marca + régua de pagamento do mês (preenchida por lgMontarRegua, com os dados do calendário do app) -->
+    <section class="lg-brand" aria-label="Sobre o Anona">
+      <div class="lg-id">
+        <span class="lg-logo" aria-hidden="true"><svg viewBox="0 0 64 64"><use href="#lg-logo"/></svg></span>
+        <div>
+          <p class="lg-name">Anona</p>
+          <span class="lg-year">Condicionalidades do Bolsa Família <span id="lockYear">2026</span></span>
         </div>
       </div>
-      <p class="access-credit"><span class="psi-mini" aria-hidden="true">Ψ</span> Paulo Xavier · CRP-20/09816 · Psicólogo</p>
-    </div>
-
-    <div class="ticket-notch"></div>
-
-    <div class="px-7 pt-5 pb-7">
-      <div class="access-tabs mb-4">
-        <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="access-tab active" aria-pressed="true"><i data-lucide="log-in"></i> Entrar</button>
-        <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="access-tab" aria-pressed="false"><i data-lucide="user-plus"></i> Criar conta</button>
-      </div>
-      <p id="authModalSubtitle" class="text-xs text-slate-500 mb-3 text-center leading-snug">Entre com e-mail e senha para acessar suas anotações com segurança, em qualquer aparelho.</p>
-
-      <form id="authForm" class="space-y-3 text-left" autocomplete="on" novalidate onsubmit="event.preventDefault(); submitAuthForm();">
+      <div class="lg-mid">
         <div>
-          <label for="authEmail" class="text-[11px] font-bold text-slate-500 mb-1 block">E-mail</label>
-          <div class="access-input-wrap">
-            <i data-lucide="mail"></i>
+          <h2 class="lg-headline">Cada prazo do Bolsa Família no dia certo.</h2>
+          <p class="lg-lede">Calendário de condicionalidades, calculadora de frequência escolar e anotações que acompanham você entre os aparelhos, inclusive sem internet.</p>
+        </div>
+        <div class="lg-pay" id="lgPay">
+          <div class="lg-pay-head"><p class="lg-pay-title" id="lgPayTitle"></p><p class="lg-pay-hint">dia de pagamento por final do NIS</p></div>
+          <ol class="lg-pay-grid" id="lgPayGrid" aria-labelledby="lgPayTitle"></ol>
+          <p class="lg-pay-next" id="lgPayNext" aria-live="polite"></p>
+        </div>
+      </div>
+      <p class="lg-brand-foot">Paulo Xavier · CRP-20/09816 · Psicólogo</p>
+    </section>
+
+    <!-- painel do formulário -->
+    <section class="lg-panel">
+      <div class="lg-wrap">
+        <h1 class="lg-title"><span id="authGreeting"></span><span id="authHeading">Entre para continuar</span></h1>
+
+        <div class="lg-tabs" data-mode="login">
+          <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="lg-tab active" aria-pressed="true">Entrar</button>
+          <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="lg-tab" aria-pressed="false">Criar conta</button>
+        </div>
+        <p id="authModalSubtitle" class="lg-sub">Entre com e-mail e senha para acessar suas anotações com segurança, em qualquer aparelho.</p>
+
+        <form id="authForm" class="lg-form" autocomplete="on" novalidate onsubmit="event.preventDefault(); submitAuthForm();">
+          <div class="lg-field">
+            <label for="authEmail" class="lg-label">E-mail</label>
             <input id="authEmail" name="email" type="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next"
-              placeholder="seu@email.com" autocomplete="username" required class="access-input" aria-describedby="authEmailHint">
+              placeholder="seu@email.com" autocomplete="username" required class="lg-input" aria-describedby="authEmailHint">
+            <p id="authEmailHint" class="lg-hint hidden" role="status">Confira o e-mail: ele parece incompleto (ex.: nome@gmail.com).</p>
           </div>
-          <p id="authEmailHint" class="access-hint hidden" role="status">Confira o e-mail — parece incompleto (ex.: nome@gmail.com).</p>
-        </div>
 
-        <div>
-          <label for="authPass" class="text-[11px] font-bold text-slate-500 mb-1 block">Senha</label>
-          <div class="access-input-wrap">
-            <i data-lucide="lock"></i>
-            <input id="authPass" name="password" type="password" placeholder="Sua senha" autocomplete="current-password" required minlength="6"
-              enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false"
-              class="access-input" style="padding-right:2.9rem" oninput="updateAuthPassStrength()">
-            <button type="button" id="authPassToggle" onmousedown="event.preventDefault()" onclick="toggleAuthPassVisibility()" aria-label="Mostrar senha" aria-pressed="false"
-              class="access-eye">
-              <i data-lucide="eye" id="authPassEyeIcon" class="w-4 h-4"></i>
-              <i data-lucide="eye-off" id="authPassEyeOffIcon" class="w-4 h-4 hidden"></i>
-            </button>
-          </div>
-          <p id="authCapsWarn" class="access-caps hidden mt-1.5 text-[10.5px] font-semibold" style="color:var(--amarelo-text)" role="status">
-            <i data-lucide="arrow-big-up" class="w-3 h-3"></i> Caps Lock está ligado
-          </p>
-          <div id="authPassStrengthWrap" class="hidden mt-1.5">
-            <div class="h-1 rounded-full bg-slate-200 overflow-hidden flex gap-0.5">
-              <div id="authPassStrengthBar" class="h-full rounded-full transition-all" style="width:0%; background:#DC2626;"></div>
+          <div class="lg-field">
+            <label for="authPass" class="lg-label">Senha</label>
+            <div class="lg-pw">
+              <input id="authPass" name="password" type="password" placeholder="Sua senha" autocomplete="current-password" required minlength="6"
+                enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false" class="lg-input" oninput="updateAuthPassStrength()">
+              <button type="button" id="authPassToggle" onmousedown="event.preventDefault()" onclick="toggleAuthPassVisibility()" aria-label="Mostrar senha" aria-pressed="false" class="lg-eye">
+                <svg id="authPassEyeIcon" class="lg-ic" aria-hidden="true"><use href="#lg-i-eye"/></svg>
+                <svg id="authPassEyeOffIcon" class="lg-ic hidden" aria-hidden="true"><use href="#lg-i-eye-off"/></svg>
+              </button>
             </div>
-            <p id="authPassStrengthLabel" class="text-[10px] font-semibold mt-1 text-slate-400"></p>
+            <p id="authCapsWarn" class="lg-caps hidden" role="status"><svg class="lg-ic" aria-hidden="true"><use href="#lg-i-caps"/></svg><span>Caps Lock está ligado</span></p>
+            <div id="authPassStrengthWrap" class="lg-meter hidden">
+              <div class="lg-meter-track"><div id="authPassStrengthBar" class="lg-meter-bar"></div></div>
+              <p id="authPassStrengthLabel" class="lg-meter-label"></p>
+            </div>
           </div>
+
+          <div class="lg-row">
+            <label class="lg-check"><input type="checkbox" id="authRemember" checked><span>Lembrar e-mail</span></label>
+            <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="lg-link">Esqueci minha senha</button>
+          </div>
+
+          <p id="authError" role="alert" class="lg-alert lg-alert-error hidden"></p>
+          <p id="authSuccess" role="status" class="lg-alert lg-alert-ok hidden"></p>
+          <p id="authOffline" role="status" class="lg-alert lg-alert-warn hidden"><span>Sem internet. Para entrar ou criar conta é preciso estar conectado.</span></p>
+
+          <button type="submit" id="authSubmitBtn" class="lg-submit">
+            <svg id="authSubmitSpinner" class="lg-ic lg-spin hidden" aria-hidden="true"><use href="#lg-i-loader"/></svg>
+            <span id="authSubmitLabel">Entrar</span>
+            <svg id="authSubmitArrow" class="lg-ic" aria-hidden="true"><use href="#lg-i-arrow"/></svg>
+          </button>
+        </form>
+
+        <div class="lg-foot">
+          <p><svg class="lg-ic" aria-hidden="true"><use href="#lg-i-lock"/></svg>Sua senha é verificada pelo Firebase (Google) e nunca fica salva no app.</p>
+          <p>Ferramenta independente, sem vínculo, afiliação ou endosso do Governo Federal, do MDS ou da Caixa.</p>
+          <p class="lg-credit">Paulo Xavier · CRP-20/09816 · Psicólogo</p>
         </div>
-        <div class="flex items-center justify-between gap-2 -mt-1">
-          <label class="access-check text-[11px] font-semibold text-slate-500">
-            <input type="checkbox" id="authRemember" checked>
-            <span>Lembrar e-mail</span>
-          </label>
-          <button type="button" id="authForgotBtn" onclick="doForgotPassword()" class="access-link text-[11px] font-semibold">Esqueci minha senha</button>
-        </div>
-
-        <p id="authError" role="alert" class="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2 hidden"></p>
-        <p id="authSuccess" role="status" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 hidden"></p>
-
-        <p id="authOffline" role="status" class="access-offline hidden"><i data-lucide="wifi-off"></i><span>Você está sem internet. Para entrar ou criar conta é preciso estar conectado.</span></p>
-
-        <button type="submit" id="authSubmitBtn" class="access-btn w-full text-white py-3.5 rounded-xl text-sm font-bold transition hover:-translate-y-px active:translate-y-0 disabled:opacity-60 flex items-center justify-center gap-2">
-          <i data-lucide="loader-2" id="authSubmitSpinner" class="w-4 h-4 animate-spin hidden"></i>
-          <span id="authSubmitLabel">Entrar</span> <i data-lucide="arrow-right" class="w-4 h-4" id="authSubmitArrow"></i>
-        </button>
-      </form>
-      <ul class="access-chips" aria-label="Recursos">
-        <li><i data-lucide="shield-check"></i> Protegido</li>
-        <li><i data-lucide="refresh-cw"></i> Sincroniza</li>
-        <li><i data-lucide="wifi-off"></i> Offline</li>
-      </ul>
-      <div class="access-legal">
-        <p><i data-lucide="lock-keyhole"></i> Sua senha é verificada pelo Firebase (Google) — nunca fica salva nem visível no código do app.</p>
-        <p>Ferramenta independente, sem vínculo, afiliação ou endosso do Governo Federal, do MDS ou da Caixa.</p>
       </div>
-    </div>
-    </div><!-- /access-main -->
-    </div><!-- /access-split -->
-  </div>
+    </section>
+  </main>
 </div>
 
 <div id="appContent" style="display:none;">
@@ -1639,14 +1567,15 @@ window.AnonaImpressao = (function () {
 
   function setAuthMode(mode) {
     authMode = mode;
-    const tabsEl = document.querySelector('.access-tabs'); if (tabsEl) tabsEl.dataset.mode = mode;
+    const tabsEl = document.querySelector('.lg-tabs'); if (tabsEl) tabsEl.dataset.mode = mode;
+    const tituloEl = document.getElementById('authHeading'); if (tituloEl) tituloEl.textContent = mode === 'login' ? 'Entre para continuar' : 'Crie sua conta';
     authError.classList.add('hidden');
     clearFieldInvalid();
     document.getElementById('authSuccess').classList.add('hidden');
     const tabLogin = document.getElementById('authTabLogin');
     const tabSignup = document.getElementById('authTabSignup');
-    const activeCls = 'access-tab active';
-    const inactiveCls = 'access-tab';
+    const activeCls = 'lg-tab active';
+    const inactiveCls = 'lg-tab';
     tabLogin.setAttribute('aria-pressed', String(mode === 'login'));
     tabSignup.setAttribute('aria-pressed', String(mode !== 'login'));
     const passEl = document.getElementById('authPass');
@@ -1729,25 +1658,10 @@ window.AnonaImpressao = (function () {
     input.focus();
   };
 
-  // Saudação conforme o horário + leve inclinação do cartão seguindo o mouse (só desktop).
+  // Saudação conforme o horário ("Boa tarde." antes do título).
   (function () {
     const g = document.getElementById('authGreeting');
     if (g) { const hr = new Date().getHours(); g.textContent = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite'; }
-    const scr = document.getElementById('lockScreen'), card = document.getElementById('lockCard');
-    if (!scr || !card || !window.matchMedia) return;
-    if (!matchMedia('(hover:hover) and (pointer:fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let raf = 0;
-    scr.addEventListener('mousemove', (e) => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        const x = (e.clientX / innerWidth - .5), y = (e.clientY / innerHeight - .5);
-        scr.style.setProperty('--px', (x * -40).toFixed(1) + 'px');
-        scr.style.setProperty('--py', (y * -40).toFixed(1) + 'px');
-        card.style.transform = `perspective(900px) rotateX(${(y * -3).toFixed(2)}deg) rotateY(${(x * 4).toFixed(2)}deg)`;
-      });
-    });
-    scr.addEventListener('mouseleave', () => { card.style.transform = ''; scr.style.setProperty('--px','0px'); scr.style.setProperty('--py','0px'); });
   })();
 
   // Validação inline: borda vermelha + aria-invalid + dica abaixo do campo.
@@ -5553,6 +5467,44 @@ function dadosDoAno(ano) {
 // cima e esses textos se atualizam sozinhos para o ano mais recente.
 document.title = `Anona — Acompanhamento de Condicionalidades ${ANO_VIGENTE}`;
 ['lockYear','lockYearHero'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ANO_VIGENTE; });
+
+// Régua de pagamento da tela de entrada: dia de pagamento de cada final de NIS no mês, lido do próprio calendário do app
+// (CALENDARIOS_POR_ANO.paymentCalendar). Mostra o mês corrente; se todas as datas já passaram, o mês seguinte.
+// Se o ano não estiver cadastrado, a régua some e a tela segue normal. Dados públicos: nada pessoal passa por aqui.
+(function lgMontarRegua() {
+  try {
+    const grid = document.getElementById('lgPayGrid'), titulo = document.getElementById('lgPayTitle'), prox = document.getElementById('lgPayNext'), caixa = document.getElementById('lgPay');
+    if (!grid || !caixa) return;
+    const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    const FINAIS = [1,2,3,4,5,6,7,8,9,0];   // mesma ordem das 10 colunas do calendário
+    const hoje = new Date(); const ano = hoje.getFullYear(), mes = hoje.getMonth(), dia = hoje.getDate();
+    const datas = (a, m) => { const c = CALENDARIOS_POR_ANO[a]; return c && c.paymentCalendar && c.paymentCalendar[m]; };
+    let a = ano, m = mes, lista = datas(a, m), acabou = false;
+    if (lista && Math.max.apply(null, lista) < dia) { acabou = true; }
+    if (!lista || acabou) {
+      const a2 = m === 11 ? a + 1 : a, m2 = (m + 1) % 12, prox2 = datas(a2, m2);
+      if (prox2) { a = a2; m = m2; lista = prox2; }
+    }
+    if (!lista || lista.length !== 10) { caixa.style.display = 'none'; return; }
+    const mesAtual = a === ano && m === mes;
+    // próximo pagamento: primeiro dia >= hoje (no mês corrente); no mês seguinte, o menor dia do mês
+    let idxProx = -1;
+    lista.forEach((d, i) => { if ((!mesAtual || d >= dia) && (idxProx < 0 || d < lista[idxProx])) idxProx = i; });
+    titulo.textContent = 'Pagamento de ' + MESES[m];
+    const mm = String(m + 1).padStart(2, '0');
+    grid.innerHTML = lista.map((d, i) => {
+      const cls = i === idxProx ? 'proximo' : (mesAtual && d < dia ? 'passou' : '');
+      return '<li class="' + cls + '" style="--i:' + i + '" aria-label="Final ' + FINAIS[i] + ': dia ' + d + ' de ' + MESES[m] + (i === idxProx ? ', próximo pagamento' : '') + '">' +
+        '<span class="nis">final ' + FINAIS[i] + '</span><span class="dia">' + d + '</span><span class="mes">' + MESES[m].slice(0, 3) + '</span></li>';
+    }).join('');
+    if (idxProx >= 0 && prox) {
+      const d = lista[idxProx], alvo = new Date(a, m, d), base = new Date(ano, mes, dia);
+      const faltam = Math.round((alvo - base) / 86400000);
+      const quando = faltam === 0 ? 'hoje' : faltam === 1 ? 'amanhã' : 'em ' + faltam + ' dias';
+      prox.innerHTML = 'Próximo pagamento: <strong>final ' + FINAIS[idxProx] + ', dia ' + String(d).padStart(2, '0') + '/' + mm + '</strong> (' + quando + ').';
+    }
+  } catch (e) { const c = document.getElementById('lgPay'); if (c) c.style.display = 'none'; }
+})();
 document.getElementById('headerYearSpan').textContent = ANO_VIGENTE;
 document.getElementById('footerYearText').textContent =
   `Datas conforme calendário oficial MDS/Caixa ${ANO_VIGENTE}. Este app é uma ferramenta independente de organização pessoal — não é canal oficial do governo.`;
