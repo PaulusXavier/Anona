@@ -12,12 +12,12 @@
  *  - Firestore/Auth/Gemini NÃO passam por aqui (dados e login sempre direto na rede).
  * Para forçar todo mundo a baixar tudo de novo, aumente o número de CACHE_NAME.
  */
-const CACHE_NAME = 'anona-app-shell-v32';
+const CACHE_NAME = 'anona-app-shell-v33';
 const PREFIXOS_ANTIGOS = ['anona-app-shell-', 'pbf-app-shell-'];
 
 const ARQUIVOS_LOCAIS = [
   './', 'index.html', 'styles.css', 'manifest.json',
-  'anona-tabelas.js', 'anona-mascot.js', 'anona-presenca.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
+  'anona-tabelas.js', 'anona-rota.js', 'anona-mascot.js', 'anona-presenca.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'
 ];
 const BIBLIOTECAS = [
@@ -27,12 +27,14 @@ const BIBLIOTECAS = [
   'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js',
   'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
   'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js',
   'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js'
 ];
 // Hosts de bibliotecas/fontes que podem ser guardados no cache durante o uso.
-const HOSTS_CACHEAVEIS = ['unpkg.com', 'cdn.jsdelivr.net', 'cdn.tailwindcss.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+const HOSTS_CACHEAVEIS = ['unpkg.com', 'cdn.jsdelivr.net', 'cdn.tailwindcss.com', 'cdnjs.cloudflare.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
 const respostaBoa = (res) => !!res && (res.status === 200 || res.type === 'opaque');
 
