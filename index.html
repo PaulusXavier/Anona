@@ -306,7 +306,7 @@
     <div class="px-7 pt-5 pb-7">
       <div class="access-tabs mb-4">
         <button type="button" id="authTabLogin" onclick="setAuthMode('login')" class="access-tab active" aria-pressed="true"><i data-lucide="log-in"></i> Entrar</button>
-        <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="access-tab"><i data-lucide="user-plus"></i> Criar conta</button>
+        <button type="button" id="authTabSignup" onclick="setAuthMode('signup')" class="access-tab" aria-pressed="false"><i data-lucide="user-plus"></i> Criar conta</button>
       </div>
       <p id="authModalSubtitle" class="text-xs text-slate-500 mb-3 text-center leading-snug">Entre com e-mail e senha para acessar suas anotações com segurança, em qualquer aparelho.</p>
 
@@ -354,6 +354,8 @@
 
         <p id="authError" role="alert" class="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2 hidden"></p>
         <p id="authSuccess" role="status" class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 hidden"></p>
+
+        <p id="authOffline" role="status" class="access-offline hidden"><i data-lucide="wifi-off"></i><span>Você está sem internet. Para entrar ou criar conta é preciso estar conectado.</span></p>
 
         <button type="submit" id="authSubmitBtn" class="access-btn w-full text-white py-3.5 rounded-xl text-sm font-bold transition hover:-translate-y-px active:translate-y-0 disabled:opacity-60 flex items-center justify-center gap-2">
           <i data-lucide="loader-2" id="authSubmitSpinner" class="w-4 h-4 animate-spin hidden"></i>
@@ -1645,6 +1647,8 @@ window.AnonaImpressao = (function () {
     const tabSignup = document.getElementById('authTabSignup');
     const activeCls = 'access-tab active';
     const inactiveCls = 'access-tab';
+    tabLogin.setAttribute('aria-pressed', String(mode === 'login'));
+    tabSignup.setAttribute('aria-pressed', String(mode !== 'login'));
     const passEl = document.getElementById('authPass');
     if (mode === 'login') {
       tabLogin.className = activeCls;
@@ -1808,6 +1812,16 @@ window.AnonaImpressao = (function () {
       else localStorage.removeItem(LS_EMAIL_LEMBRADO);
     } catch (_) {}
   }
+
+  // Aviso de "sem internet" na tela de acesso: entrar e criar conta dependem do Firebase.
+  (function () {
+    const el = document.getElementById('authOffline');
+    if (!el) return;
+    const atualizar = () => el.classList.toggle('hidden', navigator.onLine !== false);
+    window.addEventListener('online', atualizar);
+    window.addEventListener('offline', atualizar);
+    atualizar();
+  })();
 
   function setAuthLoading(loading) {
     authLoading = loading;
