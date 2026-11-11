@@ -20,6 +20,7 @@ index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
 anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas). Conhece o Bolsa Família: ~30 fatos em 6 assuntos (valores, entrada, pagamento, escola/saúde, descumprimento, recurso), responde perguntas offline (`AnonaMascot.responder`) e avisa o que está valendo no mês. Testes: `node tests/mascot.test.js`
+login.css                        -> tela de entrada (login): autocontida, sem Tailwind/Lucide; a régua de pagamento do mês vem do calendário do próprio app (CALENDARIOS_POR_ANO)
 anona-tabelas.js                -> cálculos e tabelas: Panorama do ano da calculadora, estilo padrão das planilhas .xlsx (com fórmulas), exportar .xlsx/.csv e copiar tabela. Testes: `node tests/tabelas.test.js`
 anona-presenca.js               -> assistente de presença: entende frases ("3 faltas em março, 22 dias letivos"), preenche a calculadora, simula faltas e faz o mascote comentar o resultado
 icon-192.png                    -> ícone do app para Android/desktop (cantos transparentes; ilustração própria, sem uso de marca de terceiros)
