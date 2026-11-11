@@ -10,7 +10,7 @@
   const MINUSCULAS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
 
   function semAcento(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-  function limpa(s) { return String(s || '').replace(/\s+/g, ' ').replace(/^[\s,;:\-–—]+|[\s,;:\-–—]+$/g, '').trim(); }
+  function limpa(s) { return String(s || '').replace(/\s+/g, ' ').replace(/^[\s,;:|_\-–—]+|[\s,;:|_\-–—]+$/g, '').trim(); }
 
   // "RUA SANTO AGOSTINHO" → "Rua Santo Agostinho"
   function tituloCaso(s) {
@@ -95,8 +95,15 @@
     if (!nome && tipo) {   // "Tipo de logradouro: RUA Nome: SANTO AGOSTINHO" — só vale o "Nome" que vem depois do tipo
       const apos = texto.slice(texto.indexOf('TIPOLOG:'));
       nome = pegaRotulo(apos, 'nome');
+      // "1.12 - Tipo: AVENIDA  1.13 - Título: GENERAL  1.14 - Nome: SAMPAIO" → Avenida General Sampaio.
+      // Título vazio ("Título: Nome: ELDORADO") não pode engolir o campo seguinte.
+      let titulo = pegaRotulo(apos, 't[íi]tulo');
+      if (/[:]/.test(titulo)) titulo = '';
+      if (nome && titulo) nome = titulo + ' ' + nome;
     }
-    let numero = numeroDe(pegaRotulo(texto, 'n[úu]mero|n[º°o]'));
+    // O OCR de folha escaneada confunde O/o com 0 e l/I com 1 dentro do número do Cadastro Único (16 dígitos).
+    const numeroBruto = pegaRotulo(texto, 'n[úu]mero|n[º°o]').replace(/[0-9OolI]{8,}/g, t => t.replace(/[Oo]/g, '0').replace(/[lI]/g, '1'));
+    let numero = numeroDe(numeroBruto);
     const bairroRot = pegaRotulo(texto, 'bairro|localidade');
     if (nome) {
       const jaTemTipo = new RegExp('^(?:' + TIPOS + ')\\s', 'i').test(nome);
