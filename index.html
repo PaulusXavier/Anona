@@ -825,7 +825,7 @@
           </div>
           <details class="tv-more">
             <summary>Como a ordem é sugerida</summary>
-            <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” pede ao Paulus a ordem de visita: começa pela rua de partida, segue rua por rua dentro do bairro e, em cada rua, sobe pelos números ímpares e volta pelos pares. Tudo é calculado no aparelho, sem IA externa e sem internet. É uma aproximação pelo texto do endereço (sem mapa), então ajuste se você conhece um caminho melhor. Você também pode usar as setinhas para reordenar manualmente. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
+            <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Folhas <strong>escaneadas</strong> (PDF que é só uma imagem) são lidas por OCR, também no aparelho e só no quadro “Endereço da família”; na primeira vez o app baixa o leitor de imagem (precisa de internet). Confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” pede ao Paulus a ordem de visita: começa pela rua de partida, segue rua por rua dentro do bairro e, em cada rua, sobe pelos números ímpares e volta pelos pares. Tudo é calculado no aparelho, sem IA externa e sem internet. É uma aproximação pelo texto do endereço (sem mapa), então ajuste se você conhece um caminho melhor. Você também pode usar as setinhas para reordenar manualmente. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
           </details>
           <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait mt-3" style="background:var(--azul)">
             <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
@@ -4195,7 +4195,8 @@ window.AnonaImpressao = (function () {
   function unificarTextoStatus(item) {
     return ({
       lendo: 'Lendo o endereço do PDF…',
-      ok: 'Endereço lido do PDF — confira.',
+      ocr: 'Folha escaneada (imagem): lendo o endereço por OCR no seu aparelho… pode levar alguns segundos.',
+      ok: item.via === 'ocr' ? 'Endereço lido da imagem da folha (OCR) — confira com atenção.' : 'Endereço lido do PDF — confira.',
       nao: 'Não achei o endereço neste PDF — digite rua e número.',
       erro: 'Não consegui ler este PDF — digite rua e número.',
       manual: ''
@@ -4231,20 +4232,74 @@ window.AnonaImpressao = (function () {
     return unificarPdfJsPromise;
   }
 
+  // Folhas escaneadas (só imagem, sem texto) precisam de OCR. Roda 100% no aparelho (tesseract.js): a imagem nunca é enviada.
+  // Só baixa o leitor e o idioma português (uma vez; depois fica no cache do navegador) quando aparece uma folha escaneada.
+  const OCR_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';
+  let unificarOcrLibPromise = null, unificarOcrWorkerPromise = null;
+  function unificarCarregarOcr() {
+    if (unificarOcrWorkerPromise) return unificarOcrWorkerPromise;
+    unificarOcrWorkerPromise = (async () => {
+      if (!window.Tesseract) {
+        unificarOcrLibPromise = unificarOcrLibPromise || new Promise((resolve, reject) => {
+          const sc = document.createElement('script');
+          sc.src = OCR_LIB; sc.onload = resolve;
+          sc.onerror = () => { unificarOcrLibPromise = null; reject(new Error('Não consegui carregar o leitor de imagem (OCR). Precisa de internet na primeira vez.')); };
+          document.head.appendChild(sc);
+        });
+        await unificarOcrLibPromise;
+      }
+      const w = await window.Tesseract.createWorker('por');
+      await w.setParameters({ tessedit_pageseg_mode: '6' });   // bloco único de texto: o quadro "Endereço da família"
+      return w;
+    })();
+    unificarOcrWorkerPromise.catch(() => { unificarOcrWorkerPromise = null; });
+    return unificarOcrWorkerPromise;
+  }
+  async function unificarEncerrarOcr() {
+    const p = unificarOcrWorkerPromise; unificarOcrWorkerPromise = null;
+    if (p) { try { (await p).terminate(); } catch (e) {} }
+  }
+
+  // Desenha a página 1 e lê SÓ a faixa do quadro "II - Endereço da família" (topo da folha): nome, CPF e demais componentes
+  // ficam fora da imagem lida. Se não achar, tenta a página inteira (layouts diferentes).
+  async function unificarLerEnderecoOCR(doc) {
+    const page = await doc.getPage(1);
+    const vp = page.getViewport({ scale: 2.2 });
+    const cheio = document.createElement('canvas'); cheio.width = Math.ceil(vp.width); cheio.height = Math.ceil(vp.height);
+    await page.render({ canvasContext: cheio.getContext('2d'), viewport: vp }).promise;
+    const worker = await unificarCarregarOcr();
+    const faixas = [[0.08, 0.34], [0, 1]];
+    for (const [de, ate] of faixas) {
+      const h = Math.round(cheio.height * (ate - de)), y0 = Math.round(cheio.height * de);
+      const c = document.createElement('canvas'); c.width = cheio.width; c.height = h;
+      c.getContext('2d').drawImage(cheio, 0, y0, cheio.width, h, 0, 0, cheio.width, h);
+      const { data } = await worker.recognize(c);
+      const achou = window.AnonaRota.extrairEndereco(String(data.text || '').split('\n').map(l => l.trim()).filter(Boolean));
+      if (achou && achou.rua) return achou;
+    }
+    return null;
+  }
+
   // Lê o texto das primeiras páginas da folha e procura o endereço (só rua/número/bairro; nada é enviado).
-  async function unificarLerEndereco(file) {
+  // Sem camada de texto (folha escaneada) → OCR no aparelho. Devolve { ...endereço, via: 'texto' | 'ocr' } ou null.
+  async function unificarLerEndereco(file, item) {
     const pdfjs = await unificarCarregarPdfJs();
     const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     try {
-      let linhas = [];
+      let linhas = [], caracteres = 0;
       for (let n = 1; n <= Math.min(doc.numPages, 3); n++) {
         const page = await doc.getPage(n);
         const conteudo = await page.getTextContent();
+        caracteres += conteudo.items.reduce((t, it) => t + String(it.str || '').trim().length, 0);
         linhas = linhas.concat(window.AnonaRota.linhasDeItens(conteudo.items));
         const achou = window.AnonaRota.extrairEndereco(linhas);
-        if (achou) return achou;
+        if (achou) return Object.assign(achou, { via: 'texto' });
       }
-      return null;
+      const achouOcr = (await (async () => {
+        if (item) { item.status = 'ocr'; unificarAtualizarItemDOM(item); }
+        return unificarLerEnderecoOCR(doc);
+      })());
+      return achouOcr ? Object.assign(achouOcr, { via: 'ocr' }) : null;
     } finally { try { doc.destroy(); } catch (e) {} }
   }
 
@@ -4252,9 +4307,9 @@ window.AnonaImpressao = (function () {
     item.status = 'lendo';
     item.leitura = (async () => {
       try {
-        const achou = await unificarLerEndereco(item.file);
+        const achou = await unificarLerEndereco(item.file, item);
         if (item.status === 'manual') return;   // a pessoa digitou enquanto lia: vale o que ela digitou
-        if (achou) { item.endereco = achou.texto; item.status = 'ok'; } else { item.status = 'nao'; }
+        if (achou) { item.endereco = achou.texto; item.via = achou.via; item.status = 'ok'; } else { item.status = 'nao'; }
       } catch (e) {
         console.warn('Leitura do endereço falhou:', e);
         if (item.status !== 'manual') item.status = 'erro';
@@ -4292,7 +4347,7 @@ window.AnonaImpressao = (function () {
     });
     renderUnificarLista(bloco);
     // lê um de cada vez, para não pesar em celulares mais fracos
-    (async () => { for (const n of novos) await unificarIniciarLeitura(n); })();
+    (async () => { for (const n of novos) await unificarIniciarLeitura(n); await unificarEncerrarOcr(); })();
     if (rejeitados.length) alert(`Estes arquivos não foram adicionados:\n${rejeitados.join('\n')}`);
   };
 
