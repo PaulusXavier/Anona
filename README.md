@@ -186,6 +186,8 @@ Na barra lateral, bloco **"Unificar Folhas de Família — Rota de Visita"**:
 - Endereço de partida e nome/ordem dos blocos ficam nas constantes `UNIFICAR_PARTIDA` e `UNIFICAR_BLOCOS` no `index.html`, caso precise trocar de bairro ou de ponto de partida em outro dia.
 - Nada é enviado à internet além do texto do endereço (e só quando a IA está ativada) — a junção dos PDFs acontece no próprio aparelho, e os arquivos originais enviados não são alterados nem guardados.
 
+**Leitura automática do endereço e roteiro (novo):** ao adicionar cada folha, o app lê rua, número e bairro direto do PDF (pdf.js, carregado só nessa hora, no próprio aparelho — nome, NIS e CPF não são lidos). O endereço aparece no campo abaixo do arquivo, para conferir/corrigir. O botão **"Organizar rota automaticamente"** ordena os dois blocos (rua de partida primeiro, depois por rua e número; com IA marcada, refina com o Gemini) e o PDF final ganha uma página de **roteiro** logo após a capa. PDFs escaneados (só imagem) não têm texto: nesses, digite o endereço. Código em `anona-rota.js`; testes: `node tests/rota.test.js`.
+
 ## 8.4 Unificar Folhas de Família — Abrigos (Operação Acolhida)
 
 Na barra lateral, bloco **"Unificar Folhas de Família — Abrigos (Operação Acolhida)"**:
