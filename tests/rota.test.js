@@ -28,6 +28,12 @@ eq(e.rua, 'Rua Sete'); eq(e.numero, '245'); eq(e.bairro, '13 de Setembro');
 e = R.extrairEndereco(['Visita ao domicílio na AV. CAPITAO ENE GARCEZ nº 1500, Centro']);
 eq(e.rua, 'Avenida Capitao Ene Garcez'); eq(e.numero, '1500');
 
+// Folha Resumo do Cadastro Único: campos numerados, vários por linha, número com zeros à esquerda
+e = R.extrairEndereco(['II - ENDEREÇO DA FAMÍLIA', '1.11 - Localidade: 13 DE SETEMBRO', '1.12 - Tipo: AVENIDA 1.13 - Título:',
+  '1.14 - Nome: ELDORADO', '1.15 - Número: 0000000000000046 1.16 - Complemento do Número:', '1.17 - Complemento Adicional: CASA',
+  '1.18 - Cep: 69308000 1.20 - Referência para Localização:', 'III - COMPONENTES DA FAMÍLIA', '4.02 - Nome Completo: FULANA DE TAL']);
+eq(e.rua, 'Avenida Eldorado'); eq(e.numero, '46'); eq(e.bairro, '13 de Setembro');
+
 eq(R.extrairEndereco(['Folha sem endereço nenhum']), null);
 
 // ordem: rua de partida primeiro, depois alfabética, por número; S/N e sem número no fim da rua
