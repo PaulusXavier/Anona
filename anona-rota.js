@@ -49,6 +49,8 @@
   function normalizaTipo(t) { const k = String(t).toLowerCase(); return ABREV[k] || tituloCaso(t); }
 
   function numeroDe(s) {
+    // Cadastro Único preenche o número com zeros à esquerda ("0000000000000046" = 46)
+    s = String(s || '').replace(/(^|[^\p{L}\d])0+(?=\d)/gu, '$1');
     const m = /(?:^|[^\p{L}\d])(s\s*\/\s*n|sn|sem\s+n[úu]mero|\d{1,6}[A-Za-z]?)(?![\p{L}\d])/iu.exec(' ' + String(s || ''));
     if (!m) return '';
     return /^s/i.test(m[1]) ? 'S/N' : m[1].toUpperCase();
@@ -78,8 +80,14 @@
 
   // Lê o endereço a partir das linhas de texto da folha resumo. Devolve null se não achar.
   function extrairEndereco(linhas) {
-    const texto = (Array.isArray(linhas) ? linhas.join(' ') : String(linhas || '')).replace(/\s+/g, ' ')
+    let texto = (Array.isArray(linhas) ? linhas.join(' ') : String(linhas || '')).replace(/\s+/g, ' ')
       .replace(/tipo\s+(?:de\s+)?logradouro\s*:/gi, 'TIPOLOG:');
+    // Folha Resumo do Cadastro Único: campos numerados ("1.12 - Tipo: AVENIDA 1.13 - Título: 1.14 - Nome: ELDORADO ...").
+    // Tira os códigos de item e trata o "Tipo:" solto como tipo de logradouro, para um campo não engolir o seguinte.
+    if (texto.indexOf('TIPOLOG:') < 0) {
+      texto = texto.replace(/\b\d{1,2}\.\d{2}\s*-?\s*(?=\p{L})/gu, ' ').replace(/\s+/g, ' ')
+        .replace(/(^|\s)tipo\s*:/i, '$1TIPOLOG:');
+    }
 
     // 1) campos com rótulo (Tipo de logradouro / Nome / Número / Bairro)
     const tipo = (pegaRotulo(texto, 'tipolog').split(' ')[0] || '');
