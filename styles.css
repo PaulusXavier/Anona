@@ -194,107 +194,32 @@
     pointer-events:none;
   }
 
-  /* ---------- telas de acesso (senha do app / sincronizar notas) ----------
-     Fundo "caderneta": mesmo azul profundo do cabeçalho, com a textura de
-     pontilhado e o selo da família em relevo, para as duas telas de entrada
-     do app parecerem a capa de um mesmo documento, e não uma tela genérica. */
-  .access-bg{
-    background:
-      radial-gradient(125% 70% at -8% -12%, rgba(21,153,71,.58), transparent 55%),
-      radial-gradient(118% 68% at 110% 114%, rgba(255,204,41,.42), transparent 55%),
-      radial-gradient(95% 60% at 54% 42%, rgba(11,47,122,.55), transparent 68%),
-      linear-gradient(150deg,#030F26 0%,#0B2F63 42%,#0A2757 70%,#030F26 100%);
-    background-size:100% 100%, 100% 100%, 100% 100%, 220% 220%;
-    background-position:0 0, 0 0, 0 0, 20% 15%;
-    animation:auroraDrift 26s ease-in-out infinite alternate;
-    position:relative; overflow:hidden;
-  }
-  @keyframes auroraDrift{
-    from{ background-position:0 0, 0 0, 0 0, 12% 10%; }
-    to{ background-position:0 0, 0 0, 0 0, 88% 82%; }
-  }
-  @media (prefers-reduced-motion: reduce){
-    .access-bg{ animation:none; }
-  }
-  .access-bg::before{
-    content:""; position:absolute; inset:0; pointer-events:none;
-    background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNzAnIGhlaWdodD0nMTcwJz4KICA8ZmlsdGVyIGlkPSduJz4KICAgIDxmZVR1cmJ1bGVuY2UgdHlwZT0nZnJhY3RhbE5vaXNlJyBiYXNlRnJlcXVlbmN5PScwLjc1JyBudW1PY3RhdmVzPScyJyBzdGl0Y2hUaWxlcz0nc3RpdGNoJy8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSdzYXR1cmF0ZScgdmFsdWVzPScwJy8+CiAgPC9maWx0ZXI+CiAgPHJlY3Qgd2lkdGg9JzEwMCUnIGhlaWdodD0nMTAwJScgZmlsdGVyPSd1cmwoI24pJyBvcGFjaXR5PScwLjU1Jy8+Cjwvc3ZnPg==");
-    background-repeat:repeat;
-    background-size:170px 170px;
-    mix-blend-mode:soft-light;
-    opacity:1;
-  }
-  /* brilho suave vindo de cima + leve vinheta nas bordas, para o fundo azul
-     ter mais profundidade e empurrar o olho para o cartão central em vez
-     de ficar chapado ou competir com ele. Um filete de luz na diagonal
-     (bem discreto) dá o acabamento "capa encadernada" — como o reflexo
-     que um material encerado pega sob luz de estúdio. */
-  .access-bg::after{
-    content:""; position:absolute; inset:0; pointer-events:none;
-    background:
-      linear-gradient(120deg, transparent 42%, rgba(255,255,255,.05) 50%, transparent 58%),
-      radial-gradient(65% 55% at 50% -8%, rgba(255,255,255,.16), transparent 70%),
-      radial-gradient(120% 85% at 50% 50%, transparent 55%, rgba(3,12,31,.35) 100%);
-  }
-  /* Anéis "abertos" (mesmo traço do selo psi da tela de senha) soltos ao
-     fundo, bem discretos — repete a mesma linguagem visual do círculo
-     incompleto pra dar profundidade sem competir com o cartão branco. */
-  .ring-seal{
-    position:absolute; aspect-ratio:1/1; border-radius:50%;
-    border:5px solid rgba(255,255,255,.12);
-    border-bottom-color:transparent;
-    pointer-events:none;
-  }
-  /* Pontinhos soltos (verde/dourado) espalhados no fundo azul — dão vida
-     à tela de acesso sem virar confete: poucos, pequenos, bem discretos. */
-  .access-dot{
-    position:absolute; border-radius:50%; pointer-events:none;
-    box-shadow:0 0 14px 2px currentColor;
-  }
+  
+  
+  
+  
+  
+  
+  
 
-  /* ---------- fundo animado da tela de acesso ---------- */
-  .access-fx{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
-  .access-blob{ position:absolute; border-radius:50%; filter:blur(60px); opacity:.5; will-change:transform; }
-  .access-blob.b1{ width:min(70vw,460px); aspect-ratio:1; left:-15%; top:-10%; background:#159947; animation:blobA 18s ease-in-out infinite alternate; }
-  .access-blob.b2{ width:min(65vw,420px); aspect-ratio:1; right:-18%; bottom:-12%; background:#FFCC29; opacity:.38; animation:blobB 22s ease-in-out infinite alternate; }
-  .access-blob.b3{ width:min(55vw,380px); aspect-ratio:1; left:30%; top:35%; background:#1E56C8; opacity:.45; animation:blobC 26s ease-in-out infinite alternate; }
-  @keyframes blobA{ to{ transform:translate(30vw,22vh) scale(1.25); } }
-  @keyframes blobB{ to{ transform:translate(-28vw,-20vh) scale(1.2); } }
-  @keyframes blobC{ 0%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-22vw,14vh) scale(1.3); } 100%{ transform:translate(18vw,-16vh) scale(.9); } }
-  .access-bokeh{
-    position:absolute; bottom:-30px; width:var(--s); height:var(--s); border-radius:50%;
-    background:var(--c); opacity:0; box-shadow:0 0 18px 3px var(--c);
-    animation:bokehUp var(--d) linear var(--t) infinite;
-  }
-  @keyframes bokehUp{
-    0%{ transform:translate(0,0); opacity:0; }
-    10%{ opacity:.55; }
-    50%{ transform:translate(18px,-55vh); }
-    90%{ opacity:.45; }
-    100%{ transform:translate(-14px,-112vh); opacity:0; }
-  }
-  .access-bg .ring-seal{ animation:ringSpin 60s linear infinite; }
-  .access-bg .ring-seal:nth-of-type(2){ animation-duration:80s; animation-direction:reverse; }
-  @keyframes ringSpin{ to{ rotate:360deg; } }
-  .access-dot{ animation:dotPulse 4.5s ease-in-out infinite; }
-  @keyframes dotPulse{ 50%{ scale:1.9; translate:0 -8px; } }
-  @media (prefers-reduced-motion: reduce){
-    .access-blob, .access-bokeh, .access-bg .ring-seal, .access-dot{ animation:none; }
-    .access-bokeh{ display:none; }
-  }
-  .access-card{
-    background:var(--card);
-    border-radius:1.75rem;
-    box-shadow:0 40px 80px -20px rgba(3,12,31,.65), 0 2px 10px rgba(3,12,31,.18),
-      inset 0 1px 0 rgba(255,255,255,.6);
-    position:relative; overflow:hidden;
-  }
-  .access-icon{
-    width:3.1rem; height:3.1rem; border-radius:50%;
-    display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(circle at 32% 26%, var(--amarelo-soft), var(--amarelo) 68%, #A9781F 100%);
-    box-shadow:0 0 0 5px rgba(216,155,50,.16), 0 6px 16px -4px rgba(216,155,50,.55);
-  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* ---------- logotipo Anona (monograma "A") ----------
      Marca única usada no cabeçalho, na tela de login e nos PDFs: um selo
@@ -305,27 +230,11 @@
   .logo-mark{ display:inline-flex; flex-shrink:0; border-radius:22%; overflow:hidden; box-shadow:0 1px 3px rgba(13,46,99,.22); }
   .logo-mark svg{ display:block; width:100%; height:100%; }
 
-  /* selinho Ψ (psicologia): mantido na tela de login, agora pequeno e ao
-     lado do nome/CRP — a marca do app (acima) é quem assume o papel de
-     logotipo principal; este é só um toque da identidade profissional. */
-  .psi-mini{
-    width:1.3rem; height:1.3rem; border-radius:50%; flex-shrink:0;
-    display:inline-flex; align-items:center; justify-content:center;
-    border:1.4px solid var(--azul); color:var(--azul);
-    font-family:'Georgia','Times New Roman',serif; font-weight:700; font-size:.82rem; line-height:1;
-  }
-  /* ---------- divisória "canhoto de bilhete" ----------
-     Uma linha tracejada com dois recortes circulares nas bordas, como a
-     parte destacável de um bilhete/carnê — reforça a linguagem visual de
-     "documento" que o resto do app já usa (.tool-step, .passbook, .id-card)
-     também nas telas de entrada. */
-  .ticket-notch{ position:relative; border-top:1.5px dashed var(--line); margin:0 -1.75rem; }
-  .ticket-notch::before, .ticket-notch::after{
-    content:""; position:absolute; top:-.5rem; width:1rem; height:1rem;
-    border-radius:50%; background:var(--azul-deep);
-  }
-  .ticket-notch::before{ left:-.5rem; }
-  .ticket-notch::after{ right:-.5rem; }
+  
+  
+  
+  
+  
   .access-input{
     width:100%; border:1.5px solid var(--line); border-radius:1rem;
     /* 16px: abaixo disso o iOS dá zoom automático ao focar o campo */
@@ -333,66 +242,34 @@
     background:#FCFBF8; transition:border-color .15s, box-shadow .15s, background .15s;
   }
   .access-input::placeholder{ color:#9AA3B2; }
-  .access-input-wrap:focus-within > svg, .access-input-wrap:focus-within > .lucide{ opacity:1; }
-  .access-eye{
-    position:absolute; right:.35rem; top:50%; transform:translateY(-50%);
-    width:2.4rem; height:2.4rem; border-radius:.8rem; color:#7B8597;
-    display:flex; align-items:center; justify-content:center; transition:background .15s, color .15s;
-  }
-  .access-eye:hover{ background:var(--azul-soft); color:var(--azul); }
-  .access-eye[aria-pressed="true"]{ color:var(--azul); }
-  .access-link{ color:var(--azul); padding:.35rem .1rem; border-radius:.4rem; }
-  .access-link:hover{ text-decoration:underline; }
-  .access-check{ display:inline-flex; align-items:center; gap:.4rem; cursor:pointer; padding:.35rem 0; user-select:none; }
-  .access-check input{ width:1rem; height:1rem; accent-color:var(--azul); cursor:pointer; }
-  .access-caps svg{ display:inline-block; vertical-align:-2px; width:.8rem; height:.8rem; margin-right:.2rem; }
-  .access-chips{
-    display:flex; flex-wrap:wrap; justify-content:center; gap:.35rem .5rem;
-    margin:1.1rem 0 0; padding:0; list-style:none;
-  }
-  .access-chips li{
-    display:inline-flex; align-items:center; gap:.3rem; font-size:10px; font-weight:700;
-    color:var(--azul); background:var(--azul-soft); padding:.28rem .6rem; border-radius:999px;
-  }
-  .access-chips svg{ width:.75rem; height:.75rem; }
-  .access-card-in{ animation:accessCardIn .6s cubic-bezier(.2,.8,.2,1) backwards; }
-  .access-card-in .logo-mark{ animation:accessPop .7s .15s cubic-bezier(.3,1.4,.5,1) both; }
-  @keyframes accessCardIn{ from{ opacity:0; transform:translateY(18px) scale(.985); } to{ opacity:1; transform:none; } }
-  @keyframes accessPop{ from{ opacity:0; transform:scale(.7) rotate(-8deg); } to{ opacity:1; transform:none; } }
-  @media (prefers-reduced-motion: reduce){ .access-card-in, .access-card-in .logo-mark{ animation:none; } }
-  #lockScreen button:focus-visible, #lockScreen input[type=checkbox]:focus-visible{
-    outline:3px solid rgba(216,155,50,.75); outline-offset:2px;
-  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   .access-input:focus{ outline:none; border-color:var(--azul); background:#fff; box-shadow:0 0 0 4px rgba(13,46,99,.13); }
-  .access-input-wrap{ position:relative; }
-  .access-input-wrap > svg, .access-input-wrap > .lucide{
-    position:absolute; left:.9rem; top:50%; transform:translateY(-50%);
-    width:1.05rem; height:1.05rem; color:var(--azul); opacity:.55; pointer-events:none;
-  }
-  .access-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:.25rem; background:var(--azul-soft); border-radius:.9rem; padding:.25rem; }
-  .access-tab{ padding:.7rem 0; min-height:2.75rem; border-radius:.7rem; font-size:.75rem; font-weight:700; transition:all .15s; color:var(--azul); opacity:.7; display:flex; align-items:center; justify-content:center; gap:.3rem; }
-  .access-tab.active{ background:var(--card); opacity:1; box-shadow:0 1px 4px rgba(13,46,99,.18); }
-  .access-tab svg{ width:.85rem; height:.85rem; }
-  /* Botão principal das telas de acesso: gradiente sutil + brilho que
-     desliza no hover, em vez de azul chapado, para reforçar que é a ação
-     principal da tela. */
-  .access-btn{
-    background:linear-gradient(135deg,var(--azul) 0%,#123A78 100%);
-    box-shadow:0 14px 28px -10px rgba(13,46,99,.6), inset 0 1px 0 rgba(255,255,255,.16);
-    position:relative; overflow:hidden;
-  }
-  .access-btn::before{
-    content:""; position:absolute; inset:0; border-radius:inherit;
-    background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.22) 45%, transparent 60%);
-    transform:translateX(-100%); transition:transform .5s ease;
-  }
-  .access-btn:hover::before{ transform:translateX(100%); }
-  @keyframes shake{
-    10%,90%{ transform:translateX(-1px); } 20%,80%{ transform:translateX(2px); }
-    30%,50%,70%{ transform:translateX(-4px); } 40%,60%{ transform:translateX(4px); }
-  }
-  .shake{ animation:shake .4s both; }
-  @media (prefers-reduced-motion: reduce){ .shake{ animation:none; } }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
   /* =====================================================================
      REPAGINADA VISUAL GERAL — refinamento de formatação sobre a base que
@@ -403,11 +280,11 @@
      botões sólidos com profundidade e leve resposta ao toque/mouse em vez
      de opacidade chapada, a única tabela do app ganha cabeçalho e hover
      de linha, e o foco de teclado fica padronizado em todo o app.
-     Nenhum id/classe usada pelo JavaScript foi alterado — só aparência. */
-
-  /* cabeçalho de cada seção (.eyebrow, ~20 cartões): mais peso e uma
+     Nenhum id/classe usada pelo JavaScript foi alterado — só aparência. *//* cabeçalho de cada seção (.eyebrow, ~20 cartões): mais peso e uma
      linha fina separando do conteúdo, para o olho encontrar rápido do
      que se trata cada bloco ao rolar a página */
+
+  
   .eyebrow{ font-size:1.03rem; padding-bottom:.6rem; margin-bottom:.85rem !important; border-bottom:1px solid var(--line-soft); }
   .eyebrow .chip{ box-shadow:0 1px 2px rgba(13,46,99,.08), inset 0 0 0 1px rgba(13,46,99,.05); }
 
@@ -610,7 +487,6 @@
     html{ scroll-behavior:auto; }
   }
 
-
   /* calendário acompanha a altura do painel ao lado: as semanas crescem
      para preencher, sem sobrar vão embaixo do mês */
   @media (min-width:1280px){
@@ -618,36 +494,25 @@
     .cal-panel .calendar-grid{ flex:1; grid-auto-rows:minmax(104px,1fr); }
   }
 
-  /* ---------- login: acabamento extra ---------- */
-  #lockScreen{ transition:opacity .4s ease, transform .4s ease; }
-  #lockScreen.access-leaving{ opacity:0; transform:scale(1.03); pointer-events:none; }
-  .access-fx{ translate:var(--px,0) var(--py,0); transition:translate .6s ease-out; }
-  #lockCard{ transition:transform .35s ease-out; will-change:transform; }
-  #lockCard.shake{ transition:none; }
-  /* faixa da bandeira com brilho passando */
-  #lockCard .flag-ribbon{ position:relative; overflow:hidden; height:5px; }
-  #lockCard .flag-ribbon::after{
-    content:""; position:absolute; inset:0;
-    background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.75) 50%, transparent 70%);
-    transform:translateX(-120%); animation:ribbonShine 5s ease-in-out 1.2s infinite;
-  }
-  @keyframes ribbonShine{ 0%{ transform:translateX(-120%); } 40%,100%{ transform:translateX(120%); } }
-  /* entrada escalonada dos blocos do formulário */
-  #authForm > *, .access-tabs, #authModalSubtitle{ animation:accessRise .55s cubic-bezier(.2,.8,.2,1) both; }
-  .access-tabs{ animation-delay:.25s; } #authModalSubtitle{ animation-delay:.3s; }
-  #authForm > :nth-child(1){ animation-delay:.35s; } #authForm > :nth-child(2){ animation-delay:.42s; }
-  #authForm > :nth-child(3){ animation-delay:.49s; } #authForm > :nth-child(6){ animation-delay:.56s; }
-  @keyframes accessRise{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
-  /* botão principal respira de leve */
-  .access-btn:not(:disabled){ animation:btnGlow 3.2s ease-in-out infinite; }
-  @keyframes btnGlow{ 50%{ box-shadow:0 16px 34px -8px rgba(30,86,200,.65), inset 0 1px 0 rgba(255,255,255,.2); } }
-  .access-btn:active{ transform:scale(.985); }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+   
+   
+   
+  
+  
+  
+  
   /* autofill do Chrome sem o amarelo/azul destoando */
   .access-input:-webkit-autofill{ -webkit-box-shadow:0 0 0 40px #FCFBF8 inset; -webkit-text-fill-color:#1b2433; }
-  @media (prefers-reduced-motion: reduce){
-    #lockCard .flag-ribbon::after, #authForm > *, .access-tabs, #authModalSubtitle, .access-btn{ animation:none !important; }
-    .access-fx{ transition:none; }
-  }
+  
 
 /* =====================================================================
    REFINAMENTO VISUAL (v2) — camada de acabamento por cima do estilo
@@ -736,143 +601,9 @@ textarea{ line-height:1.5; }
   .day-cell .mt-auto > div.uppercase{ display:none; }
 }
 
-/* =====================================================================
-   TELA DE LOGIN (v3) — cartão dividido no desktop, cabeçalho compacto
-   no celular, abas com indicador deslizante e validação inline.
-   ===================================================================== */
-#lockCard{ max-width:24rem; }
-.access-split{ display:block; }
-.access-hero{ display:none; }
-.access-main{ min-width:0; }
-
-/* cabeçalho (celular): marca à esquerda, texto à direita */
-.access-head{ text-align:left; }
-.access-head-row{ display:flex; align-items:center; gap:.9rem; }
-.access-head .logo-mark{ width:3.6rem; height:3.6rem; }
-.access-head-text{ min-width:0; }
-.access-greeting{ font-size:11px; font-weight:600; color:#94A3B8; line-height:1.2; margin:0 0 .1rem; }
-.access-title{ font-weight:700; font-size:1.6rem; line-height:1.1; color:var(--azul-deep); margin:0; }
-.access-title-lg{ display:none; }
-.access-sub{ margin:.3rem 0 0; font-size:11px; line-height:1.35; font-weight:700; letter-spacing:.02em; color:var(--amarelo-text); }
-.access-year{
-  display:inline-block; margin-left:.2rem; padding:.05rem .45rem; border-radius:999px;
-  background:var(--amarelo-soft, #F4DFB4); color:var(--amarelo-text); font-weight:800; white-space:nowrap;
-}
-.access-credit{
-  display:flex; align-items:center; gap:.4rem; margin:.85rem 0 0;
-  font-size:11.5px; line-height:1.3; color:#64748B;
-}
-
-/* abas com indicador deslizante */
-.access-tabs{ position:relative; }
-.access-tabs::before{
-  content:""; position:absolute; top:.25rem; bottom:.25rem; left:.25rem; width:calc(50% - .25rem);
-  background:var(--card); border-radius:.7rem; box-shadow:0 1px 4px rgba(13,46,99,.18);
-  transition:transform .28s cubic-bezier(.3,.9,.3,1);
-}
-.access-tabs[data-mode="signup"]::before{ transform:translateX(100%); }
-.access-tab{ position:relative; z-index:1; }
-.access-tab.active{ background:transparent; box-shadow:none; }
-@media (prefers-reduced-motion: reduce){ .access-tabs::before{ transition:none; } }
-
 /* validação inline */
 .access-input.is-invalid{ border-color:#DC2626; background:#FFF8F7; }
 .access-input.is-invalid:focus{ box-shadow:0 0 0 4px rgba(220,38,38,.14); }
-.access-hint{ margin:.35rem 0 0; font-size:11px; font-weight:600; color:#B3261E; line-height:1.35; }
-.access-input-wrap:focus-within > svg, .access-input-wrap:focus-within > .lucide{ color:var(--azul); }
-
-/* rodapé: nota de segurança + aviso legal */
-.access-legal{
-  margin-top:1.1rem; padding-top:.9rem; border-top:1px solid var(--line);
-  display:grid; gap:.5rem; text-align:center;
-}
-.access-legal p{ margin:0; font-size:10.5px; line-height:1.45; color:#64748B; }
-.access-legal p:first-child svg{ display:inline-block; width:.8rem; height:.8rem; vertical-align:-2px; margin-right:.2rem; color:var(--verde); }
-.access-legal p:last-child{ font-size:10px; color:#8391A5; }
-
-/* campo e botão com leve elevação ao focar */
-.access-btn:focus-visible{ outline:3px solid rgba(216,155,50,.75); outline-offset:3px; }
-
-/* celulares baixos / teclado aberto: tira o respiro do topo */
-@media (max-height:700px){
-  #lockScreen{ padding-top:1rem !important; padding-bottom:1rem !important; }
-  .access-chips{ display:none; }
-}
-
-/* ===== desktop: cartão dividido ===== */
-@media (min-width:900px){
-  #lockCard{ max-width:58rem; border-radius:2rem; }
-  .access-split{ display:grid; grid-template-columns:minmax(0,1.02fr) minmax(0,1fr); min-height:34rem; }
-  .access-hero{
-    display:flex; flex-direction:column; justify-content:space-between; gap:2rem;
-    position:relative; overflow:hidden; color:#fff; padding:2.4rem 2.4rem 2rem;
-    background:
-      radial-gradient(90% 60% at 0% 0%, rgba(21,153,71,.55), transparent 60%),
-      radial-gradient(80% 55% at 100% 100%, rgba(255,204,41,.34), transparent 62%),
-      linear-gradient(160deg,#0D2E63 0%,#082252 55%,#041634 100%);
-  }
-  .access-hero::before{
-    content:""; position:absolute; inset:0; pointer-events:none;
-    background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.09) 1px, transparent 0);
-    background-size:18px 18px;
-  }
-  .access-hero::after{
-    content:""; position:absolute; left:0; right:0; bottom:0; height:5px;
-    background:linear-gradient(90deg, var(--verde) 0 33%, var(--amarelo) 33% 66%, #1E56C8 66% 100%);
-  }
-  .access-hero > *{ position:relative; z-index:1; }
-  .access-hero .ring-seal{ position:absolute; z-index:0; animation:ringSpin 70s linear infinite; }
-  .access-hero-top{ display:flex; align-items:center; gap:.85rem; }
-  .access-hero-top .logo-mark{ box-shadow:0 8px 22px -6px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.18); }
-  .access-hero-name{ font-size:1.9rem; font-weight:700; letter-spacing:-.01em; }
-  .access-hero-eyebrow{
-    margin:0 0 .7rem; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#FFD36B;
-  }
-  .access-hero-body h2{ font-size:2rem; line-height:1.12; font-weight:600; margin:0 0 1.4rem; max-width:17ch; text-wrap:balance; }
-  .access-hero-list{ list-style:none; margin:0; padding:0; display:grid; gap:.8rem; }
-  .access-hero-list li{ display:flex; align-items:center; gap:.75rem; font-size:.88rem; line-height:1.35; color:rgba(255,255,255,.88); }
-  .access-hero-list li svg{
-    flex:none; width:2.1rem; height:2.1rem; padding:.5rem; border-radius:.7rem;
-    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.14); color:#FFD36B;
-  }
-  .access-hero-credit{
-    display:flex; align-items:center; gap:.5rem; margin:0; padding-bottom:.3rem;
-    font-size:11.5px; color:rgba(255,255,255,.7);
-  }
-  .access-hero-credit .psi-mini{ border-color:rgba(255,255,255,.6); color:#fff; }
-
-  .access-main{ display:flex; flex-direction:column; justify-content:center; padding:1.2rem .6rem 0; }
-  .access-main > .px-7{ padding-left:2.2rem; padding-right:2.2rem; }
-  .access-head{ padding-top:1.4rem !important; padding-bottom:.4rem !important; }
-  .access-head .logo-mark, .access-head .access-sub, .access-head .access-credit, .access-title-brand{ display:none; }
-  .access-title-lg{ display:inline; }
-  .access-head-row{ display:block; }
-  .access-greeting{ font-size:13px; margin-bottom:.15rem; }
-  .access-title{ font-size:1.75rem; }
-  .ticket-notch{ display:none; }
-  .access-main .access-tabs{ margin-top:.4rem; }
-}
-@media (min-width:900px) and (max-height:640px){
-  .access-split{ min-height:0; }
-  .access-hero-list li:nth-child(n+3){ display:none; }
-}
-@media (prefers-reduced-motion: reduce){ .access-hero .ring-seal{ animation:none !important; } }
-#lockScreen{ position:fixed; inset:0; }
-
-/* foco dos campos do login: mantém cantos arredondados e o anel azul
-   (a regra global de :focus-visible deixava o campo quadrado e verde) */
-#lockScreen .access-input:focus-visible{
-  border-radius:1rem; border-color:var(--azul); background:#fff;
-  box-shadow:0 0 0 4px rgba(13,46,99,.16);
-}
-#lockScreen .access-input.is-invalid:focus-visible{
-  border-color:#DC2626; box-shadow:0 0 0 4px rgba(220,38,38,.16);
-}
-#lockScreen .access-tab:focus-visible, #lockScreen .access-eye:focus-visible{ border-radius:.7rem; box-shadow:none; }
-
-/* Botão "mostrar senha": a regra geral de button:active (translateY(1px)) anulava o translateY(-50%) que o centraliza,
-   então ao apertar o botão ele pulava para baixo, saía de baixo do cursor e o clique se perdia. */
-button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); }
 
 
 /* ═════════════════════════ IMPRESSÃO ═════════════════════════
@@ -933,10 +664,16 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
   .pr-nota > div{ margin-top:2px; white-space:pre-wrap; overflow-wrap:anywhere; }
 
   /* modo 2 — Ctrl+P direto na página */
-  body:not(.anona-imprimindo) #globalErrorBanner, body:not(.anona-imprimindo) #offlineBanner, body:not(.anona-imprimindo) #lockScreen,
-  body:not(.anona-imprimindo) #toastContainer, body:not(.anona-imprimindo) #confirmModalOverlay, body:not(.anona-imprimindo) #anonaMascotWrap,
-  body:not(.anona-imprimindo) [id^="paulusAnona"], body:not(.anona-imprimindo) .flag-ribbon,
-  body:not(.anona-imprimindo) button, body:not(.anona-imprimindo) input[type="file"], body:not(.anona-imprimindo) .no-print{ display:none !important; }
+  body:not(.anona-imprimindo) #globalErrorBanner,
+body:not(.anona-imprimindo) #offlineBanner,
+body:not(.anona-imprimindo) #toastContainer,
+body:not(.anona-imprimindo) #confirmModalOverlay,
+body:not(.anona-imprimindo) #anonaMascotWrap,
+body:not(.anona-imprimindo) [id^="paulusAnona"],
+body:not(.anona-imprimindo) .flag-ribbon,
+body:not(.anona-imprimindo) button,
+body:not(.anona-imprimindo) input[type="file"],
+body:not(.anona-imprimindo) .no-print{ display:none !important; }
   body:not(.anona-imprimindo) header{ background:#fff !important; color:#0B2F7A !important; box-shadow:none !important; }
   body:not(.anona-imprimindo) header *{ color:#0B2F7A !important; }
   body:not(.anona-imprimindo) .panel, body:not(.anona-imprimindo) .panel-tool{ box-shadow:none !important; break-inside:avoid; }
@@ -1048,47 +785,5 @@ button.access-eye:not(:disabled):active{ transform:translateY(-50%) scale(.94); 
 }
 @media print{ #territorioVolante .tv-tools, #territorioVolante .tv-nav{ display:none; } }
 
-
-/* =====================================================================
-   TELA DE LOGIN (v4) — leitura mais confortável e estados mais claros.
-   Textos de 10–11px passam para 12–13px e ganham contraste (WCAG AA,
-   4,5:1); subtítulo alinhado ao título no desktop; hover/desabilitado
-   nos campos e no botão; aviso de "sem internet". Só aparência: nenhum
-   id/classe usado pelo JavaScript foi alterado.
-   ===================================================================== */
-#lockScreen .access-greeting{ color:#64748B; }
-#lockScreen #authForm > div > label.block{ font-size:12.5px; color:#475569; letter-spacing:.01em; margin-bottom:.35rem; }
-#lockScreen #authModalSubtitle{ font-size:13px; line-height:1.45; color:#52607A; }
-#lockScreen .access-check{ font-size:12.5px; color:#475569; }
-#lockScreen .access-link{ font-size:12.5px; font-weight:700; text-underline-offset:3px; }
-#lockScreen .access-hint{ font-size:12px; }
-#lockScreen #authCapsWarn{ font-size:12px; }
-#lockScreen #authError, #lockScreen #authSuccess{ font-size:13px; line-height:1.4; }
-#lockScreen .access-chips li{ font-size:11px; padding:.3rem .65rem; }
-#lockScreen .access-legal p{ font-size:11.5px; color:#53627A; }
-#lockScreen .access-legal p:last-child{ font-size:11px; color:#5F6E84; }
-#lockScreen .access-sub{ font-size:11.5px; }
-
 /* campos e abas: resposta ao passar o mouse */
 .access-input:hover:not(:focus):not(.is-invalid){ border-color:#BFC9D8; background:#fff; }
-.access-tab:not(.active):hover{ opacity:.95; }
-
-/* botão principal: seta que avança no hover; desabilitado mostra "trabalhando" */
-.access-btn svg:last-child{ transition:transform .2s ease; }
-.access-btn:hover:not(:disabled) svg:last-child{ transform:translateX(3px); }
-.access-btn:disabled{ cursor:progress; }
-@media (prefers-reduced-motion: reduce){ .access-btn svg:last-child{ transition:none; } .access-btn:hover:not(:disabled) svg:last-child{ transform:none; } }
-
-/* aviso de sem internet */
-.access-offline{
-  display:flex; align-items:flex-start; gap:.5rem; margin:0; padding:.6rem .75rem;
-  font-size:12.5px; line-height:1.4; font-weight:600; color:#7A4B00;
-  background:#FFF6DD; border:1px solid #F1D58A; border-radius:.75rem;
-}
-.access-offline svg{ flex:none; width:1rem; height:1rem; margin-top:.1rem; }
-.access-offline.hidden{ display:none; }
-
-/* desktop: título e subtítulo alinhados à esquerda, como o cabeçalho */
-@media (min-width:900px){
-  #lockScreen #authModalSubtitle{ text-align:left; }
-}
