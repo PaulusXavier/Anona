@@ -189,6 +189,14 @@ Na barra lateral, bloco **"Unificar Folhas de Família — Rota de Visita"**:
 
 **Leitura automática do endereço e roteiro (novo):** ao adicionar cada folha, o app lê rua, número e bairro direto do PDF (pdf.js, carregado só nessa hora, no próprio aparelho — nome, NIS e CPF não são lidos). O endereço aparece no campo abaixo do arquivo, para conferir/corrigir. O botão **"Organizar rota automaticamente"** ordena os dois blocos (rua de partida primeiro, depois rua por rua, ímpares subindo e pares voltando, pela IA Paulus, sem internet) e o PDF final ganha uma página de **roteiro** logo após a capa. PDFs escaneados (só imagem) não têm texto: nesses, digite o endereço. Código em `anona-rota.js`; testes: `node tests/rota.test.js`.
 
+**Rota com IA — melhorada (Paulus 0.15.0):**
+- **A ordem sai do Paulus, no aparelho.** Nomes de rua são normalizados ("Cap. Ene Garcez" = "Capitão Ene Garcez"; uma letra errada não cria rua nova), a ordem é natural ("Rua 2" antes de "Rua 10") e as casas de cada rua seguem em serpentina (ímpares subindo, pares voltando). Integrantes da mesma família ficam juntos.
+- **Menor distância, se houver mapa.** Se existir um `geografia.json` ao lado do `index.html` (coordenadas de RUAS e BAIRROS, nunca de casas; gerado com `node scripts/montar-geografia.mjs overpass.json geografia.json` no repositório do Paulus), as ruas passam a ser ordenadas pelo menor deslocamento (busca exata até 9 ruas) e o aviso diz o km estimado. Sem o arquivo, tudo funciona como antes, pelo texto do endereço.
+- **Gemini só propõe a ordem das ruas.** Com a IA ligada, vai ao Gemini uma linha por rua e bairro, com a quantidade de famílias — **sem número de casa, nome, NIS ou CPF**. O Paulus valida a resposta: ordem inválida (índice repetido, faltando ou fora da lista) é descartada, e, havendo coordenadas, uma ordem mais longa que a do programa também é (o aviso diz a diferença em km).
+- **Aprende com seus ajustes.** Ao mexer na ordem com as setinhas e gerar o PDF, as ruas que você pôs em sequência passam a contar como vizinhas na próxima vez. Só nome de rua e bairro, só neste aparelho; o quanto foi aprendido aparece em "Como a ordem é sugerida", com botão para apagar.
+- Testes: `node tests/rota.test.js` e `node tests/rota-integracao.test.js` (roda o código real do `index.html` com o Paulus de verdade e um Gemini de mentira).
+
+
 ## 8.4 Unificar Folhas de Família — Abrigos (Operação Acolhida)
 
 Na barra lateral, bloco **"Unificar Folhas de Família — Abrigos (Operação Acolhida)"**:
