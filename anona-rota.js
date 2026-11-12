@@ -60,7 +60,7 @@
   function parseEnderecoLivre(txt) {
     const t = limpa(txt);
     if (!t) return null;
-    const re = new RegExp('(?:^|[\\s,;(])(' + TIPOS + ')\\s+(.+?)(?:\\s*[,\\-–—]?\\s*(?:n[º°o]\\.?|n[úu]mero|num\\.?)?\\s*(s\\s*\\/\\s*n|sn|\\d{1,6}[A-Za-z]?)(?![\\p{L}\\d])(.*)|$)', 'iu');
+    const re = new RegExp('(?:^|[\\s,;(])(' + TIPOS + ')\\s+(.+?)(?:(?:\\s*[,\\-–—]\\s*|\\s+)(?:n[º°o]\\.?|n[úu]mero|num\\.?)?\\s*(s\\s*\\/\\s*n|sn|\\d{1,6}[A-Za-z]?)(?![\\p{L}\\d])(.*)|$)', 'iu');
     const m = re.exec(t);
     if (m) {
       let nome = limpa(m[2]);
@@ -147,7 +147,7 @@
     dados.sort((a, b) => {
       const pa = ruaPartida && a.chave === ruaPartida ? 0 : 1, pb = ruaPartida && b.chave === ruaPartida ? 0 : 1;
       if (pa !== pb) return pa - pb;
-      if (a.chave !== b.chave) return a.chave.localeCompare(b.chave, 'pt-BR');
+      if (a.chave !== b.chave) return a.chave.localeCompare(b.chave, 'pt-BR', { numeric: true });   // "rua 2" antes de "rua 10"
       if (a.num !== b.num) return a.num - b.num;
       return a.i - b.i;
     });
