@@ -503,7 +503,7 @@
       </div>
     </div>
     <p class="text-xs text-slate-500 mb-3">O fluxo mensal, do recebimento da planilha do MDS ao relatório final — na ordem em que você normalmente usa.</p>
-    <p class="tv-privacidade"><i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0" style="color:var(--verde)"></i> <span>Tudo é processado no seu aparelho e os arquivos originais nunca são alterados. A única exceção é a otimização de rota com IA (opcional), que envia só o texto do endereço.</span></p>
+    <p class="tv-privacidade"><i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0" style="color:var(--verde)"></i> <span>Tudo é processado no seu aparelho e os arquivos originais nunca são alterados. A única exceção é a otimização de rota com IA (opcional), que envia só os nomes das ruas e dos bairros (sem número de casa, nome, NIS ou CPF).</span></p>
     <nav class="tv-nav" aria-label="Etapas do fluxo mensal"><a href="#tvPasso1" data-tv-nav="1"><b>1</b> Planilha do MDS</a><a href="#tvPasso2" data-tv-nav="2"><b>2</b> Divisão da equipe</a><a href="#tvPasso3" data-tv-nav="3"><b>3</b> Recorrentes</a><a href="#tvPasso4" data-tv-nav="4"><b>4</b> Relatório individual</a><a href="#tvPasso5" data-tv-nav="5"><b>5</b> Rota de visita</a><a href="#tvPasso6" data-tv-nav="6"><b>6</b> Abrigos</a></nav>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-10">
@@ -679,7 +679,7 @@
                 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.</p>
               <details class="tv-more">
                 <summary>Privacidade e computador compartilhado</summary>
-                <p class="tv-hint">Só o bairro/endereço de cada família é enviado ao Gemini — nunca nome, NIS ou CPF. Sem internet ou sem chave, o app usa normalmente a ordenação por proximidade (bairro/rua).
+                <p class="tv-hint">Só os nomes das ruas e dos bairros são enviados ao Gemini, uma linha por rua e sem número de casa — nunca nome, NIS ou CPF. O Paulus confere a resposta (descarta ordem inválida e, havendo coordenadas, a que for mais longa) e é ele quem põe as casas em ordem dentro de cada rua. Sem internet ou sem chave, o app usa a ordenação do Paulus, feita no aparelho.
                   <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.</p>
               </details>
             </div>
@@ -733,6 +733,7 @@
             <button type="button" onclick="unificarSugerirOrdemIA(0,event)" class="tv-btn-ghost w-full mt-2">
               <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
             </button>
+            <p id="unificarOrdemInfo0" class="tv-hint mt-2 hidden" role="status"></p>
           </div>
 
           <div class="tv-sub-card">
@@ -750,10 +751,12 @@
             <button type="button" onclick="unificarSugerirOrdemIA(1,event)" class="tv-btn-ghost w-full mt-2">
               <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
             </button>
+            <p id="unificarOrdemInfo1" class="tv-hint mt-2 hidden" role="status"></p>
           </div>
           <details class="tv-more">
             <summary>Como a ordem é sugerida</summary>
-            <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Folhas <strong>escaneadas</strong> (PDF que é só uma imagem) são lidas por OCR, também no aparelho e só no quadro “Endereço da família”; na primeira vez o app baixa o leitor de imagem (precisa de internet). Confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” pede ao Paulus a ordem de visita: começa pela rua de partida, segue rua por rua dentro do bairro e, em cada rua, sobe pelos números ímpares e volta pelos pares. Tudo é calculado no aparelho, sem IA externa e sem internet. É uma aproximação pelo texto do endereço (sem mapa), então ajuste se você conhece um caminho melhor. Você também pode usar as setinhas para reordenar manualmente. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
+            <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Folhas <strong>escaneadas</strong> (PDF que é só uma imagem) são lidas por OCR, também no aparelho e só no quadro “Endereço da família”; na primeira vez o app baixa o leitor de imagem (precisa de internet). Confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” pede ao Paulus a ordem de visita: começa pela rua de partida e, em cada rua, sobe pelos números ímpares e volta pelos pares. Quanto às ruas, se o app tem as coordenadas (arquivo <code>geografia.json</code>) o Paulus escolhe a ordem de <strong>menor deslocamento</strong> e mostra a estimativa em km; sem elas, segue rua por rua dentro do bairro pelo texto do endereço, que é só uma aproximação. Tudo é calculado no aparelho, sem IA externa e sem internet. Se você conhece um caminho melhor, use as setinhas: ao gerar o PDF o app <strong>aprende quais ruas você põe em sequência</strong> e usa isso nas próximas rotas. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
+            <p class="tv-hint mt-1"><span id="rotaVizinhancaTexto">O app ainda não aprendeu nenhum ajuste seu.</span> <button type="button" id="rotaVizinhancaApagar" onclick="rotaVizinhancaApagar()" class="underline font-semibold hidden" style="color:var(--verde)">Apagar o que foi aprendido</button></p>
           </details>
           <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait mt-3" style="background:var(--azul)">
             <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
@@ -2988,6 +2991,40 @@ window.AnonaImpressao = (function () {
   ];
   const ROTA_OUTROS_LABEL = 'Outros bairros';
 
+  // Coordenadas de RUAS e BAIRROS (nunca de casas) para o Paulus ordenar pela menor distância: arquivo opcional "geografia.json",
+  // gerado com o script montar-geografia.mjs do Paulus. Sem o arquivo, o Paulus ordena pelo texto do endereço, como antes.
+  let ROTA_GEO = null;
+  (async function carregarGeografiaRota() {
+    try {
+      const r = await fetch('geografia.json');
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j && (Array.isArray(j.ruas) || Array.isArray(j.bairros))) ROTA_GEO = j;
+    } catch (e) { /* sem arquivo, sem problema */ }
+  })();
+
+  // Ruas que a equipe costuma visitar em sequência, aprendidas quando ela ajusta a ordem à mão. Só nome de rua e bairro, só neste aparelho.
+  const ROTA_VIZ_CHAVE = 'anonaVizinhancaRuas';
+  function rotaVizinhancaLer() {
+    try { const v = JSON.parse(safeStorageGet(ROTA_VIZ_CHAVE, '') || 'null'); return v && typeof v === 'object' && v.pares ? v : null; } catch (e) { return null; }
+  }
+  function rotaVizinhancaTexto() {
+    const el = document.getElementById('rotaVizinhancaTexto');
+    if (!el) return;
+    const P = window.Paulus && window.Paulus.visitas;
+    const n = P && P.resumoVizinhanca ? P.resumoVizinhanca(rotaVizinhancaLer()).ligacoes : 0;
+    el.textContent = n ? `O app aprendeu ${n} ligaç${n === 1 ? 'ão' : 'ões'} entre ruas com os seus ajustes (guardado só neste aparelho).` : 'O app ainda não aprendeu nenhum ajuste seu.';
+    const bt = document.getElementById('rotaVizinhancaApagar');
+    if (bt) bt.classList.toggle('hidden', !n);
+  }
+  window.rotaVizinhancaApagar = () => {
+    if (!confirm('Apagar o que o app aprendeu com os seus ajustes de rota? A ordem volta a ser a do Paulus.')) return;
+    try { localStorage.removeItem(ROTA_VIZ_CHAVE); } catch (e) {}
+    rotaVizinhancaTexto();
+  };
+  document.addEventListener('DOMContentLoaded', rotaVizinhancaTexto);
+  setTimeout(rotaVizinhancaTexto, 1500);
+
   // Texto usado para IDENTIFICAR o bairro (prioriza a coluna Bairro; se
   // ela não existir na planilha enviada, cai para Endereço/Referência).
   function relatorioIndividualTextoBairro(row, idxEndereco, idxBairro, idxRef) {
@@ -3060,12 +3097,12 @@ window.AnonaImpressao = (function () {
   // ORIGINAIS de `enderecos`, na ordem sugerida de visita — ou lança um
   // erro (com uma mensagem amigável) se algo der errado, para quem chamar
   // decidir cair na ordenação por proximidade (bairro/rua) como reserva.
-  async function geminiSugerirOrdemVisita(partida, enderecos, apiKey, modelo) {
+  async function geminiSugerirOrdemVisita(partida, enderecos, apiKey, modelo, rotulo) {
     if (!apiKey) throw new Error('Chave de API do Gemini não informada.');
     if (!enderecos.length) return [];
     const modeloUsar = (modelo || '').trim() || 'gemini-flash-latest';
     const lista = enderecos.map((e, i) => `${i}: ${e}`).join('\n');
-    const prompt = `Você ajuda um profissional de assistência social a planejar visitas domiciliares a pé/de carro em Boa Vista, Roraima, Brasil.\n\nPonto de partida: ${partida}\n\nEndereços das famílias a visitar, um por linha no formato "índice: endereço":\n${lista}\n\nSugira a melhor ordem de visita para minimizar o deslocamento total, considerando a proximidade real das ruas e bairros de Boa Vista/RR, começando pelo endereço mais próximo da partida. Responda APENAS com um array JSON dos índices originais na ordem sugerida — todos os ${enderecos.length} índices (0 a ${enderecos.length - 1}), cada um exatamente uma vez.`;
+    const prompt = `Você ajuda um profissional de assistência social a planejar visitas domiciliares a pé/de carro em Boa Vista, Roraima, Brasil.\n\nPonto de partida: ${partida}\n\n${rotulo || 'Endereços das famílias a visitar'}, um por linha no formato "índice: texto":\n${lista}\n\nSugira a melhor ordem de visita para minimizar o deslocamento total, considerando a proximidade real das ruas e bairros de Boa Vista/RR, começando pelo item mais próximo da partida. Responda APENAS com um array JSON dos índices originais na ordem sugerida — todos os ${enderecos.length} índices (0 a ${enderecos.length - 1}), cada um exatamente uma vez.`;
 
     let resp;
     try {
@@ -3203,13 +3240,12 @@ window.AnonaImpressao = (function () {
       const doBloco = enriquecidas.filter(e => e.bloco === bi);
       if (!doBloco.length) continue;
 
-      // Ordem por proximidade (rua -> número -> ordem original): base e
-      // também reserva caso a IA não possa ser usada neste bloco.
+      // Reserva (só se o Paulus não estiver carregado): rua em ordem natural -> número -> ordem original.
       const heuristica = [...doBloco].sort((a, b) => {
         if (a.rua !== b.rua) {
           if (!a.rua) return 1;   // sem endereço: vai para o fim do bairro
           if (!b.rua) return -1;
-          return a.rua.localeCompare(b.rua, 'pt-BR');
+          return a.rua.localeCompare(b.rua, 'pt-BR', { numeric: true });   // "rua 2" antes de "rua 10"
         }
         if (a.numero !== b.numero) return a.numero - b.numero;
         // Mesmo endereço: mantém as linhas de uma mesma família juntas.
@@ -3219,15 +3255,53 @@ window.AnonaImpressao = (function () {
 
       let ordemFinalBloco = heuristica;
 
-      if (usarIA && apiKey && !chaveInvalida) {
-        // Agrupa por família (várias linhas/integrantes podem compartilhar
-        // o mesmo endereço) — a IA só precisa ver um endereço por família.
-        const familiasOrdem = [];
-        const porFamilia = new Map();
-        heuristica.forEach(e => {
-          if (!porFamilia.has(e.familia)) { porFamilia.set(e.familia, []); familiasOrdem.push(e.familia); }
-          porFamilia.get(e.familia).push(e);
-        });
+      // Uma entrada por família (várias linhas/integrantes dividem o mesmo endereço), na ordem da planilha.
+      const familiasOrdem = [];
+      const porFamilia = new Map();
+      doBloco.forEach(e => {
+        if (!porFamilia.has(e.familia)) { porFamilia.set(e.familia, []); familiasOrdem.push(e.familia); }
+        porFamilia.get(e.familia).push(e);
+      });
+      const itensVisita = familiasOrdem.map(chave => {
+        const e = porFamilia.get(chave)[0];
+        // endereço no formato que o Paulus lê: "Rua X, 12 — Bairro" (a referência do endereço não entra)
+        const rua = idxEndereco >= 0 ? String(e.row[idxEndereco] || '').trim() : '';
+        const bairro = idxBairro >= 0 ? String(e.row[idxBairro] || '').trim() : '';
+        return { familia: chave, endereco: [rua, bairro].filter(Boolean).join(' — ') };
+      });
+      const expandir = (itensOrdenados) => itensOrdenados.flatMap(it => porFamilia.get(it.familia).slice().sort((a, b) => a.i - b.i));
+
+      // O Paulus (no aparelho) ordena as ruas pela menor distância quando o app tem coordenadas, e as casas dentro de cada rua
+      // (ímpares subindo, pares voltando). A IA externa, se ligada, só propõe a ordem das RUAS; o Paulus confere e decide.
+      const paulusV = window.Paulus && window.Paulus.visitas;
+      const opcoesV = { geo: ROTA_GEO, vizinhanca: rotaVizinhancaLer() };
+      if (paulusV && paulusV.ordenar) {
+        try {
+          let resultado = null;
+          if (usarIA && apiKey && !chaveInvalida && paulusV.ruas && paulusV.comSugestao) {
+            const { ruas } = paulusV.ruas(itensVisita, ROTA_PARTIDA);
+            if (ruas.length >= 3) {   // com 1 ou 2 ruas não há o que a IA acrescentar
+              try {
+                const rotulos = ruas.map(r => `${r.rotulo} (${r.quantidade} fam.)`);
+                const ordemIdx = await geminiSugerirOrdemVisita(ROTA_PARTIDA, rotulos, apiKey, modelo, 'Ruas a visitar (o número entre parênteses é só a quantidade de famílias na rua)');
+                resultado = paulusV.comSugestao(itensVisita, ROTA_PARTIDA, ordemIdx.map(idx => ruas[idx].id), opcoesV);
+                if (resultado.origem === 'ia') usouIA = true;
+                else avisos.push(`${blocoLabels[bi]}: não usei a ordem do Gemini (${resultado.motivo}); usei a do Paulus.`);
+              } catch (e) {
+                if (e && e.chaveInvalida) chaveInvalida = true;
+                console.warn(`Não consegui usar a IA para o ${blocoLabels[bi]}, usando a ordenação do Paulus:`, e);
+                avisos.push(`${blocoLabels[bi]}: ${e && e.message ? e.message : 'falha ao consultar a IA'}`);
+              }
+            }
+          }
+          if (!resultado) resultado = paulusV.ordenar(itensVisita, ROTA_PARTIDA, opcoesV);
+          ordemFinalBloco = expandir(resultado.itens);
+        } catch (e) {
+          console.warn('Paulus não conseguiu ordenar o bloco; usando a ordenação simples por rua/número:', e);
+          ordemFinalBloco = heuristica;
+        }
+      } else if (usarIA && apiKey && !chaveInvalida) {
+        // Paulus indisponível: mantém o caminho antigo (Gemini ordena as famílias pelo texto do endereço).
         const enderecosFamilias = familiasOrdem.map(chave => porFamilia.get(chave)[0].enderecoCompleto);
         try {
           const ordemIndices = await geminiSugerirOrdemVisita(ROTA_PARTIDA, enderecosFamilias, apiKey, modelo);
@@ -3999,8 +4073,8 @@ window.AnonaImpressao = (function () {
         }
         if (usarIA && avisosGerais.length) {
           msg += '\n\n' + (usouIAAlguma
-            ? 'A rota foi otimizada com o Gemini na maior parte, mas em pelo menos um bairro não deu certo, então usei a ordenação normal por proximidade nele:\n\n'
-            : 'Não consegui otimizar a rota com o Gemini agora, então os relatórios foram gerados com a ordenação normal por proximidade (bairro/rua):\n\n')
+            ? 'A rota usou a ordem do Gemini na maior parte; nos bairros abaixo usei a ordenação do Paulus:\n\n'
+            : 'Não usei a ordem do Gemini; os relatórios foram gerados com a ordenação do Paulus (feita no aparelho):\n\n')
             + avisosGerais.join('\n');
         }
         alert(msg);
@@ -4013,8 +4087,8 @@ window.AnonaImpressao = (function () {
         if (usarIA && avisos && avisos.length) {
           alert(
             (usouIA
-              ? 'A rota foi otimizada com o Gemini na maior parte, mas em pelo menos um bairro não deu certo, então usei a ordenação normal por proximidade nele:\n\n'
-              : 'Não consegui otimizar a rota com o Gemini agora, então o relatório foi gerado com a ordenação normal por proximidade (bairro/rua):\n\n') +
+              ? 'A rota usou a ordem do Gemini na maior parte; nos bairros abaixo usei a ordenação do Paulus:\n\n'
+              : 'Não usei a ordem do Gemini; o relatório foi gerado com a ordenação do Paulus (feita no aparelho):\n\n') +
             avisos.join('\n') +
             '\n\nO PDF foi gerado normalmente.'
           );
@@ -4273,6 +4347,7 @@ window.AnonaImpressao = (function () {
     const j = i + direcao;
     if (j < 0 || j >= lista.length) return;
     [lista[i], lista[j]] = [lista[j], lista[i]];
+    unificarAjustadoAMao[bloco] = true;   // o app aprende com o ajuste ao gerar o PDF (ver unificarAprenderAjustes)
     renderUnificarLista(bloco);
   };
 
@@ -4293,6 +4368,36 @@ window.AnonaImpressao = (function () {
   // por rua/número do AnonaRota, para nunca travar.
   const unificarEsperarLeituras = () => Promise.all(unificarListas.flat().map(i => i.leitura).filter(Boolean));
 
+  // Blocos em que a pessoa mexeu na ordem à mão depois de o app sugerir (ou sem sugestão).
+  const unificarAjustadoAMao = UNIFICAR_BLOCOS.map(() => false);
+
+  // Diz, sem exagero, como a ordem saiu (texto vem do Paulus; vai com textContent).
+  function unificarMostrarComoSaiu(bloco, r) {
+    const el = document.getElementById('unificarOrdemInfo' + bloco);
+    if (!el) return;
+    const P = window.Paulus && window.Paulus.visitas;
+    el.textContent = P && P.explicar ? P.explicar(r) : '';
+    el.classList.toggle('hidden', !el.textContent);
+  }
+
+  // Ao gerar o PDF, o que a pessoa ajustou à mão vira aprendizado: as ruas que ela pôs em sequência passam a contar como vizinhas
+  // na próxima ordem. Só nome de rua e bairro (nunca número de casa), só neste aparelho; dá para ver quanto foi aprendido e apagar.
+  function unificarAprenderAjustes() {
+    try {
+      const P = window.Paulus && window.Paulus.visitas;
+      if (!P || !P.aprender) return;
+      let viz = rotaVizinhancaLer(); let mudou = false;
+      unificarListas.forEach((lista, b) => {
+        if (!unificarAjustadoAMao[b]) return;
+        const comEndereco = lista.filter(item => String(item.endereco || '').trim());
+        if (comEndereco.length < 2) return;
+        viz = P.aprender(viz, comEndereco, UNIFICAR_PARTIDA); mudou = true;
+        unificarAjustadoAMao[b] = false;
+      });
+      if (mudou) { safeStorageSet(ROTA_VIZ_CHAVE, JSON.stringify(viz)); rotaVizinhancaTexto(); }
+    } catch (e) { console.warn('Não consegui guardar o ajuste de rota:', e); }
+  }
+
   // Ordena UM bloco. Devolve um aviso quando o Paulus não estava disponível.
   function unificarOrdenarBloco(bloco) {
     const lista = unificarListas[bloco] || [];
@@ -4301,7 +4406,11 @@ window.AnonaImpressao = (function () {
     let ordenados; let aviso = '';
     const paulus = window.Paulus && window.Paulus.visitas && window.Paulus.visitas.ordenar;
     if (paulus) {
-      try { ordenados = paulus(comEndereco, UNIFICAR_PARTIDA).itens; }
+      try {
+        const r = paulus(comEndereco, UNIFICAR_PARTIDA, { geo: ROTA_GEO, vizinhanca: rotaVizinhancaLer() });
+        ordenados = r.itens;
+        unificarMostrarComoSaiu(bloco, r);
+      }
       catch (e) { console.warn('Paulus não conseguiu ordenar a rota:', e); }
     }
     if (!ordenados) {
@@ -4309,6 +4418,7 @@ window.AnonaImpressao = (function () {
       aviso = `${UNIFICAR_BLOCOS[bloco].label}: o Paulus não está disponível agora; usei a ordenação simples por rua/número.`;
     }
     unificarListas[bloco] = ordenados.concat(semEndereco);
+    unificarAjustadoAMao[bloco] = false;   // a ordem atual é a do programa; só vale aprender o que a pessoa mudar depois
     renderUnificarLista(bloco);
     return aviso;
   }
@@ -4431,6 +4541,7 @@ window.AnonaImpressao = (function () {
     if (btnTextoEl) { btnTextoEl.textContent = `Juntando ${totalArquivos} arquivo${totalArquivos === 1 ? '' : 's'}…`; }
     try {
       await unificarEsperarLeituras();
+      unificarAprenderAjustes();
       const { PDFDocument, StandardFonts } = window.PDFLib;
       const outDoc = await PDFDocument.create();
       const fontBold = await outDoc.embedFont(StandardFonts.HelveticaBold);
