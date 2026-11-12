@@ -66,7 +66,8 @@
       ["cadunico", ["cadastro único", "cadastro unico", "cadunico"], "cadastro único"],
       ["cronograma", ["cronograma", "cronograma de repercussão", "cronograma de repercussao"], "cronograma de repercuss"],
       ["recurso", ["recurso", "recurso on-line", "recurso online"], "recurso on-line"],
-      ["motivos", ["legenda de motivos", "motivos", "motivos de frequência"], "legenda de motivos"]
+      ["motivos", ["legenda de motivos", "motivos", "motivos de frequência"], "legenda de motivos"],
+      ["rota", ["rota de visita", "organizar rota", "ordem de visita", "unificar folhas", "rota"], "rota de visita"]
     ];
     itens.forEach(function (it) {
       P.registrarAcao({ id: it[0], rotulos: it[1], executar: function () { irParaCard(it[2]); } });
