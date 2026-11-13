@@ -372,3 +372,14 @@ Arquivos: `anona-presenca.js` (novo), `paulus-anona.js` (desvio local antes de e
 - Prazos de um novo período: **adicione** linhas em `MOMENTOS` (com `de`/`ate`). Elas expiram sozinhas.
 - Regra de proteção e limites em R$ dela vêm de noticiário (Portaria 1.084/2025); confirme com o CRAS antes de afirmar números.
 - `node tests/mascot.test.js` confere respostas, valores e expiração dos prazos.
+
+
+## O mascote como rosto da IA (12/11/2026)
+
+- **Balão que conversa:** tocar no mascote abre um balão com campo de pergunta e sugestões do cartão que está na tela (só o *título* do cartão vai à IA). A resposta chega aos poucos no balão; o histórico fica no painel (💬 Conversa completa).
+- **Rosto expressivo:** pensando (olha para cima, reticências), falando (boca mexe), ouvindo (anel amarelo), alerta (crise ou dado pessoal), feliz (👍/ação feita) e triste (erro). Pisca sozinho; respeita "reduzir movimento".
+- **Sem internet / IA fora do ar:** o mascote responde sozinho com o que sabe do Bolsa Família (aviso de que pode estar desatualizado).
+- **Voz:** 🔈 lê as respostas em voz alta (síntese do navegador, no aparelho); 🎤 dita a pergunta (reconhecimento do navegador: no Chrome o áudio pode passar pelo servidor do fabricante; o app pede aceite e avisa para não falar nome, NIS ou CPF).
+- **PDF no aparelho:** 📎 ou arrastar PDF/JPG/PNG sobre o mascote; "numerar as páginas", "remover a página 2", "juntar"… (Paulus.pdf, usa o pdf-lib que o app já carrega). O arquivo não vai ao Worker nem à IA.
+- **Bom-dia diário** com o que vale no período, e perguntas sugeridas por cartão (`sugestoesDoCartao`).
+- `sw.js` na v40. Publique também o Worker do Paulus (`worker/apps.mjs` atualizado).
