@@ -434,6 +434,7 @@
     if (!C || Date.now() < silencioAte) return;
     var painel = document.getElementById("paulusAnonaPainel");
     if (painel && !painel.hidden) return; // conversa aberta: não interrompe
+    if (raiz.AnonaMascot && raiz.AnonaMascot.conversaAberta && raiz.AnonaMascot.conversaAberta()) return; // balão em conversa: não interrompe
     var est = C.ler();
     if (!est) return;
     var ass = assinatura(est);
