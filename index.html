@@ -4490,10 +4490,12 @@ window.AnonaImpressao = (function () {
   // Páginas de ROTEIRO: a ordem de visita de cada bloco, com o endereço lido de cada folha.
   function unificarDesenharRoteiro(pdfDoc, fontBold, fontRegular) {
     const azul = window.PDFLib.rgb(0x0B/255, 0x2F/255, 0x7A/255);
+    // Corta no limite da coluna COM reticências (antes cortava em silêncio: o endereço parecia terminar ali).
     const cabe = (txt, font, size, max) => {
       let t = window.AnonaRota.textoSeguroPdf(txt);
-      while (t.length > 4 && font.widthOfTextAtSize(t, size) > max) t = t.slice(0, -2);
-      return t;
+      if (font.widthOfTextAtSize(t, size) <= max) return t;
+      while (t.length > 1 && font.widthOfTextAtSize(t + '...', size) > max) t = t.slice(0, -1);
+      return t.replace(/\s+$/, '') + '...';
     };
     const linhas = [];
     UNIFICAR_BLOCOS.forEach((b, bi) => {
@@ -6019,15 +6021,20 @@ async function exportNotesPDF(){
       docPdf.addPage();
       drawHeader();
       y = 120;
-      const p2 = sobra.slice(0, linhasPorPagina);
-      sobra = sobra.slice(linhasPorPagina);
-      const h2 = 20 + p2.length*13;
+      const p2 = sobra.slice(0, linhasPorPagina - 2);       // 2 linhas a menos: cabem o rótulo da data abaixo
+      sobra = sobra.slice(linhasPorPagina - 2);
+      const h2 = 36 + p2.length*13;
       docPdf.setFillColor(...(noteObj.emphasis ? amarelo : azul));
       docPdf.rect(margin, y-14, 4, h2-6, 'F');
+      // Rótulo: antes a página de continuação começava no meio do texto, sem dizer de que dia era.
+      docPdf.setFont('helvetica','bolditalic');
+      docPdf.setFontSize(9.5);
+      docPdf.setTextColor(...(noteObj.emphasis ? amareloText : azul));
+      docPdf.text(dateLabel + ' (continuação)', margin+14, y);
       docPdf.setFont('helvetica','normal');
       docPdf.setFontSize(10);
       docPdf.setTextColor(...slate);
-      docPdf.text(p2, margin+14, y);
+      docPdf.text(p2, margin+14, y+16);
       y += h2;
     }
   });
