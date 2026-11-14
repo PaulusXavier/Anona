@@ -7159,6 +7159,30 @@ if ('serviceWorker' in navigator) {
 <script src="anona-mascot.js" defer></script>
 <script src="paulus.v1.js" defer></script>
 <script src="anona-presenca.js" defer></script>
+<script>
+// Ponte para a IA (anona-ia.js): API pequena e estável sobre o calendário. A IA age pelo app, nunca lê notas nem NIS.
+window.AnonaApp = {
+  hoje: () => new Date(),
+  anos: () => [ANO_MIN, ANO_MAX],
+  mes: () => ({ ano: currentMonth.getFullYear(), mes: currentMonth.getMonth() }),
+  selecionado: () => selectedDay,
+  destaques: (ano, mes) => (dadosDoAno(ano).monthHighlights[mes] || []),
+  eventos: (ano) => dadosDoAno(ano).officialEvents || {},
+  pagamentos: (ano) => dadosDoAno(ano).paymentCalendar || {},
+  nis: () => document.getElementById('nisInput').value.trim(),
+  setNis: (d) => { const i = document.getElementById('nisInput'); i.value = d; i.dispatchEvent(new Event('input', { bubbles: true })); },
+  irHoje: () => irParaHoje(),
+  mudarMes: (n) => changeMonth(n),
+  irMes: (ano, mes) => { guardarRascunhoSeSujo(); currentMonth = new Date(ano, mes, 1); render(); },
+  irDia: (d) => { guardarRascunhoSeSujo(); currentMonth = new Date(d.getFullYear(), d.getMonth(), 1); selectedDay = d; render(); },
+  preencherNota: (texto) => { const n = document.getElementById('noteInput'); if (texto) n.value = texto; n.scrollIntoView({ block: 'center' }); n.focus(); },
+  imprimirMes: () => imprimirMes(),
+  valores: () => window.AnonaValoresBeneficio,
+  motivos: () => (typeof MOTIVOS_FREQUENCIA !== 'undefined' ? MOTIVOS_FREQUENCIA : []),
+  irCartao: (t) => { const k = { calendario: 'calendário', exportar: 'exportar' }[t] || t; const hs = document.querySelectorAll('#appContent h2, #appContent h3'); for (const h of hs) if ((h.textContent || '').toLowerCase().includes(k)) { h.scrollIntoView({ behavior: 'smooth', block: 'start' }); return true; } return false; }
+};
+</script>
+<script src="anona-ia.js" defer></script>
 <script src="paulus-anona.js" defer></script>
 
 </div><!-- fim #appContent -->
