@@ -58,7 +58,8 @@
     if (mapa) return mapa;
     L = await carregarLeaflet();
     if (mapa) return mapa;
-    mapa = L.map('mapaCanvas', { zoomControl: true }).setView(CENTRO, 13);
+    mapa = L.map('mapaCanvas', { zoomControl: false }).setView(CENTRO, 13);
+    L.control.zoom({ position: 'bottomright', zoomInTitle: 'Aproximar', zoomOutTitle: 'Afastar' }).addTo(mapa);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · rotas: OSRM'
@@ -280,8 +281,6 @@
       L.polyline(pontos, { color: '#146B47', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' })
     ]).addTo(mapa);
     if (o.rotulo !== 'Minha posição') mOrigem = L.marker([o.lat, o.lng], { icon: icone('mp-pino-orig', 16), title: o.rotulo, keyboard: false }).addTo(mapa);
-    mapa.fitBounds(L.latLngBounds(pontos), { padding: [30, 30] });
-
     $('mapaDist').textContent = fmtDist(rota.distance);
     $('mapaTempo').textContent = fmtTempo(rota.duration);
     $('mapaDeAte').textContent = o.rotulo + ' → ' + destino.rotulo;
@@ -295,6 +294,8 @@
       ol.appendChild(li);
     });
     $('mapaResumo').classList.remove('hidden');
+    if (cheia && MOBILE()) recolherMais(true);
+    mapa.fitBounds(L.latLngBounds(pontos), margens());
   }
 
   function mostrarErro(e) { status((e && e.message) || 'Algo deu errado.', 'erro'); ocupado(false); }
@@ -318,10 +319,112 @@
   const selOrigem = $('mapaOrigem');
   const origemSalva = lerPref('anonaMapaOrigem', 'pos');
   if (['pos', 'partida', 'outro'].includes(origemSalva)) selOrigem.value = origemSalva;
-  const ajustarOrigem = () => $('mapaOrigemTexto').classList.toggle('hidden', selOrigem.value !== 'outro');
+  const ajustarOrigem = () => $('mapaOrigemBox').classList.toggle('hidden', selOrigem.value !== 'outro');
   ajustarOrigem();
   selOrigem.addEventListener('change', () => { gravarPref('anonaMapaOrigem', selOrigem.value); ajustarOrigem(); if (selOrigem.value === 'outro') $('mapaOrigemTexto').focus(); else if (destino) tracarRota(); });
   $('mapaOrigemTexto').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (destino) tracarRota(); } });
+
+
+
+  // ---------- tela cheia (CSS + API de tela cheia do navegador; o botão Voltar do Android também sai) ----------
+  let cheia = false, viaApi = false, saindo = false;
+  const MOBILE = () => window.matchMedia('(max-width: 1023px)').matches;
+  const ajustarMapa = () => { if (mapa) setTimeout(() => { mapa.invalidateSize(); }, 80); };
+  function recolherMais(sim) { const m = sec.querySelector('.mp-mais'); m.classList.toggle('is-recolhido', !!sim); $('mapaMais').setAttribute('aria-expanded', sim ? 'false' : 'true'); }
+  function margens() {
+    if (!cheia) return { padding: [30, 30] };
+    const topo = sec.querySelector('.mp-topo').offsetHeight, base = sec.querySelector('.mp-base').offsetHeight;
+    if (MOBILE()) return { paddingTopLeft: [24, topo + 16], paddingBottomRight: [24, base + 16] };
+    return { paddingTopLeft: [sec.querySelector('.mp-topo').offsetWidth + 40, 30], paddingBottomRight: [30, 30] };
+  }
+  function entrarCheia() {
+    if (cheia) return;
+    cheia = true;
+    sec.classList.add('is-tela-cheia'); document.documentElement.classList.add('mp-sem-rolagem');
+    $('mapaTelaCheia').setAttribute('aria-pressed', 'true'); $('mapaSairCheia').classList.remove('hidden');
+    recolherMais(MOBILE()); $('mapaMais').classList.remove('hidden');
+    $('mapaResumo').classList.add('is-passos-fechados'); $('mapaPassosBtn').setAttribute('aria-expanded', 'false');
+    try { history.pushState({ anonaMapaCheia: 1 }, ''); } catch (e) { /* sem histórico: o botão Sair continua funcionando */ }
+    try { if (sec.requestFullscreen) sec.requestFullscreen({ navigationUI: 'hide' }).then(() => { viaApi = true; }).catch(() => {}); } catch (e) { /* só a versão em CSS */ }
+    garantirMapa().then(ajustarMapa).catch(() => {}); ajustarMapa();
+  }
+  function fecharCheia() {
+    if (!cheia) return;
+    cheia = false; saindo = false;
+    sec.classList.remove('is-tela-cheia'); document.documentElement.classList.remove('mp-sem-rolagem');
+    $('mapaTelaCheia').setAttribute('aria-pressed', 'false'); $('mapaSairCheia').classList.add('hidden'); $('mapaMais').classList.add('hidden');
+    sec.querySelector('.mp-mais').classList.remove('is-recolhido');
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) { /* já saiu */ } }
+    viaApi = false; ajustarMapa();
+    try { sec.scrollIntoView({ block: 'start' }); } catch (e) { /* sem rolagem automática */ }
+  }
+  function sairCheia() {
+    if (!cheia || saindo) return;
+    saindo = true;   // Esc/Voltar/botão podem chegar juntos: só um history.back()
+    if (history.state && history.state.anonaMapaCheia) history.back();   // dispara o popstate abaixo, que fecha
+    else fecharCheia();
+  }
+  $('mapaTelaCheia').addEventListener('click', () => (cheia ? sairCheia() : entrarCheia()));
+  $('mapaSairCheia').addEventListener('click', sairCheia);
+  $('mapaMais').addEventListener('click', () => recolherMais(!sec.querySelector('.mp-mais').classList.contains('is-recolhido')));
+  $('mapaPassosBtn').addEventListener('click', () => { const f = $('mapaResumo').classList.toggle('is-passos-fechados'); $('mapaPassosBtn').setAttribute('aria-expanded', f ? 'false' : 'true'); });
+  window.addEventListener('popstate', fecharCheia);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cheia) sairCheia(); });
+  document.addEventListener('fullscreenchange', () => { if (cheia && viaApi && !document.fullscreenElement) sairCheia(); else ajustarMapa(); });
+  window.addEventListener('resize', ajustarMapa); window.addEventListener('orientationchange', ajustarMapa);
+  // o painel de baixo cobre a atribuição do mapa: sobe os controles do Leaflet acima dele
+  if ('ResizeObserver' in window) new ResizeObserver(() => sec.style.setProperty('--mp-base-h', (sec.querySelector('.mp-base').offsetHeight + 8) + 'px')).observe(sec.querySelector('.mp-base'));
+
+  // ---------- voz (Web Speech API do navegador; pt-BR) ----------
+  const Reconhecimento = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  // "ir para rua santo agostinho número 193 bairro centenário" -> "Rua santo agostinho, 193, centenário"
+  function limparFala(t) {
+    let s = String(t || '').replace(/\s+/g, ' ').trim();
+    s = s.replace(/^(?:por favor[, ]+)?(?:ir|vá|va|levar|leve|me leve|navegar|navegue|traçar|trace|rota|buscar|busque|procurar|procure|endereço|destino)(?:\s+(?:até|ate|para|pra|a|o|ao|na|no|de|do|da))*\s+/i, '');
+    s = s.replace(/\s*\b(?:n[úu]mero|n[º°]\.?)\s*(?=\d)/gi, ', ').replace(/\s+\b(?:n[úu]mero)\b\s*/gi, ', ');
+    s = s.replace(/\s+bairro\s+/gi, ', ').replace(/\s*,(\s*,)+/g, ',').replace(/\s+,/g, ',').replace(/[.\s]+$/, '').replace(/^[\s,]+/, '').trim();
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  }
+  const ERROS_VOZ = {
+    'not-allowed': 'O microfone foi negado. Permita o acesso ao microfone no navegador (ícone de cadeado, ao lado do endereço).',
+    'service-not-allowed': 'O navegador não liberou o reconhecimento de voz. Permita o microfone ou digite o endereço.',
+    'no-speech': 'Não ouvi nada. Toque no microfone e fale o endereço de novo.',
+    'audio-capture': 'Não encontrei um microfone neste aparelho.',
+    'network': 'O reconhecimento de voz precisa de internet. Confira a conexão ou digite o endereço.',
+    'language-not-supported': 'Este navegador não reconhece português por voz. Digite o endereço.'
+  };
+
+  function ligarVoz(btn, input, aoTerminar) {
+    if (!btn || !input) return;
+    if (!Reconhecimento) { btn.classList.add('hidden'); return; }   // ex.: Firefox: só digitando
+    let rec = null, ativo = false;
+    btn.addEventListener('click', () => {
+      if (ativo && rec) { try { rec.stop(); } catch (e) { /* já parou */ } return; }
+      let final = '', erro = '';
+      try {
+        rec = new Reconhecimento();
+        rec.lang = 'pt-BR'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+      } catch (e) { status('Não consegui iniciar o microfone. Digite o endereço.', 'erro'); return; }
+      rec.onstart = () => { ativo = true; btn.setAttribute('aria-pressed', 'true'); btn.classList.add('is-ouvindo'); status('Ouvindo… diga o endereço (ex.: "Rua Santo Agostinho, 193, Centenário").'); };
+      rec.onresult = (e) => {
+        let txt = '', ok = false;
+        for (let i = 0; i < e.results.length; i++) { txt += e.results[i][0].transcript; if (e.results[i].isFinal) ok = true; }
+        input.value = txt;
+        if (ok) final = limparFala(txt) || txt.trim();
+      };
+      rec.onerror = (e) => { erro = ERROS_VOZ[e && e.error] || (e && e.error === 'aborted' ? '' : 'Não consegui entender. Tente de novo ou digite o endereço.'); };
+      rec.onend = () => {
+        ativo = false; btn.setAttribute('aria-pressed', 'false'); btn.classList.remove('is-ouvindo');
+        if (erro) { status(erro, 'erro'); return; }
+        if (final) { input.value = final; status(''); if (aoTerminar) aoTerminar(final); }
+        else status('Não ouvi nenhum endereço. Toque no microfone e tente de novo.', 'erro');
+      };
+      try { rec.start(); } catch (e) { status('Não consegui iniciar o microfone agora. Tente de novo.', 'erro'); }
+    });
+  }
+  ligarVoz($('mapaVoz'), $('mapaBusca'), () => { const f = $('mapaForm'); if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true })); });
+  ligarVoz($('mapaVozOrigem'), $('mapaOrigemTexto'), () => { if (destino) tracarRota(); });
 
   $('mapaForm').addEventListener('submit', buscar);
   $('mapaMinhaPos').addEventListener('click', async () => {
@@ -337,5 +440,5 @@
   } else garantirMapa().catch(() => {});
   iconesRefresh();
 
-  window.AnonaMapa = { _teste: { instrucao, fmtDist, fmtTempo, rotuloCurto } };
+  window.AnonaMapa = { _teste: { instrucao, fmtDist, fmtTempo, rotuloCurto, limparFala } };
 })();
