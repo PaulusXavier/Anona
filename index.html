@@ -348,6 +348,7 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <a href="#mapaRotas" class="mp-atalho" title="Ir para o mapa e rotas"><i data-lucide="map-pinned" class="w-3.5 h-3.5"></i> Mapa</a>
       <div id="authArea" class="text-right text-xs"></div>
     </div>
   </div>
@@ -503,7 +504,7 @@
       </div>
     </div>
     <p class="text-xs text-slate-500 mb-3">O fluxo mensal, do recebimento da planilha do MDS ao relatório final — na ordem em que você normalmente usa.</p>
-    <p class="tv-privacidade"><i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0" style="color:var(--verde)"></i> <span>Tudo é processado no seu aparelho e os arquivos originais nunca são alterados. A única exceção é a otimização de rota com IA (opcional), que envia só os nomes das ruas e dos bairros (sem número de casa, nome, NIS ou CPF).</span></p>
+    <p class="tv-privacidade"><i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0" style="color:var(--verde)"></i> <span>Tudo é processado no seu aparelho e os arquivos originais nunca são alterados. A única exceção é a seção "Mapa e rotas", que consulta o OpenStreetMap com o endereço que você digita (nunca nome, NIS ou CPF).</span></p>
     <nav class="tv-nav" aria-label="Etapas do fluxo mensal"><a href="#tvPasso1" data-tv-nav="1"><b>1</b> Planilha do MDS</a><a href="#tvPasso2" data-tv-nav="2"><b>2</b> Divisão da equipe</a><a href="#tvPasso3" data-tv-nav="3"><b>3</b> Recorrentes</a><a href="#tvPasso4" data-tv-nav="4"><b>4</b> Relatório individual</a><a href="#tvPasso5" data-tv-nav="5"><b>5</b> Rota de visita</a><a href="#tvPasso6" data-tv-nav="6"><b>6</b> Abrigos</a></nav>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-10">
@@ -669,20 +670,7 @@
           </div>
 
           <div class="tv-opcoes">
-            <label class="tv-check">
-              <input type="checkbox" id="geminiRotaToggle" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)">
-              <span><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> Otimizar a rota com IA (Gemini), partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong></span>
-            </label>
-            <div id="geminiConfigWrap" class="hidden mt-2 space-y-1.5">
-              <input type="password" id="geminiApiKeyInput" placeholder="Cole aqui sua chave de API do Gemini" autocomplete="off" class="access-input w-full text-xs" style="padding:.5rem .7rem;">
-              <p class="tv-hint">A chave fica guardada só neste navegador (nunca é enviada para o Anona nem publicada no código). Consiga uma gratuita em
-                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-semibold" style="color:var(--verde)">aistudio.google.com/apikey</a>.</p>
-              <details class="tv-more">
-                <summary>Privacidade e computador compartilhado</summary>
-                <p class="tv-hint">Só os nomes das ruas e dos bairros são enviados ao Gemini, uma linha por rua e sem número de casa — nunca nome, NIS ou CPF. O Paulus confere a resposta (descarta ordem inválida e, havendo coordenadas, a que for mais longa) e é ele quem põe as casas em ordem dentro de cada rua. Sem internet ou sem chave, o app usa a ordenação do Paulus, feita no aparelho.
-                  <strong>Se este for um computador compartilhado</strong> (ex: outro computador do CRAS), apague a chave deste campo ao terminar — ela fica salva neste navegador e outra pessoa que usar o mesmo aparelho/login poderia gastar sua cota gratuita.</p>
-              </details>
-            </div>
+            <p class="tv-hint"><i data-lucide="sparkles" class="w-3.5 h-3.5 inline -mt-0.5" style="color:var(--verde)"></i> <strong>A IA Paulus otimiza a rota</strong>, partindo de <strong>Rua Santo Agostinho, nº 193 — Centenário, Boa Vista/RR</strong>. Ela trabalha no seu aparelho: nenhum endereço é enviado para a internet e não precisa de chave.</p>
           </div>
 
           <label class="tv-drop " id="relatorioIndividualLabel">
@@ -957,6 +945,60 @@
       </details>
 
       </div>
+    </div>
+  </section>
+
+  <!-- MAPA E ROTAS — busca de endereço como no Google Maps + rota a partir da posição do aparelho (anona-mapa.js; Leaflet em vendor/leaflet) -->
+  <section id="mapaRotas" class="panel-tool p-5 mb-6" aria-labelledby="mapaTitulo">
+    <h2 class="eyebrow mb-1" id="mapaTitulo">
+      <span class="chip"><i data-lucide="map-pinned" class="w-4 h-4" style="color:var(--verde)"></i></span> Mapa e rotas
+    </h2>
+    <p class="text-xs text-slate-500 mb-3">Procure um endereço e veja o caminho até ele a partir da sua posição, como no Google Maps. Também dá para tocar no mapa para escolher o destino.</p>
+    <div class="mp-grid">
+      <div class="mp-painel">
+        <form id="mapaForm" class="mp-busca" role="search">
+          <label for="mapaBusca" class="sr-only">Endereço de destino</label>
+          <input id="mapaBusca" type="search" class="access-input" placeholder="Destino: rua, número, bairro" autocomplete="off" enterkeyhint="search">
+          <button type="submit" class="mp-btn" id="mapaBuscar"><i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar</button>
+        </form>
+        <ul id="mapaResultados" class="mp-resultados hidden"></ul>
+
+        <div class="mp-linha">
+          <label for="mapaOrigem">Partir de</label>
+          <select id="mapaOrigem" class="mp-select">
+            <option value="pos">Minha posição</option>
+            <option value="partida">Rua Santo Agostinho, 193 — Centenário</option>
+            <option value="outro">Outro endereço…</option>
+          </select>
+        </div>
+        <input id="mapaOrigemTexto" type="text" class="access-input hidden" placeholder="Endereço de partida (rua, número, bairro)" autocomplete="off">
+
+        <div class="mp-modos" role="group" aria-label="Meio de transporte">
+          <button type="button" data-modo="carro" aria-pressed="true"><i data-lucide="car" class="w-3.5 h-3.5"></i> Carro/moto</button>
+          <button type="button" data-modo="pe" aria-pressed="false"><i data-lucide="footprints" class="w-3.5 h-3.5"></i> A pé</button>
+          <button type="button" data-modo="bike" aria-pressed="false"><i data-lucide="bike" class="w-3.5 h-3.5"></i> Bicicleta</button>
+        </div>
+        <div class="mp-acoes">
+          <button type="button" id="mapaMinhaPos" class="mp-btn mp-btn-sec"><i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i> Usar minha posição</button>
+          <button type="button" id="mapaLimpar" class="mp-btn mp-btn-sec"><i data-lucide="x" class="w-3.5 h-3.5"></i> Limpar</button>
+        </div>
+
+        <p id="mapaStatus" class="mp-status hidden" role="status" aria-live="polite"></p>
+
+        <div id="mapaDestinoBox" class="mp-destino hidden"><b>Destino:</b> <span id="mapaDestinoTexto"></span></div>
+        <div id="mapaResumo" class="mp-resumo hidden">
+          <div class="mp-total"><strong id="mapaTempo"></strong> <span id="mapaDist"></span></div>
+          <p id="mapaDeAte" class="mp-deate"></p>
+          <a id="mapaGoogle" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir no Google Maps</a>
+          <ol id="mapaPassos" class="mp-passos"></ol>
+        </div>
+
+        <details class="tv-more mp-priv">
+          <summary>Privacidade</summary>
+          <p class="tv-hint">O que você digita (só o endereço) vai ao OpenStreetMap/Nominatim para achar o ponto no mapa, e as coordenadas da partida e do destino vão ao serviço de rotas (routing.openstreetmap.de). Sua posição só é lida quando você pede e não é guardada. <strong>Não digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca.</p>
+        </details>
+      </div>
+      <div class="mp-mapa"><div id="mapaCanvas" role="application" aria-label="Mapa de Boa Vista"></div></div>
     </div>
   </section>
 </main>
@@ -2440,7 +2482,7 @@ window.AnonaImpressao = (function () {
         // Como no envio em lote por técnico: se um falhar, os outros continuam (antes, um erro cancelava todos).
         try {
           const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
-            dados.headers, dados.rows, dados.mesTexto, false, '', '', { nome, formacao }, { retornarBytes: true }
+            dados.headers, dados.rows, dados.mesTexto, { nome, formacao }, { retornarBytes: true }
           );
           arquivosGerados.push({ nomeArquivo, bytes });
           gerados++;
@@ -3091,127 +3133,13 @@ window.AnonaImpressao = (function () {
     return partes.join(', ') || '(endereço não informado)';
   }
 
-  // Pergunta ao Gemini a melhor ordem de visita para uma lista de
-  // endereços, partindo do endereço informado. Envia SÓ texto de
-  // localização (nunca nome/NIS/CPF). Devolve um array com os índices
-  // ORIGINAIS de `enderecos`, na ordem sugerida de visita — ou lança um
-  // erro (com uma mensagem amigável) se algo der errado, para quem chamar
-  // decidir cair na ordenação por proximidade (bairro/rua) como reserva.
-  async function geminiSugerirOrdemVisita(partida, enderecos, apiKey, modelo, rotulo) {
-    if (!apiKey) throw new Error('Chave de API do Gemini não informada.');
-    if (!enderecos.length) return [];
-    const modeloUsar = (modelo || '').trim() || 'gemini-flash-latest';
-    const lista = enderecos.map((e, i) => `${i}: ${e}`).join('\n');
-    const prompt = `Você ajuda um profissional de assistência social a planejar visitas domiciliares a pé/de carro em Boa Vista, Roraima, Brasil.\n\nPonto de partida: ${partida}\n\n${rotulo || 'Endereços das famílias a visitar'}, um por linha no formato "índice: texto":\n${lista}\n\nSugira a melhor ordem de visita para minimizar o deslocamento total, considerando a proximidade real das ruas e bairros de Boa Vista/RR, começando pelo item mais próximo da partida. Responda APENAS com um array JSON dos índices originais na ordem sugerida — todos os ${enderecos.length} índices (0 a ${enderecos.length - 1}), cada um exatamente uma vez.`;
-
-    let resp;
-    try {
-      // Timeout de 20s: sem isso, se o Gemini ficar sem responder, o
-      // relatório inteiro travaria esperando indefinidamente. Passado
-      // esse tempo, a chamada é abortada e o bloco cai para a ordenação
-      // normal por proximidade (ver relatorioIndividualCalcularRota).
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
-      try {
-        resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modeloUsar)}:generateContent`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              responseSchema: { type: 'ARRAY', items: { type: 'INTEGER' } }
-            }
-          })
-        });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    } catch (e) {
-      if (e && e.name === 'AbortError') throw new Error('O Gemini demorou demais para responder (mais de 20s). Tente de novo.');
-      throw new Error('Falha de conexão ao consultar o Gemini. Confira sua internet.');
-    }
-    if (!resp.ok) {
-      let msg = `O Gemini respondeu com erro (${resp.status}).`;
-      try {
-        const errJson = await resp.json();
-        if (errJson && errJson.error && errJson.error.message) msg = `Gemini: ${errJson.error.message}`;
-      } catch (e) { /* mantém a mensagem genérica acima */ }
-      const erro = new Error(msg);
-      // Marca erros de chave/autenticação (400/401/403) para quem chamar
-      // poder desistir de tentar a IA nos próximos bairros também, em vez
-      // de repetir a mesma chamada fadada a falhar (e fazer a pessoa
-      // esperar à toa) em cada bloco do relatório.
-      if (resp.status === 400 || resp.status === 401 || resp.status === 403) erro.chaveInvalida = true;
-      throw erro;
-    }
-    const data = await resp.json();
-    const texto = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts || [])
-      .map(p => p.text || '').join('');
-    let ordem;
-    try { ordem = JSON.parse(texto); }
-    catch (e) { throw new Error('O Gemini não devolveu uma lista válida.'); }
-    if (!Array.isArray(ordem) || ordem.length !== enderecos.length) {
-      throw new Error('O Gemini não devolveu todos os endereços esperados.');
-    }
-    const vistos = new Set();
-    for (const idx of ordem) {
-      if (!Number.isInteger(idx) || idx < 0 || idx >= enderecos.length || vistos.has(idx)) {
-        throw new Error('O Gemini devolveu índices inválidos ou repetidos.');
-      }
-      vistos.add(idx);
-    }
-    return ordem;
-  }
-
-  // Mantém a chave de API do Gemini sincronizada entre os DOIS campos que
-  // existem no app (Relatório Individual e Unificar Folhas de Família):
-  // ambos guardam/leem a mesma chave em 'anonaGeminiApiKey', mas antes só
-  // liam o valor salvo uma vez, na abertura da página — se a pessoa
-  // atualizasse a chave num campo, o outro campo continuava com o valor
-  // antigo até recarregar. Esta função central atualiza o localStorage E
-  // o(s) outro(s) campo(s) visível(is) a cada letra digitada.
-  function syncGeminiApiKey(valor, origemId) {
-    const v = String(valor || '').trim();
-    safeStorageSet('anonaGeminiApiKey', v);
-    ['geminiApiKeyInput', 'geminiApiKeyInputUnificar'].forEach((id) => {
-      if (id === origemId) return;
-      const el = document.getElementById(id);
-      if (el && el.value !== valor) el.value = valor;
-    });
-  }
-  window.__syncGeminiApiKey = syncGeminiApiKey;
-
-  // Liga a caixinha "Otimizar a rota com IA (Gemini)": mostra/esconde o
-  // campo da chave de API e lembra (só neste navegador, via localStorage)
-  // se a pessoa deixou a opção marcada e qual chave já usou antes, para
-  // não precisar colar de novo toda vez.
-  (function initGeminiRotaUI() {
-    const toggle = document.getElementById('geminiRotaToggle');
-    const configWrap = document.getElementById('geminiConfigWrap');
-    const apiKeyInput = document.getElementById('geminiApiKeyInput');
-    if (!toggle || !configWrap || !apiKeyInput) return;
-    const chaveSalva = safeStorageGet('anonaGeminiApiKey', '');
-    if (chaveSalva) apiKeyInput.value = chaveSalva;
-    const ativoSalvo = safeStorageGet('anonaGeminiRotaAtiva', '') === '1';
-    toggle.checked = ativoSalvo;
-    configWrap.classList.toggle('hidden', !ativoSalvo);
-    toggle.addEventListener('change', () => {
-      configWrap.classList.toggle('hidden', !toggle.checked);
-      safeStorageSet('anonaGeminiRotaAtiva', toggle.checked ? '1' : '0');
-    });
-    apiKeyInput.addEventListener('input', () => syncGeminiApiKey(apiKeyInput.value, 'geminiApiKeyInput'));
-  })();
-
   // Reordena as linhas por melhor rota de visita: bloco de bairro a bloco
   // de bairro (na ordem definida em ROTA_BLOCOS_DEF, com "outros bairros"
   // por último). Dentro de cada bairro, tenta usar a ordem sugerida pelo
-  // Gemini (se `usarIA` e `apiKey` foram informados); quando isso não é
-  // possível — sem IA habilitada, sem chave, sem internet, ou qualquer
-  // falha na resposta — cai para a ordenação por rua (alfabética) e depois
-  // pelo número do endereço, sem nunca travar a geração do relatório.
-  async function relatorioIndividualCalcularRota(headers, dataRows, usarIA, apiKey, modelo) {
+  // Paulus (no aparelho, sem internet); se o Paulus não estiver carregado ou
+  // falhar, cai para a ordenação por rua (alfabética) e depois pelo número
+  // do endereço, sem nunca travar a geração do relatório.
+  async function relatorioIndividualCalcularRota(headers, dataRows) {
     const idxEndereco = headers.findIndex(h => normalizeText(h) === 'endereco');
     const idxBairro = headers.findIndex(h => normalizeText(h) === 'bairro');
     const idxRef = headers.findIndex(h => normalizeText(h).includes('referencia') && normalizeText(h).includes('endereco'));
@@ -3232,8 +3160,7 @@ window.AnonaImpressao = (function () {
 
     const blocoLabels = ROTA_BLOCOS_DEF.map(b => b.label).concat([ROTA_OUTROS_LABEL]);
     const avisos = [];
-    let usouIA = false;
-    let chaveInvalida = false; // some vira true se o Gemini recusar a chave; evita repetir a mesma falha em cada bairro
+    let usouPaulus = false;
     const linhasRota = [];
 
     for (let bi = 0; bi < blocoLabels.length; bi++) {
@@ -3272,56 +3199,31 @@ window.AnonaImpressao = (function () {
       const expandir = (itensOrdenados) => itensOrdenados.flatMap(it => porFamilia.get(it.familia).slice().sort((a, b) => a.i - b.i));
 
       // O Paulus (no aparelho) ordena as ruas pela menor distância quando o app tem coordenadas, e as casas dentro de cada rua
-      // (ímpares subindo, pares voltando). A IA externa, se ligada, só propõe a ordem das RUAS; o Paulus confere e decide.
+      // (ímpares subindo, pares voltando). Nada sai do aparelho.
       const paulusV = window.Paulus && window.Paulus.visitas;
       const opcoesV = { geo: ROTA_GEO, vizinhanca: rotaVizinhancaLer() };
       if (paulusV && paulusV.ordenar) {
         try {
-          let resultado = null;
-          if (usarIA && apiKey && !chaveInvalida && paulusV.ruas && paulusV.comSugestao) {
-            const { ruas } = paulusV.ruas(itensVisita, ROTA_PARTIDA);
-            if (ruas.length >= 3) {   // com 1 ou 2 ruas não há o que a IA acrescentar
-              try {
-                const rotulos = ruas.map(r => `${r.rotulo} (${r.quantidade} fam.)`);
-                const ordemIdx = await geminiSugerirOrdemVisita(ROTA_PARTIDA, rotulos, apiKey, modelo, 'Ruas a visitar (o número entre parênteses é só a quantidade de famílias na rua)');
-                resultado = paulusV.comSugestao(itensVisita, ROTA_PARTIDA, ordemIdx.map(idx => ruas[idx].id), opcoesV);
-                if (resultado.origem === 'ia') usouIA = true;
-                else avisos.push(`${blocoLabels[bi]}: não usei a ordem do Gemini (${resultado.motivo}); usei a do Paulus.`);
-              } catch (e) {
-                if (e && e.chaveInvalida) chaveInvalida = true;
-                console.warn(`Não consegui usar a IA para o ${blocoLabels[bi]}, usando a ordenação do Paulus:`, e);
-                avisos.push(`${blocoLabels[bi]}: ${e && e.message ? e.message : 'falha ao consultar a IA'}`);
-              }
-            }
-          }
-          if (!resultado) resultado = paulusV.ordenar(itensVisita, ROTA_PARTIDA, opcoesV);
+          const resultado = paulusV.ordenar(itensVisita, ROTA_PARTIDA, opcoesV);
           ordemFinalBloco = expandir(resultado.itens);
+          usouPaulus = true;
         } catch (e) {
           console.warn('Paulus não conseguiu ordenar o bloco; usando a ordenação simples por rua/número:', e);
+          avisos.push(`${blocoLabels[bi]}: o Paulus não conseguiu ordenar; usei a ordenação simples por rua/número.`);
           ordemFinalBloco = heuristica;
         }
-      } else if (usarIA && apiKey && !chaveInvalida) {
-        // Paulus indisponível: mantém o caminho antigo (Gemini ordena as famílias pelo texto do endereço).
-        const enderecosFamilias = familiasOrdem.map(chave => porFamilia.get(chave)[0].enderecoCompleto);
-        try {
-          const ordemIndices = await geminiSugerirOrdemVisita(ROTA_PARTIDA, enderecosFamilias, apiKey, modelo);
-          ordemFinalBloco = ordemIndices.flatMap(idx => porFamilia.get(familiasOrdem[idx]));
-          usouIA = true;
-        } catch (e) {
-          if (e && e.chaveInvalida) chaveInvalida = true;
-          console.warn(`Não consegui usar a IA para o ${blocoLabels[bi]}, usando ordenação por proximidade:`, e);
-          avisos.push(`${blocoLabels[bi]}: ${e && e.message ? e.message : 'falha ao consultar a IA'}`);
-        }
+      } else {
+        avisos.push(`${blocoLabels[bi]}: o Paulus não está disponível agora; usei a ordenação simples por rua/número.`);
       }
 
       linhasRota.push(...ordemFinalBloco.map(e => ({ row: e.row, bloco: e.bloco })));
     }
 
-    return { linhasRota, usouIA, avisos };
+    return { linhasRota, usouPaulus, avisos };
   }
 
 
-  async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, usarIA, apiKey, modelo, tecnicoInfo, opcoes) {
+  async function relatorioIndividualGerarPDF(headers, dataRows, mesTexto, tecnicoInfo, opcoes) {
     const { jsPDF } = window.jspdf;
     // Emoji, setas e letras fora do alfabeto da fonte do PDF saíam como lixo e desalinhavam as colunas: limpa tudo antes de medir.
     { const limpo = window.AnonaPDF.texto;
@@ -3374,9 +3276,9 @@ window.AnonaImpressao = (function () {
 
     // Ordena as famílias pela melhor rota de visita (bloco por bairro, na
     // ordem 13 de Setembro -> Araceli -> outros bairros; dentro de cada
-    // bairro, tenta usar a IA (Gemini) e, se não der, usa rua e depois a
+    // bairro, usa a IA Paulus (no aparelho) e, se não der, usa rua e depois a
     // numeração crescente do imóvel).
-    const { linhasRota, usouIA, avisos } = await relatorioIndividualCalcularRota(headers, dataRows, usarIA, apiKey, modelo);
+    const { linhasRota, usouPaulus, avisos } = await relatorioIndividualCalcularRota(headers, dataRows);
     const blocoLabels = ROTA_BLOCOS_DEF.map(b => b.label).concat([ROTA_OUTROS_LABEL]);
     const blocoContagem = blocoLabels.map((_, bi) => linhasRota.filter(l => l.bloco === bi).length);
 
@@ -3527,7 +3429,7 @@ window.AnonaImpressao = (function () {
     // ---------- resumo da rota de visita (sumário com página de cada bloco) + quadro por bloco e efeito ----------
     const yFaixaCapa = y;
     docPdf.setFont('helvetica','bold'); docPdf.setFontSize(13); docPdf.setTextColor(...azul);
-    docPdf.text(usouIA ? 'Rota sugerida para as visitas (otimizada com IA · Gemini)' : 'Rota sugerida para as visitas', margin, y);
+    docPdf.text(usouPaulus ? 'Rota sugerida para as visitas (otimizada pela IA Paulus)' : 'Rota sugerida para as visitas', margin, y);
     y += 18;
     docPdf.setFont('helvetica','normal'); docPdf.setFontSize(9.5); docPdf.setTextColor(...slate);
     docPdf.text(`Partida: ${ROTA_PARTIDA}`, margin, y);
@@ -3946,10 +3848,10 @@ window.AnonaImpressao = (function () {
     // por técnico — devolve o PDF pronto sem baixar sozinho. Sem essa opção,
     // mantém o comportamento de sempre: baixa este PDF na hora.
     if (opcoes && opcoes.retornarBytes) {
-      return { usouIA, avisos, nomeArquivo, bytes: docPdf.output('arraybuffer') };
+      return { usouPaulus, avisos, nomeArquivo, bytes: docPdf.output('arraybuffer') };
     }
     docPdf.save(nomeArquivo);
-    return { usouIA, avisos };
+    return { usouPaulus, avisos };
   }
 
   // Junta vários PDFs já gerados (bytes em memória) num único arquivo .zip
@@ -3990,26 +3892,13 @@ window.AnonaImpressao = (function () {
       return;
     }
 
-    const toggle = document.getElementById('geminiRotaToggle');
-    const apiKeyInput = document.getElementById('geminiApiKeyInput');
-    const usarIA = !!(toggle && toggle.checked);
-    const apiKey = ((apiKeyInput && apiKeyInput.value) || '').trim();
     const labelTexto = document.getElementById('relatorioIndividualLabelTexto');
     const statusEl = document.getElementById('relatorioIndividualStatus');
     const labelTextoOriginal = labelTexto ? labelTexto.textContent : '';
 
-    if (usarIA && !apiKey) {
-      alert('Você marcou "Otimizar a rota com IA (Gemini)" mas não colou sua chave de API. Cole a chave (ou desmarque a opção) e envie a planilha de novo. Consiga uma chave gratuita em aistudio.google.com/apikey.');
-      input.value = '';
-      return;
-    }
-    if (usarIA && apiKey) safeStorageSet('anonaGeminiApiKey', apiKey);
-
     if (labelTexto && statusEl) {
-      labelTexto.textContent = usarIA ? 'Consultando a IA para otimizar a rota…' : 'Gerando o relatório em PDF…';
-      statusEl.textContent = usarIA
-        ? 'Isso pode levar alguns segundos — a rota é calculada bairro por bairro.'
-        : 'Isso pode levar alguns segundos em planilhas grandes.';
+      labelTexto.textContent = 'O Paulus está otimizando a rota…';
+      statusEl.textContent = 'Isso pode levar alguns segundos em planilhas grandes.';
       statusEl.classList.remove('hidden');
       input.disabled = true;
     }
@@ -4038,7 +3927,6 @@ window.AnonaImpressao = (function () {
         let gerados = 0;
         const avisosGerais = [];
         const falharam = []; // { nome, erro } — um técnico falhar não deve travar os outros
-        let usouIAAlguma = false;
         const arquivosGerados = [];
         for (let i = 0; i < abasValidas.length; i++) {
           const { nome: nomeAba, dados } = abasValidas[i];
@@ -4047,11 +3935,10 @@ window.AnonaImpressao = (function () {
           const { nome: nomeTecnico, formacao } = relatorioIndividualSepararNomeFormacao(nomeAba, dados.formacao);
           if (labelTexto) labelTexto.textContent = `Gerando relatório ${i + 1} de ${abasValidas.length} (${nomeTecnico})…`;
           try {
-            const { usouIA: usouIAEsta, avisos: avisosEsta, nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
-              dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey, '', { nome: nomeTecnico, formacao }, { retornarBytes: true }
+            const { avisos: avisosEsta, nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
+              dados.headers, dados.rows, dados.mesTexto, { nome: nomeTecnico, formacao }, { retornarBytes: true }
             );
             arquivosGerados.push({ nomeArquivo, bytes });
-            if (usouIAEsta) usouIAAlguma = true;
             if (avisosEsta && avisosEsta.length) avisosGerais.push(...avisosEsta.map(a => `${nomeTecnico}: ${a}`));
             gerados++;
           } catch (eTecnico) {
@@ -4071,27 +3958,18 @@ window.AnonaImpressao = (function () {
         if (falharam.length) {
           msg += `\n\nNão consegui gerar o relatório de: ${falharam.map(f => `${f.nome} (${f.erro})`).join(', ')}.`;
         }
-        if (usarIA && avisosGerais.length) {
-          msg += '\n\n' + (usouIAAlguma
-            ? 'A rota usou a ordem do Gemini na maior parte; nos bairros abaixo usei a ordenação do Paulus:\n\n'
-            : 'Não usei a ordem do Gemini; os relatórios foram gerados com a ordenação do Paulus (feita no aparelho):\n\n')
-            + avisosGerais.join('\n');
+        if (avisosGerais.length) {
+          msg += '\n\nAvisos da rota (o PDF foi gerado normalmente):\n\n' + avisosGerais.join('\n');
         }
         alert(msg);
       } else {
         // Só 1 aba válida: comportamento original — um único relatório
         // combinado, sem nome de técnico no cabeçalho/arquivo.
         const dados = abasValidas[0].dados;
-        const { usouIA, avisos } = await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto, usarIA, apiKey);
+        const { avisos } = await relatorioIndividualGerarPDF(dados.headers, dados.rows, dados.mesTexto);
         input.value = '';
-        if (usarIA && avisos && avisos.length) {
-          alert(
-            (usouIA
-              ? 'A rota usou a ordem do Gemini na maior parte; nos bairros abaixo usei a ordenação do Paulus:\n\n'
-              : 'Não usei a ordem do Gemini; o relatório foi gerado com a ordenação do Paulus (feita no aparelho):\n\n') +
-            avisos.join('\n') +
-            '\n\nO PDF foi gerado normalmente.'
-          );
+        if (avisos && avisos.length) {
+          alert('Avisos da rota:\n\n' + avisos.join('\n') + '\n\nO PDF foi gerado normalmente.');
         }
       }
     } catch (e) {
@@ -5278,7 +5156,7 @@ window.AnonaImpressao = (function () {
         const dados = relatorioIndividualExtrairDadosDoWorkbook(wb, [nomeTecnico]);
         if (!dados || !dados.rows.length) { semRegistros.push(nomeTecnico); continue; }
         const { nomeArquivo, bytes } = await relatorioIndividualGerarPDF(
-          dados.headers, dados.rows, dados.mesTexto, false, '', '', relatorioIndividualSepararNomeFormacao(nomeTecnico, dados.formacao), { retornarBytes: true }
+          dados.headers, dados.rows, dados.mesTexto, relatorioIndividualSepararNomeFormacao(nomeTecnico, dados.formacao), { retornarBytes: true }
         );
         arquivosGerados.push({ nomeArquivo, bytes });
         gerados++;
@@ -7155,6 +7033,7 @@ if ('serviceWorker' in navigator) {
      atrás de qualquer modal. Carregado por último e sem bloquear o resto
      da página (defer). -->
 <script src="anona-rota.js" defer></script>
+<script src="anona-mapa.js" defer></script>
 <script src="anona-tabelas.js" defer></script>
 <script src="anona-mascot.js" defer></script>
 <script src="paulus.v1.js" defer></script>
