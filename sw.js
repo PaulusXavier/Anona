@@ -9,15 +9,15 @@
  *  - index.html: tenta a rede primeiro (versão mais nova); se demorar mais de 4 s ou não houver internet, usa a cópia guardada;
  *  - demais arquivos: usa a cópia guardada na hora e atualiza em segundo plano;
  *  - só guarda respostas válidas (200 OK, ou "opaca" das bibliotecas carregadas por <script>): página de erro nunca entra no cache;
- *  - Firestore/Auth/Gemini NÃO passam por aqui (dados e login sempre direto na rede).
+ *  - Firestore/Auth NÃO passam por aqui (dados e login sempre direto na rede).
  * Para forçar todo mundo a baixar tudo de novo, aumente o número de CACHE_NAME.
  */
-const CACHE_NAME = 'anona-app-shell-v41';
+const CACHE_NAME = 'anona-app-shell-v45';
 const PREFIXOS_ANTIGOS = ['anona-app-shell-', 'pbf-app-shell-'];
 
 const ARQUIVOS_LOCAIS = [
   './', 'index.html', 'styles.css', 'login.css', 'manifest.json',
-  'anona-tabelas.js', 'anona-rota.js', 'anona-mascot.js', 'anona-presenca.js', 'anona-ia.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
+  'anona-tabelas.js', 'anona-rota.js', 'anona-mapa.js', 'anona-mascot.js', 'anona-presenca.js', 'anona-ia.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'
 ];
 const BIBLIOTECAS = [
@@ -103,7 +103,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const mesmaOrigem = url.origin === self.location.origin;
-  if (!mesmaOrigem && !HOSTS_CACHEAVEIS.includes(url.hostname)) return;     // Firestore, Auth, Gemini etc.: direto na rede
+  if (!mesmaOrigem && !HOSTS_CACHEAVEIS.includes(url.hostname)) return;     // Firestore, Auth etc.: direto na rede
   if (mesmaOrigem && req.mode === 'navigate') { event.respondWith(redePrimeiro(req, 'index.html')); return; }
   if (mesmaOrigem && /\/(index\.html)?$/.test(url.pathname)) { event.respondWith(redePrimeiro(req, 'index.html')); return; }
   event.respondWith(guardadoPrimeiro(req).catch(() => caches.match(req).then(r => r || Response.error())));
