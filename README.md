@@ -192,9 +192,9 @@ Na barra lateral, bloco **"Unificar Folhas de Família — Rota de Visita"**:
 **Rota com IA — melhorada (Paulus 0.15.0):**
 - **A ordem sai do Paulus, no aparelho.** Nomes de rua são normalizados ("Cap. Ene Garcez" = "Capitão Ene Garcez"; uma letra errada não cria rua nova), a ordem é natural ("Rua 2" antes de "Rua 10") e as casas de cada rua seguem em serpentina (ímpares subindo, pares voltando). Integrantes da mesma família ficam juntos.
 - **Menor distância, se houver mapa.** Se existir um `geografia.json` ao lado do `index.html` (coordenadas de RUAS e BAIRROS, nunca de casas; gerado com `node scripts/montar-geografia.mjs overpass.json geografia.json` no repositório do Paulus), as ruas passam a ser ordenadas pelo menor deslocamento (busca exata até 9 ruas) e o aviso diz o km estimado. Sem o arquivo, tudo funciona como antes, pelo texto do endereço.
-- **Gemini só propõe a ordem das ruas.** Com a IA ligada, vai ao Gemini uma linha por rua e bairro, com a quantidade de famílias — **sem número de casa, nome, NIS ou CPF**. O Paulus valida a resposta: ordem inválida (índice repetido, faltando ou fora da lista) é descartada, e, havendo coordenadas, uma ordem mais longa que a do programa também é (o aviso diz a diferença em km).
+- **Sem IA externa.** O Relatório Individual não usa mais o Gemini nem pede chave de API: a rota é sempre otimizada pelo Paulus, no aparelho, e nenhum endereço sai do dispositivo. Se o Paulus não estiver carregado, o app usa a ordenação simples por rua/número e avisa.
 - **Aprende com seus ajustes.** Ao mexer na ordem com as setinhas e gerar o PDF, as ruas que você pôs em sequência passam a contar como vizinhas na próxima vez. Só nome de rua e bairro, só neste aparelho; o quanto foi aprendido aparece em "Como a ordem é sugerida", com botão para apagar.
-- Testes: `node tests/rota.test.js` e `node tests/rota-integracao.test.js` (roda o código real do `index.html` com o Paulus de verdade e um Gemini de mentira).
+- Testes: `node tests/rota.test.js` e `node tests/rota-integracao.test.js` (roda o código real do `index.html` com o Paulus de verdade).
 
 
 ## 8.4 Unificar Folhas de Família — Abrigos (Operação Acolhida)
@@ -383,3 +383,12 @@ Arquivos: `anona-presenca.js` (novo), `paulus-anona.js` (desvio local antes de e
 - **PDF no aparelho:** 📎 ou arrastar PDF/JPG/PNG sobre o mascote; "numerar as páginas", "remover a página 2", "juntar"… (Paulus.pdf, usa o pdf-lib que o app já carrega). O arquivo não vai ao Worker nem à IA.
 - **Bom-dia diário** com o que vale no período, e perguntas sugeridas por cartão (`sugestoesDoCartao`).
 - `sw.js` na v40. Publique também o Worker do Paulus (`worker/apps.mjs` atualizado).
+
+## Mapa e rotas (busca de endereço como no Google Maps)
+
+Seção "Mapa e rotas" (atalho "Mapa" no cabeçalho): digite um endereço, e o app marca o destino e traça o caminho a partir da **sua posição** (ou da Rua Santo Agostinho, 193, ou de outro endereço). Também dá para tocar no mapa para escolher o destino. Escolha carro/moto, a pé ou bicicleta; o app mostra distância, tempo, passo a passo e um botão "Abrir no Google Maps" para navegar.
+
+- Código: `anona-mapa.js` (+ Leaflet 1.9.4 em `vendor/leaflet/`, carregado só quando a seção aparece). Sem chave de API.
+- Serviços gratuitos: mapa OpenStreetMap, busca Nominatim e rotas em routing.openstreetmap.de (OSRM). São serviços públicos de uso moderado: o app espera 1 s entre buscas.
+- Privacidade: só o texto do endereço digitado e as coordenadas (posição/destino) saem do aparelho; nada é guardado. Não digite nome, NIS ou CPF. A posição só é lida quando você pede e exige HTTPS (GitHub Pages serve) e permissão do navegador.
+- O mapa precisa de internet (os blocos do mapa não ficam em cache).
