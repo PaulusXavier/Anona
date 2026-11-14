@@ -74,6 +74,7 @@
   // ter chegado lá (74,96% virando "75,0%" e, ao lado, "Baixa frequência"), mostra 2 casas sem arredondar para o limite.
   // Antes a tela mostrava 74,96% e a impressão/CSV/cópia mostravam 75,0% para o mesmo mês.
   function fmtNum(n) {
+    if (typeof n !== 'number' || !Number.isFinite(n)) return '';      // antes saía "NaN"/"Infinity" na folha, no CSV e na cópia
     const r1 = Math.round(n * 10) / 10;
     if (r1 !== n && (r1 === 60 || r1 === 75 || r1 === 100)) {
       const t = n < r1 ? Math.floor(n * 100) / 100 : Math.ceil(n * 100) / 100;
