@@ -62,7 +62,7 @@
   function velCarro(t) {
     let v = HW[t.highway][2];
     const m = /^(\d{2,3})(?:\s*km\/h)?$/.exec(String(t.maxspeed || '').trim());
-    if (m && v) v = Math.max(3, Math.min(25, +m[1] * 0.75 / 3.6));
+    if (m && v) v = Math.max(3, Math.min(22, +m[1] * 0.75 / 3.6));
     return v;
   }
 
