@@ -1,7 +1,10 @@
 /* Anona — "Mapa e rotas": procura de endereços (como no Google Maps) e rota a partir da posição do aparelho.
  * Mapa: Leaflet (vendor/leaflet, carregado só quando a seção aparece) + OpenStreetMap.
  * Busca de endereço: Nominatim. Rota: routing.openstreetmap.de (OSRM). Não precisa de chave.
- * Só o texto do endereço digitado e as coordenadas (posição/destino) saem do aparelho; nada é guardado. */
+ * Com internet, só o texto do endereço digitado e as coordenadas (posição/destino) saem do aparelho; nada é guardado.
+ * OFFLINE: depois de "Baixar mapa offline" (anona-mapa-offline.js: ruas de Boa Vista guardadas no aparelho), a busca, o
+ * toque no mapa, a rota com passo a passo e o desenho das ruas funcionam sem internet — automaticamente quando a rede
+ * falha, ou sempre, se o usuário marcar "Usar sempre o mapa offline". */
 (function () {
   'use strict';
   const sec = document.getElementById('mapaRotas');
@@ -26,6 +29,14 @@
   let modo = lerPref('anonaMapaModo', 'carro'); if (!PERFIS[modo]) modo = 'carro';
   let senha = 0;                 // descarta respostas antigas quando o usuário já pediu outra coisa
   let promessaLeaflet = null, ultimoNominatim = 0;
+  const AMO = window.AnonaMapaOffline || null;
+  let motor = null;              // mapa offline carregado (ou null)
+  let camadaTiles = null, vetor = null, ClasseVetor = null, vetorAuto = false, errosTile = 0, baixando = null;
+  let sempreOffline = lerPref('anonaMapaSempreOffline', '0') === '1';
+  let avisoDestino = '';         // ex.: "o número 193 não está no mapa offline"
+  const PARTIDA_CHAVE = 'anonaMapaPartida';
+  const usarOffline = () => !!motor && (sempreOffline || navigator.onLine === false);
+  const DICA_OFFLINE = ' Dica: baixe o mapa offline (em "Partida, posição e mapa offline") para usar sem internet.';
 
   function lerPref(k, f) { try { return localStorage.getItem(k) || f; } catch (e) { return f; } }
   function gravarPref(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* sem armazenamento: tudo bem */ } }
@@ -60,10 +71,19 @@
     if (mapa) return mapa;
     mapa = L.map('mapaCanvas', { zoomControl: false }).setView(CENTRO, 13);
     L.control.zoom({ position: 'bottomright', zoomInTitle: 'Aproximar', zoomOutTitle: 'Afastar' }).addTo(mapa);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    mapa.createPane('vetor').style.zIndex = 150;     // abaixo dos blocos do mapa: aparece quando os blocos não carregam (sem internet)
+    camadaTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · rotas: OSRM'
     }).addTo(mapa);
+    camadaTiles.on('tileload', (e) => { if (e.tile) e.tile.style.visibility = ''; });
+    camadaTiles.on('tileerror', (e) => {
+      if (e.tile) e.tile.style.visibility = 'hidden';          // bloco que falhou fica transparente: as ruas offline aparecem por baixo
+      if (!motor || vetorAuto) return;
+      if (++errosTile === 1) setTimeout(() => { errosTile = 0; }, 8000);
+      if (errosTile >= 3) { vetorAuto = true; aplicarModoMapa(); ofertaUI(); }
+    });
+    aplicarModoMapa();
     mapa.on('click', (e) => escolherNoMapa(e.latlng.lat, e.latlng.lng));
     setTimeout(() => mapa.invalidateSize(), 150);
     return mapa;
@@ -81,15 +101,29 @@
       if (!r.ok) throw new Error('O serviço de busca respondeu com erro (' + r.status + ').');
       return await r.json();
     } catch (e) {
-      if (e && e.name === 'AbortError') throw new Error('A busca demorou demais. Tente de novo.');
-      if (e instanceof TypeError) throw new Error('Sem conexão com o serviço de busca. Confira a internet.');
-      throw e;
+      let er = e;
+      if (e && e.name === 'AbortError') er = new Error('A busca demorou demais. Tente de novo.');
+      else if (e instanceof TypeError) er = new Error('Sem conexão com o serviço de busca. Confira a internet.');
+      if (er && typeof er === 'object') er.rede = true;     // qualquer falha aqui = serviço fora do ar/sem rede → vale tentar o mapa offline
+      throw er;
     } finally { clearTimeout(t); }
   }
-  const buscarEndereco = (q) => nominatim('/search', { q, limit: 6, countrycodes: 'br', viewbox: VIEWBOX, addressdetails: 1 });
-  const buscarCoordenada = (lat, lng) => nominatim('/reverse', { lat: lat.toFixed(6), lon: lng.toFixed(6), zoom: 18 });
+  // Resultados do mapa offline têm o mesmo formato dos do Nominatim (lat/lon/display_name) + _rotulo (já pronto) e _aviso.
+  const buscarOffline = (q) => motor.buscar(q, 6).map(x => ({ lat: x.lat, lon: x.lng, display_name: x.rotulo, _rotulo: x.rotulo, _aviso: x.aviso || '' }));
+  async function buscarEndereco(q) {
+    if (usarOffline()) return buscarOffline(q);
+    try { return await nominatim('/search', { q, limit: 6, countrycodes: 'br', viewbox: VIEWBOX, addressdetails: 1 }); }
+    catch (e) { if (motor && e && e.rede) return buscarOffline(q); throw e; }
+  }
+  async function buscarCoordenada(lat, lng) {
+    const offline = () => { const r = motor.reverso(lat, lng); return r ? { display_name: r.rotulo, _rotulo: r.rotulo } : null; };
+    if (usarOffline()) return offline();
+    try { return await nominatim('/reverse', { lat: lat.toFixed(6), lon: lng.toFixed(6), zoom: 18 }); }
+    catch (e) { if (motor && e && e.rede) return offline(); throw e; }
+  }
 
   function rotuloCurto(r) {
+    if (r && r._rotulo) return r._rotulo;
     const a = r.address || {};
     const via = a.road || a.pedestrian || a.footway || a.path || a.suburb || '';
     const num = a.house_number ? ', ' + a.house_number : '';
@@ -138,10 +172,15 @@
       return { lat: p.lat, lng: p.lng, rotulo: 'Minha posição' };
     }
     if (tipo === 'partida') {
+      if (!partidaCache) {   // coordenadas achadas uma vez com internet ficam guardadas: a partida padrão passa a funcionar offline
+        try { const g = JSON.parse(lerPref(PARTIDA_CHAVE, 'null')); if (g && isFinite(g.lat) && isFinite(g.lng)) partidaCache = { lat: +g.lat, lng: +g.lng, rotulo: PARTIDA.rotulo }; } catch (e) { /* guardado inválido: busca de novo */ }
+      }
       if (!partidaCache) {
         const r = await buscarEndereco(PARTIDA.consulta);
         if (!r.length) throw new Error('Não consegui localizar o endereço de partida no mapa. Use "Outro endereço".');
-        partidaCache = { lat: +r[0].lat, lng: +r[0].lon, rotulo: PARTIDA.rotulo };
+        const achada = { lat: +r[0].lat, lng: +r[0].lon, rotulo: PARTIDA.rotulo };
+        if (r[0]._rotulo) return achada;     // vindo do mapa offline (meio da rua, aproximado): não fixa nem guarda
+        partidaCache = achada; gravarPref(PARTIDA_CHAVE, JSON.stringify({ lat: achada.lat, lng: achada.lng }));
       }
       return partidaCache;
     }
@@ -169,7 +208,7 @@
   }
 
   async function escolherNoMapa(lat, lng) {
-    const minha = ++senha;
+    const minha = ++senha; avisoDestino = '';
     await marcarDestino({ lat, lng, rotulo: lat.toFixed(5) + ', ' + lng.toFixed(5) });
     status('Procurando o endereço desse ponto…'); ocupado(true);
     try {
@@ -187,7 +226,7 @@
     rs.slice(1).forEach((r) => {
       const li = document.createElement('li'); const b = document.createElement('button'); b.type = 'button';
       b.textContent = rotuloCurto(r) || r.display_name;
-      b.addEventListener('click', () => { senha++; ul.classList.add('hidden'); escolherDestino({ lat: +r.lat, lng: +r.lon, rotulo: b.textContent }).catch(mostrarErro); });
+      b.addEventListener('click', () => { senha++; avisoDestino = r._aviso || ''; ul.classList.add('hidden'); escolherDestino({ lat: +r.lat, lng: +r.lon, rotulo: b.textContent }).catch(mostrarErro); });
       li.appendChild(b); ul.appendChild(li);
     });
     const t = document.createElement('li'); t.className = 'mp-res-titulo'; t.textContent = 'Outros resultados'; ul.insertBefore(t, ul.firstChild);
@@ -205,7 +244,7 @@
       const rs = await buscarEndereco(q);
       if (minha !== senha) return;
       if (!rs.length) { listarResultados([]); status('Não encontrei esse endereço. Tente só a rua e o bairro (ex.: "Rua Santo Agostinho, Centenário") ou toque no mapa para marcar o ponto.', 'erro'); return; }
-      listarResultados(rs);
+      listarResultados(rs); avisoDestino = rs[0]._aviso || '';
       await escolherDestino({ lat: +rs[0].lat, lng: +rs[0].lon, rotulo: rotuloCurto(rs[0]) || q });
     } catch (e) { mostrarErro(e); }
     finally { ocupado(false); }
@@ -235,6 +274,30 @@
     return min < 60 ? min + ' min' : Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + String(min % 60).padStart(2, '0') + ' min' : '');
   }
 
+  async function rotaOnline(o) {
+    const perfil = PERFIS[modo];
+    const url = `${ROTAS}/${perfil.caminho}/route/v1/driving/${o.lng},${o.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson&steps=true`;
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
+    try {
+      const r = await fetch(url, { signal: ctl.signal });
+      const dados = await r.json().catch(() => null);
+      if (!r.ok && !(dados && dados.code)) throw new Error('O serviço de rotas respondeu com erro (' + r.status + ').');
+      return dados;
+    } catch (e) {
+      let er = e;
+      if (e && e.name === 'AbortError') er = new Error('O cálculo da rota demorou demais. Tente de novo.');
+      else if (e instanceof TypeError) er = new Error('Sem conexão com o serviço de rotas. Confira a internet.');
+      if (er && typeof er === 'object') er.rede = true;
+      throw er;
+    } finally { clearTimeout(t); }
+  }
+  function rotaOffline(o) {
+    const r = motor.rotear(modo, { lat: o.lat, lng: o.lng }, { lat: destino.lat, lng: destino.lng });
+    if (r.erro === 'longe') throw new Error('A partida ou o destino está fora da área do mapa offline (Boa Vista e entorno), ou longe de qualquer rua para esse meio de transporte.');
+    if (r.erro) throw new Error('Não achei caminho entre os dois pontos para esse meio de transporte (mapa offline).');
+    return { code: 'Ok', routes: [r] };
+  }
+
   async function tracarRota() {
     if (!destino) return;
     const minha = ++senha;
@@ -243,26 +306,21 @@
       const o = await obterOrigem();
       if (minha !== senha) return;
       await garantirMapa();
-      const perfil = PERFIS[modo];
-      const url = `${ROTAS}/${perfil.caminho}/route/v1/driving/${o.lng},${o.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson&steps=true`;
-      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
-      let dados;
-      try {
-        const r = await fetch(url, { signal: ctl.signal });
-        dados = await r.json().catch(() => null);
-        if (!r.ok && !(dados && dados.code)) throw new Error('O serviço de rotas respondeu com erro (' + r.status + ').');
-      } catch (e) {
-        if (e && e.name === 'AbortError') throw new Error('O cálculo da rota demorou demais. Tente de novo.');
-        if (e instanceof TypeError) throw new Error('Sem conexão com o serviço de rotas. Confira a internet.');
-        throw e;
-      } finally { clearTimeout(t); }
+      let dados, offline = false;
+      if (usarOffline()) { dados = rotaOffline(o); offline = true; }
+      else {
+        try { dados = await rotaOnline(o); }
+        catch (e) { if (motor && e && e.rede) { dados = rotaOffline(o); offline = true; } else throw e; }
+      }
       if (minha !== senha) return;
       if (!dados || dados.code !== 'Ok' || !dados.routes || !dados.routes.length) {
         limparRota();
         throw new Error(dados && dados.code === 'NoRoute' ? 'Não achei caminho entre os dois pontos para esse meio de transporte.' : 'Não consegui traçar a rota agora.');
       }
       desenharRota(o, dados.routes[0]);
-      status('');
+      const msg = [offline ? 'Rota calculada pelo mapa offline (sem internet): sem trânsito e sem obras.' : '', avisoDestino].filter(Boolean).join(' ');
+      status(msg, offline ? 'ok' : '');
+      avisoDestino = '';
     } catch (e) { mostrarErro(e); }
     finally { if (minha === senha) ocupado(false); }
   }
@@ -298,7 +356,7 @@
     mapa.fitBounds(L.latLngBounds(pontos), margens());
   }
 
-  function mostrarErro(e) { status((e && e.message) || 'Algo deu errado.', 'erro'); ocupado(false); }
+  function mostrarErro(e) { status(((e && e.message) || 'Algo deu errado.') + (e && e.rede && !motor && AMO ? DICA_OFFLINE : ''), 'erro'); ocupado(false); }
 
   function limparTudo() {
     senha++;
@@ -432,6 +490,172 @@
     catch (e) { mostrarErro(e); }
   });
   $('mapaLimpar').addEventListener('click', limparTudo);
+
+  // ---------- mapa offline: camada de ruas (canvas), download e painel ----------
+  const MINZ = [0, 0, 12, 13, 14, 15, 16];                                  // zoom mínimo para desenhar cada classe de via
+  const COR = ['#e892a2', '#f9c58f', '#f4e48a', '#ffffff', '#ffffff', '#ffffff'];
+  const LARG = [7, 6, 5.5, 4.5, 3.5, 2.5];
+  const FONTE = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  const ATRIB_OFF = 'Ruas offline: dados © OpenStreetMap';
+
+  function criarClasseVetor() {
+    return L.Layer.extend({
+      onAdd(map) {
+        this._map = map; this._med = new Map();
+        this._c = L.DomUtil.create('canvas', 'mp-vetor'); this._c.setAttribute('aria-hidden', 'true');
+        map.getPane('vetor').appendChild(this._c);
+        map.on('moveend zoomend resize viewreset', this._desenhar, this);
+        if (map.attributionControl) map.attributionControl.addAttribution(ATRIB_OFF);
+        this._desenhar();
+      },
+      onRemove(map) {
+        map.off('moveend zoomend resize viewreset', this._desenhar, this);
+        if (map.attributionControl) map.attributionControl.removeAttribution(ATRIB_OFF);
+        L.DomUtil.remove(this._c); this._map = null;
+      },
+      _desenhar() {
+        const map = this._map; if (!map || !motor) return;
+        const tam = map.getSize(), pad = 0.4, w = Math.ceil(tam.x * (1 + 2 * pad)), h = Math.ceil(tam.y * (1 + 2 * pad));
+        const dpr = Math.min(window.devicePixelRatio || 1, 2), c = this._c;
+        if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.style.width = w + 'px'; c.style.height = h + 'px'; }
+        const canto = map.containerPointToLayerPoint([-tam.x * pad, -tam.y * pad]).round();
+        L.DomUtil.setPosition(c, canto);
+        const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+        const z = map.getZoom(), esc = 256 * Math.pow(2, z), po = map.getPixelOrigin(), ox = po.x + canto.x, oy = po.y + canto.y;
+        const X = (lng) => (lng + 180) / 360 * esc - ox;
+        const Y = (lat) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * esc - oy; };
+        const b = map.getBounds().pad(pad), D = motor.dados;
+        const ids = motor.segsNaCaixa(b.getSouth(), b.getWest(), b.getNorth(), b.getEast());
+        const porRank = [[], [], [], [], [], [], []];
+        for (let i = 0; i < ids.length; i++) { const s = ids[i], r = D.rank(D.sw[s]); if (r !== undefined && z >= MINZ[r]) porRank[r].push(s); }
+        const caminhos = porRank.map((l) => {
+          if (!l.length) return null; const p = new Path2D();
+          for (const s of l) { p.moveTo(X(D.nlng[D.sa[s]]), Y(D.nlat[D.sa[s]])); p.lineTo(X(D.nlng[D.sb[s]]), Y(D.nlat[D.sb[s]])); }
+          return p;
+        });
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        const k = Math.pow(1.38, z - 15);
+        if (caminhos[6]) { ctx.setLineDash([4, 3]); ctx.strokeStyle = '#9c8f7a'; ctx.lineWidth = Math.max(1, Math.min(2.2, 1.4 * k)); ctx.stroke(caminhos[6]); ctx.setLineDash([]); }
+        const larg = (r) => Math.max(1.4, Math.min(24, LARG[r] * k));
+        for (let r = 5; r >= 0; r--) if (caminhos[r]) { ctx.strokeStyle = '#a89f91'; ctx.lineWidth = larg(r) + 2; ctx.stroke(caminhos[r]); }   // contornos
+        for (let r = 5; r >= 0; r--) if (caminhos[r]) { ctx.strokeStyle = COR[r]; ctx.lineWidth = larg(r); ctx.stroke(caminhos[r]); }               // miolo
+
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        if (z >= 15) {                      // nomes das ruas, na direção da rua, sem se sobrepor
+          const cand = [];
+          for (let r = 0; r <= 5; r++) {
+            if (z < (r <= 3 ? 15 : 16)) continue;
+            for (const s of porRank[r]) {
+              const nome = D.ways[D.sw[s]].n; if (!nome) continue;
+              const x1 = X(D.nlng[D.sa[s]]), y1 = Y(D.nlat[D.sa[s]]), x2 = X(D.nlng[D.sb[s]]), y2 = Y(D.nlat[D.sb[s]]), len = Math.hypot(x2 - x1, y2 - y1);
+              if (len >= 40) cand.push({ nome, x1, y1, x2, y2, len });
+            }
+          }
+          cand.sort((a, d) => d.len - a.len);
+          ctx.font = '600 11px ' + FONTE;
+          const ocupadas = [], contagem = new Map(); let feitos = 0;
+          for (let i = 0; i < cand.length && i < 700 && feitos < 160; i++) {
+            const cd = cand[i]; if ((contagem.get(cd.nome) || 0) >= 2) continue;
+            let tw = this._med.get(cd.nome); if (tw === undefined) { tw = ctx.measureText(cd.nome).width; this._med.set(cd.nome, tw); }
+            if (cd.len < tw + 12) continue;
+            const mx = (cd.x1 + cd.x2) / 2, my = (cd.y1 + cd.y2) / 2; if (mx < -20 || my < -20 || mx > w + 20 || my > h + 20) continue;
+            let ang = Math.atan2(cd.y2 - cd.y1, cd.x2 - cd.x1); if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
+            const hw = Math.abs(Math.cos(ang)) * tw / 2 + Math.abs(Math.sin(ang)) * 7 + 3, hh = Math.abs(Math.sin(ang)) * tw / 2 + Math.abs(Math.cos(ang)) * 7 + 3;
+            if (ocupadas.some(o => Math.abs(o.x - mx) < o.hw + hw && Math.abs(o.y - my) < o.hh + hh)) continue;
+            ocupadas.push({ x: mx, y: my, hw, hh }); contagem.set(cd.nome, (contagem.get(cd.nome) || 0) + 1); feitos++;
+            ctx.save(); ctx.translate(mx, my); ctx.rotate(ang);
+            ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.92)'; ctx.strokeText(cd.nome, 0, 0); ctx.fillStyle = '#3b3b3b'; ctx.fillText(cd.nome, 0, 0);
+            ctx.restore();
+          }
+        }
+        if (z >= 12 && z <= 15) {           // nomes dos bairros
+          ctx.font = '700 ' + (z <= 13 ? 11 : 12) + 'px ' + FONTE;
+          for (const q of D.lugares) {
+            if (!b.contains([q.lat, q.lng])) continue;
+            const x = X(q.lng), y = Y(q.lat), t = String(q.n).toUpperCase();
+            ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(242,239,233,.95)'; ctx.strokeText(t, x, y); ctx.fillStyle = 'rgba(95,84,62,.85)'; ctx.fillText(t, x, y);
+          }
+        }
+      }
+    });
+  }
+
+  function ligarVetor(sim) {
+    if (!mapa || !L) return;
+    const cont = mapa.getContainer();
+    if (sim) {
+      if (!ClasseVetor) ClasseVetor = criarClasseVetor();
+      if (!vetor) vetor = new ClasseVetor();
+      if (!mapa.hasLayer(vetor)) vetor.addTo(mapa);
+      cont.style.background = '#f2efe9';
+    } else if (vetor && mapa.hasLayer(vetor)) { mapa.removeLayer(vetor); cont.style.background = ''; }
+  }
+  // Com internet: blocos do OpenStreetMap. Sem internet (ou "usar sempre offline"): ruas desenhadas a partir do mapa baixado.
+  function aplicarModoMapa() {
+    if (!mapa || !camadaTiles) return;
+    const soVetor = !!motor && sempreOffline;
+    if (soVetor) { if (mapa.hasLayer(camadaTiles)) mapa.removeLayer(camadaTiles); }
+    else if (!mapa.hasLayer(camadaTiles)) camadaTiles.addTo(mapa);
+    ligarVetor(!!motor && (soVetor || vetorAuto));
+  }
+
+  const offBox = $('mapaOffBox');
+  function ofertaUI() {
+    if (!offBox) return;
+    const info = motor ? motor.info() : null, ocup = !!baixando;
+    let t;
+    if (ocup) t = baixando.texto || 'Baixando…';
+    else if (info) {
+      const d = new Date(info.quando), data = isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
+      t = 'Mapa offline pronto' + (data ? ' (baixado em ' + data + ')' : '') + ' · ' + info.ruas.toLocaleString('pt-BR') + ' ruas, ' + info.bairros + ' bairros.' + (vetorAuto && !sempreOffline ? ' Sem internet agora: usando o mapa offline.' : '');
+    } else t = 'Mapa offline: ainda não baixado. Baixe uma vez (de preferência no Wi-Fi) para buscar endereços, ver o mapa e traçar rotas sem internet.';
+    $('mapaOffTexto').textContent = t;
+    $('mapaOffBaixar').textContent = info ? 'Atualizar mapa offline' : 'Baixar mapa offline';
+    $('mapaOffBaixar').classList.toggle('hidden', ocup);
+    $('mapaOffCancelar').classList.toggle('hidden', !ocup);
+    $('mapaOffApagar').classList.toggle('hidden', ocup || !info);
+    $('mapaOffSempreBox').classList.toggle('hidden', !info);
+    const pr = $('mapaOffProg'); pr.classList.toggle('hidden', !ocup); if (ocup) pr.value = baixando.pct || 0;
+    $('mapaOffSempre').checked = sempreOffline;
+  }
+
+  async function baixarOffline() {
+    if (!AMO || baixando) return;
+    if (!window.confirm('Baixar o mapa de Boa Vista para usar sem internet?\n\nDemora alguns minutos e usa algumas dezenas de MB de internet — de preferência no Wi-Fi. Depois fica guardado no aparelho.')) return;
+    const ctl = new AbortController(); baixando = { ctl, texto: 'Iniciando o download…', pct: 0 }; ofertaUI(); status('');
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* o navegador decide sozinho */ }
+    try {
+      const r = await AMO.baixar({ sinal: ctl.signal, onProgresso: (p) => { baixando.texto = p.texto; baixando.pct = Math.round(p.feito / p.total * 100); ofertaUI(); } });
+      motor = AMO.criarMotor(r.pacote); vetorAuto = false; errosTile = 0;
+      if (r.erroGuardar) status('O mapa foi baixado e já funciona agora, mas NÃO ficou guardado no aparelho (vale só até fechar o app). ' + r.erroGuardar.message, 'erro');
+      else status('Mapa offline pronto: a busca, o mapa e as rotas já funcionam sem internet.', 'ok');
+      aplicarModoMapa();
+    } catch (e) { status((e && e.message) || 'Não consegui baixar o mapa offline.', 'erro'); }
+    finally { baixando = null; ofertaUI(); }
+  }
+
+  if (offBox && !AMO) offBox.classList.add('hidden');
+  if (offBox && AMO) {
+    $('mapaOffBaixar').addEventListener('click', baixarOffline);
+    $('mapaOffCancelar').addEventListener('click', () => { if (baixando) baixando.ctl.abort(); });
+    $('mapaOffApagar').addEventListener('click', async () => {
+      if (!window.confirm('Apagar o mapa offline deste aparelho? Você poderá baixar de novo quando quiser.')) return;
+      try { await AMO.apagar(); motor = null; vetorAuto = false; aplicarModoMapa(); status('Mapa offline apagado deste aparelho.', 'ok'); }
+      catch (e) { status((e && e.message) || 'Não consegui apagar o mapa offline.', 'erro'); }
+      ofertaUI();
+    });
+    $('mapaOffSempre').addEventListener('change', (ev) => {
+      sempreOffline = !!ev.target.checked; gravarPref('anonaMapaSempreOffline', sempreOffline ? '1' : '0');
+      aplicarModoMapa(); ofertaUI(); if (destino) tracarRota();
+    });
+    window.addEventListener('online', () => { vetorAuto = false; errosTile = 0; aplicarModoMapa(); ofertaUI(); });
+    window.addEventListener('offline', () => { if (motor) { vetorAuto = true; aplicarModoMapa(); } ofertaUI(); });
+    // carrega o mapa guardado quando o navegador estiver livre (montar o índice leva uma fração de segundo)
+    const iniciar = () => AMO.carregar()
+      .then((p) => { if (p) { try { motor = AMO.criarMotor(p); } catch (e) { motor = null; } } aplicarModoMapa(); ofertaUI(); })
+      .catch(() => ofertaUI());
+    (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 3000 }) : (f) => setTimeout(f, 600))(iniciar);
+  }
 
   // carrega o mapa só quando a seção chega perto da tela
   if ('IntersectionObserver' in window) {
