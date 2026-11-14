@@ -52,4 +52,13 @@ assert.deepStrictEqual(o, ['Rua Santo Agostinho, 193', 'Rua Santo Agostinho, nº
 // ordem natural: "Rua 2" vem antes de "Rua 10" (alfabética pura punha a 10 antes da 2)
 assert.deepStrictEqual(R.ordenarPorRota(['Rua 10, 5', 'Rua 2, 5', 'Rua 1, 5'].map(endereco => ({ endereco })), '').map(x => x.endereco), ['Rua 1, 5', 'Rua 2, 5', 'Rua 10, 5']);
 eq(R.textoSeguroPdf('Ação — ǿ'), 'Ação — ');
+// pdf-lib não codifica controles C1 (U+0080–U+009F), quebra de linha nem tabulação: viram espaço/nada, sem derrubar o PDF
+eq(R.textoSeguroPdf('a\u0085b\u007Fc'), 'abc');
+eq(R.textoSeguroPdf('Rua A\nRua B\t1'), 'Rua A Rua B 1');
+eq(R.textoSeguroPdf('Fim…'), 'Fim…');
+eq(R.textoSeguroPdf(null), '');
+// com o módulo de tabelas carregado, setas e ✓ viram texto (mesma regra do jsPDF)
+globalThis.AnonaTabelas = require('../anona-tabelas.js');
+eq(R.textoSeguroPdf('Rota → Centro ✓'), 'Rota -> Centro OK');
+delete globalThis.AnonaTabelas;
 console.log('rota.test.js: tudo certo');
