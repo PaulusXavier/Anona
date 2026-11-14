@@ -950,53 +950,73 @@
 
   <!-- MAPA E ROTAS — busca de endereço como no Google Maps + rota a partir da posição do aparelho (anona-mapa.js; Leaflet em vendor/leaflet) -->
   <section id="mapaRotas" class="panel-tool p-5 mb-6" aria-labelledby="mapaTitulo">
-    <h2 class="eyebrow mb-1" id="mapaTitulo">
-      <span class="chip"><i data-lucide="map-pinned" class="w-4 h-4" style="color:var(--verde)"></i></span> Mapa e rotas
-    </h2>
-    <p class="text-xs text-slate-500 mb-3">Procure um endereço e veja o caminho até ele a partir da sua posição, como no Google Maps. Também dá para tocar no mapa para escolher o destino.</p>
+    <div class="mp-cab">
+      <h2 class="eyebrow mb-1" id="mapaTitulo">
+        <span class="chip"><i data-lucide="map-pinned" class="w-4 h-4" style="color:var(--verde)"></i></span> Mapa e rotas
+      </h2>
+      <button type="button" id="mapaTelaCheia" class="mp-btn mp-btn-sec mp-btn-peq" aria-pressed="false"><i data-lucide="maximize" class="w-3.5 h-3.5"></i> Tela cheia</button>
+    </div>
+    <p class="text-xs text-slate-500 mb-3 mp-intro">Procure um endereço e veja o caminho até ele a partir da sua posição, como no Google Maps. Também dá para tocar no mapa para escolher o destino. No celular, use <strong>Tela cheia</strong> para ver o mapa maior.</p>
     <div class="mp-grid">
       <div class="mp-painel">
-        <form id="mapaForm" class="mp-busca" role="search">
-          <label for="mapaBusca" class="sr-only">Endereço de destino</label>
-          <input id="mapaBusca" type="search" class="access-input" placeholder="Destino: rua, número, bairro" autocomplete="off" enterkeyhint="search">
-          <button type="submit" class="mp-btn" id="mapaBuscar"><i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar</button>
-        </form>
-        <ul id="mapaResultados" class="mp-resultados hidden"></ul>
+        <div class="mp-topo">
+          <form id="mapaForm" class="mp-busca" role="search">
+            <button type="button" id="mapaSairCheia" class="mp-voz mp-sair hidden" aria-label="Sair da tela cheia" title="Sair da tela cheia"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+            <label for="mapaBusca" class="sr-only">Endereço de destino</label>
+            <input id="mapaBusca" type="search" class="access-input" placeholder="Destino: digite ou fale o endereço" autocomplete="off" enterkeyhint="search">
+            <button type="button" id="mapaVoz" class="mp-voz" aria-label="Falar o endereço de destino" aria-pressed="false" title="Falar o endereço"><i data-lucide="mic" class="w-4 h-4"></i></button>
+            <button type="submit" class="mp-btn" id="mapaBuscar"><i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar</button>
+          </form>
+          <ul id="mapaResultados" class="mp-resultados hidden"></ul>
 
-        <div class="mp-linha">
-          <label for="mapaOrigem">Partir de</label>
-          <select id="mapaOrigem" class="mp-select">
-            <option value="pos">Minha posição</option>
-            <option value="partida">Rua Santo Agostinho, 193 — Centenário</option>
-            <option value="outro">Outro endereço…</option>
-          </select>
+          <div class="mp-modos" role="group" aria-label="Meio de transporte">
+            <button type="button" data-modo="carro" aria-pressed="true"><i data-lucide="car" class="w-3.5 h-3.5"></i> Carro/moto</button>
+            <button type="button" data-modo="pe" aria-pressed="false"><i data-lucide="footprints" class="w-3.5 h-3.5"></i> A pé</button>
+            <button type="button" data-modo="bike" aria-pressed="false"><i data-lucide="bike" class="w-3.5 h-3.5"></i> Bicicleta</button>
+          </div>
+
+          <div class="mp-mais">
+            <button type="button" id="mapaMais" class="mp-mais-btn hidden" aria-expanded="true"><i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i> Partida e posição <i data-lucide="chevron-down" class="w-3.5 h-3.5 mp-seta"></i></button>
+            <div class="mp-mais-corpo">
+              <div class="mp-linha">
+                <label for="mapaOrigem">Partir de</label>
+                <select id="mapaOrigem" class="mp-select">
+                  <option value="pos">Minha posição</option>
+                  <option value="partida">Rua Santo Agostinho, 193 — Centenário</option>
+                  <option value="outro">Outro endereço…</option>
+                </select>
+              </div>
+              <div id="mapaOrigemBox" class="mp-busca hidden">
+                <input id="mapaOrigemTexto" type="text" class="access-input" placeholder="Partida: digite ou fale o endereço" autocomplete="off" aria-label="Endereço de partida">
+                <button type="button" id="mapaVozOrigem" class="mp-voz" aria-label="Falar o endereço de partida" aria-pressed="false" title="Falar o endereço"><i data-lucide="mic" class="w-4 h-4"></i></button>
+              </div>
+              <div class="mp-acoes">
+                <button type="button" id="mapaMinhaPos" class="mp-btn mp-btn-sec"><i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i> Usar minha posição</button>
+                <button type="button" id="mapaLimpar" class="mp-btn mp-btn-sec"><i data-lucide="x" class="w-3.5 h-3.5"></i> Limpar</button>
+              </div>
+            </div>
+          </div>
+
+          <p id="mapaStatus" class="mp-status hidden" role="status" aria-live="polite"></p>
+          <div id="mapaDestinoBox" class="mp-destino hidden"><b>Destino:</b> <span id="mapaDestinoTexto"></span></div>
         </div>
-        <input id="mapaOrigemTexto" type="text" class="access-input hidden" placeholder="Endereço de partida (rua, número, bairro)" autocomplete="off">
 
-        <div class="mp-modos" role="group" aria-label="Meio de transporte">
-          <button type="button" data-modo="carro" aria-pressed="true"><i data-lucide="car" class="w-3.5 h-3.5"></i> Carro/moto</button>
-          <button type="button" data-modo="pe" aria-pressed="false"><i data-lucide="footprints" class="w-3.5 h-3.5"></i> A pé</button>
-          <button type="button" data-modo="bike" aria-pressed="false"><i data-lucide="bike" class="w-3.5 h-3.5"></i> Bicicleta</button>
+        <div class="mp-base">
+          <div id="mapaResumo" class="mp-resumo hidden">
+            <div class="mp-total"><strong id="mapaTempo"></strong> <span id="mapaDist"></span></div>
+            <p id="mapaDeAte" class="mp-deate"></p>
+            <div class="mp-acoes">
+              <a id="mapaGoogle" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir no Google Maps</a>
+              <button type="button" id="mapaPassosBtn" class="mp-btn mp-btn-sec mp-so-cheia" aria-expanded="false"><i data-lucide="list" class="w-3.5 h-3.5"></i> Passo a passo</button>
+            </div>
+            <ol id="mapaPassos" class="mp-passos"></ol>
+          </div>
+
+          <details class="tv-more mp-priv">
+            <summary>Privacidade</summary>
+            <p class="tv-hint">O que você digita (só o endereço) vai ao OpenStreetMap/Nominatim para achar o ponto no mapa, e as coordenadas da partida e do destino vão ao serviço de rotas (routing.openstreetmap.de). Sua posição só é lida quando você pede e não é guardada. Se usar o microfone, o <strong>áudio é enviado ao serviço de voz do próprio navegador</strong> (no Chrome, o do Google) para virar texto. <strong>Não diga nem digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca.</p>
+          </details>
         </div>
-        <div class="mp-acoes">
-          <button type="button" id="mapaMinhaPos" class="mp-btn mp-btn-sec"><i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i> Usar minha posição</button>
-          <button type="button" id="mapaLimpar" class="mp-btn mp-btn-sec"><i data-lucide="x" class="w-3.5 h-3.5"></i> Limpar</button>
-        </div>
-
-        <p id="mapaStatus" class="mp-status hidden" role="status" aria-live="polite"></p>
-
-        <div id="mapaDestinoBox" class="mp-destino hidden"><b>Destino:</b> <span id="mapaDestinoTexto"></span></div>
-        <div id="mapaResumo" class="mp-resumo hidden">
-          <div class="mp-total"><strong id="mapaTempo"></strong> <span id="mapaDist"></span></div>
-          <p id="mapaDeAte" class="mp-deate"></p>
-          <a id="mapaGoogle" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir no Google Maps</a>
-          <ol id="mapaPassos" class="mp-passos"></ol>
-        </div>
-
-        <details class="tv-more mp-priv">
-          <summary>Privacidade</summary>
-          <p class="tv-hint">O que você digita (só o endereço) vai ao OpenStreetMap/Nominatim para achar o ponto no mapa, e as coordenadas da partida e do destino vão ao serviço de rotas (routing.openstreetmap.de). Sua posição só é lida quando você pede e não é guardada. <strong>Não digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca.</p>
-        </details>
       </div>
       <div class="mp-mapa"><div id="mapaCanvas" role="application" aria-label="Mapa de Boa Vista"></div></div>
     </div>
