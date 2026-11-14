@@ -17,7 +17,7 @@
 //  - A resposta é sempre inserida com textContent (nunca innerHTML).
 //  - Ao sair da conta, a conversa é apagada, o painel e o balão somem, anexos e voz são descartados.
 //
-// Carregue DEPOIS de paulus.v1.js, anona-mascot.js e anona-presenca.js (todos com defer, nesta ordem).
+// Carregue DEPOIS de paulus.v1.js, anona-mascot.js, anona-presenca.js e anona-ia.js (todos com defer, nesta ordem).
 //
 // Cálculo de presença: frases sobre faltas/dias letivos são resolvidas localmente por anona-presenca.js (nada vai
 // ao Worker). Só o botão "Explicar com a IA" envia ao Paulus um texto montado pelo app com NÚMEROS (sem nome).
@@ -77,7 +77,10 @@
       if (h.getBoundingClientRect().top <= linha) acima = h; else if (!abaixo) abaixo = h;
     }
     var alvo = acima || abaixo;
-    return alvo ? (alvo.textContent || "").replace(/\s+/g, " ").trim().slice(0, 70) : "";
+    if (!alvo) return "";
+    var c = alvo.cloneNode(true), bs = c.querySelectorAll(".anona-ia-chip");
+    for (var k = 0; k < bs.length; k++) bs[k].parentNode.removeChild(bs[k]);
+    return (c.textContent || "").replace(/\s+/g, " ").trim().slice(0, 70);
   }
 
   function abaAtual() { return tituloDoCartao() || "anona"; }
@@ -516,7 +519,8 @@
       b.type = "button";
       b.addEventListener("click", function () {
         if (conversando) return;
-        if (a.tipo === "pergunta") enviarTexto(a.texto, "painel");
+        if (a.tipo === "fazer") { try { a.fn(); } catch (e) {} }
+        else if (a.tipo === "pergunta") enviarTexto(a.texto, "painel");
         else if (a.tipo === "ia") perguntar(a.prompt, { ia: true, mostrar: a.mostrar, origem: "painel" });
         else if (window.AnonaPresenca) window.AnonaPresenca.executar(a);
       });
@@ -530,7 +534,8 @@
     return (acoes || []).map(function (a) {
       return { rotulo: a.rotulo, fn: function () {
         if (conversando) return;
-        if (a.tipo === "pergunta") enviarTexto(a.texto, "balao");
+        if (a.tipo === "fazer") { try { a.fn(); } catch (e) {} }
+        else if (a.tipo === "pergunta") enviarTexto(a.texto, "balao");
         else if (a.tipo === "ia") perguntar(a.prompt, { ia: true, mostrar: a.mostrar, origem: "balao" });
         else if (window.AnonaPresenca) window.AnonaPresenca.executar(a);
       } };
@@ -544,6 +549,20 @@
     opcoes = opcoes || {};
     if (!preparar()) { falarMascote("O assistente não carregou. Recarregue a página."); return; }
     var doBalao = opcoes.origem === "balao";
+    // Comandos do app (prazos, mês, dia, pagamento, anotar, imprimir): resolvidos AQUI, sem IA e sem enviar nada.
+    if (!opcoes.ia && window.AnonaIA) {
+      var cmd = null;
+      try { cmd = window.AnonaIA.tratar(texto); } catch (e) { cmd = null; }
+      if (cmd) {
+        mensagem("eu", texto);
+        sugestoesEl.textContent = "";
+        var bc = mensagem("ele", cmd.texto);
+        barraLocal(bc, cmd.acoes);
+        if (doBalao) masc("falar", cmd.texto, { duracao: 60000, acoes: acoesLocaisParaBalao(cmd.acoes) });
+        masc("estado", "feliz", 1500);
+        return;
+      }
+    }
     // Conta de presença: resolvida AQUI, no aparelho, sem IA e sem enviar nada (o painel só mostra).
     if (!opcoes.ia && window.AnonaPresenca) {
       var local = null;
@@ -574,6 +593,13 @@
 
     var chamada = { aba: abaAtual(), sinal: aborto ? aborto.signal : undefined };
     if (anexos.length && !opcoes.ia && ehPedidoDePdf(texto)) chamada.arquivos = anexos.slice();
+    if (window.AnonaIA) {
+      try {
+        var bp = window.AnonaIA.baseParaIA(texto), pn = window.AnonaIA.panorama();
+        if (bp && bp.length) chamada.baseApp = bp;
+        if (pn) chamada.panorama = pn + (tituloDoCartao() ? " Cartão em destaque na tela: " + tituloDoCartao() + "." : "");
+      } catch (e) {}
+    }
     chamada.onToken = function (pedaco, tudo) {
       bolha.textContent = tudo; // textContent, nunca innerHTML
       status.textContent = "escrevendo…";
