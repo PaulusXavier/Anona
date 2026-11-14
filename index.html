@@ -956,7 +956,7 @@
       </h2>
       <button type="button" id="mapaTelaCheia" class="mp-btn mp-btn-sec mp-btn-peq" aria-pressed="false"><i data-lucide="maximize" class="w-3.5 h-3.5"></i> Tela cheia</button>
     </div>
-    <p class="text-xs text-slate-500 mb-3 mp-intro">Procure um endereço e veja o caminho até ele a partir da sua posição, como no Google Maps. Também dá para tocar no mapa para escolher o destino. No celular, use <strong>Tela cheia</strong> para ver o mapa maior.</p>
+    <p class="text-xs text-slate-500 mb-3 mp-intro">Procure um endereço e veja o caminho até ele a partir da sua posição, como no Google Maps. Também dá para tocar no mapa para escolher o destino. No celular, use <strong>Tela cheia</strong> para ver o mapa maior. <strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas passam a funcionar sem conexão.</p>
     <div class="mp-grid">
       <div class="mp-painel">
         <div class="mp-topo">
@@ -976,7 +976,7 @@
           </div>
 
           <div class="mp-mais">
-            <button type="button" id="mapaMais" class="mp-mais-btn hidden" aria-expanded="true"><i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i> Partida e posição <i data-lucide="chevron-down" class="w-3.5 h-3.5 mp-seta"></i></button>
+            <button type="button" id="mapaMais" class="mp-mais-btn hidden" aria-expanded="true"><i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i> Partida, posição e mapa offline <i data-lucide="chevron-down" class="w-3.5 h-3.5 mp-seta"></i></button>
             <div class="mp-mais-corpo">
               <div class="mp-linha">
                 <label for="mapaOrigem">Partir de</label>
@@ -993,6 +993,16 @@
               <div class="mp-acoes">
                 <button type="button" id="mapaMinhaPos" class="mp-btn mp-btn-sec"><i data-lucide="locate-fixed" class="w-3.5 h-3.5"></i> Usar minha posição</button>
                 <button type="button" id="mapaLimpar" class="mp-btn mp-btn-sec"><i data-lucide="x" class="w-3.5 h-3.5"></i> Limpar</button>
+              </div>
+              <div id="mapaOffBox" class="mp-off" role="group" aria-label="Mapa offline">
+                <p id="mapaOffTexto" class="mp-off-texto">Verificando o mapa offline…</p>
+                <progress id="mapaOffProg" class="mp-off-prog hidden" max="100" value="0" aria-label="Andamento do download do mapa offline"></progress>
+                <div class="mp-acoes">
+                  <button type="button" id="mapaOffBaixar" class="mp-btn mp-btn-sec">Baixar mapa offline</button>
+                  <button type="button" id="mapaOffCancelar" class="mp-btn mp-btn-sec hidden">Cancelar download</button>
+                  <button type="button" id="mapaOffApagar" class="mp-btn mp-btn-sec hidden">Apagar</button>
+                </div>
+                <label id="mapaOffSempreBox" class="mp-off-sempre hidden"><input type="checkbox" id="mapaOffSempre"> Usar sempre o mapa offline (não gasta internet)</label>
               </div>
             </div>
           </div>
@@ -1014,7 +1024,7 @@
 
           <details class="tv-more mp-priv">
             <summary>Privacidade</summary>
-            <p class="tv-hint">O que você digita (só o endereço) vai ao OpenStreetMap/Nominatim para achar o ponto no mapa, e as coordenadas da partida e do destino vão ao serviço de rotas (routing.openstreetmap.de). Sua posição só é lida quando você pede e não é guardada. Se usar o microfone, o <strong>áudio é enviado ao serviço de voz do próprio navegador</strong> (no Chrome, o do Google) para virar texto. <strong>Não diga nem digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca.</p>
+            <p class="tv-hint">O que você digita (só o endereço) vai ao OpenStreetMap/Nominatim para achar o ponto no mapa, e as coordenadas da partida e do destino vão ao serviço de rotas (routing.openstreetmap.de). Sua posição só é lida quando você pede e não é guardada. Se usar o microfone, o <strong>áudio é enviado ao serviço de voz do próprio navegador</strong> (no Chrome, o do Google) para virar texto. <strong>Não diga nem digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca. <strong>Mapa offline:</strong> ao baixar, o app pede ao servidor público Overpass (OpenStreetMap) as ruas, bairros e locais da área de Boa Vista — nenhum dado seu vai junto — e guarda tudo só neste aparelho. Com o mapa offline em uso, nada do que você digita ou marca sai do aparelho.</p>
           </details>
         </div>
       </div>
@@ -7053,6 +7063,7 @@ if ('serviceWorker' in navigator) {
      atrás de qualquer modal. Carregado por último e sem bloquear o resto
      da página (defer). -->
 <script src="anona-rota.js" defer></script>
+<script src="anona-mapa-offline.js" defer></script>
 <script src="anona-mapa.js" defer></script>
 <script src="anona-tabelas.js" defer></script>
 <script src="anona-mascot.js" defer></script>
