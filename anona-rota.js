@@ -155,10 +155,19 @@
   }
 
   // Remove do texto o que a fonte padrão do PDF (WinAnsi) não sabe desenhar.
+  // Texto seguro para o pdf-lib (fonte Helvetica, alfabeto WinAnsi): qualquer caractere fora dele DERRUBA o drawText
+  // ("WinAnsi cannot encode"). Antes: deixava passar U+007F–U+009F (controles, não codificáveis), não trocava setas/✓
+  // por texto e descartava "…". Agora usa a mesma regra do jsPDF (AnonaTabelas.textoParaPdf) quando o módulo já carregou;
+  // senão, o filtro local. Em qualquer caso: sem quebra de linha/tabulação (pdf-lib também não aceita) e sem controles.
   function textoSeguroPdf(s) {
-    return Array.from(String(s || '').normalize('NFC')).map(c => {
-      const k = c.charCodeAt(0);
-      return (k >= 32 && k <= 255) || [8211, 8212, 8216, 8217, 8220, 8221, 8226].includes(k) ? c : '';
+    let t = String(s == null ? '' : s);
+    const T = root.AnonaTabelas;
+    if (T && typeof T.textoParaPdf === 'function') t = T.textoParaPdf(t);
+    return Array.from(t.normalize('NFC')).map(c => {
+      const k = c.codePointAt(0);
+      if (k === 9 || k === 10 || k === 13) return ' ';
+      if (k === 0xA0) return ' ';
+      return (k >= 32 && k < 127) || (k >= 0xA1 && k <= 255) || [8211, 8212, 8216, 8217, 8220, 8221, 8226, 8230].includes(k) ? c : '';
     }).join('');
   }
 
