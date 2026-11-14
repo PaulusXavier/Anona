@@ -79,9 +79,9 @@
     camadaTiles.on('tileload', (e) => { if (e.tile) e.tile.style.visibility = ''; });
     camadaTiles.on('tileerror', (e) => {
       if (e.tile) e.tile.style.visibility = 'hidden';          // bloco que falhou fica transparente: as ruas offline aparecem por baixo
-      if (!motor || vetorAuto) return;
+      if (vetorAuto) return;
       if (++errosTile === 1) setTimeout(() => { errosTile = 0; }, 8000);
-      if (errosTile >= 3) { vetorAuto = true; aplicarModoMapa(); ofertaUI(); }
+      if (motor && errosTile >= 3) { vetorAuto = true; aplicarModoMapa(); ofertaUI(); }
     });
     aplicarModoMapa();
     mapa.on('click', (e) => escolherNoMapa(e.latlng.lat, e.latlng.lng));
@@ -652,7 +652,12 @@
     window.addEventListener('offline', () => { if (motor) { vetorAuto = true; aplicarModoMapa(); } ofertaUI(); });
     // carrega o mapa guardado quando o navegador estiver livre (montar o índice leva uma fração de segundo)
     const iniciar = () => AMO.carregar()
-      .then((p) => { if (p) { try { motor = AMO.criarMotor(p); } catch (e) { motor = null; } } aplicarModoMapa(); ofertaUI(); })
+      .then((p) => {
+        if (p) { try { motor = AMO.criarMotor(p); } catch (e) { motor = null; } }
+        // app aberto já sem internet: os blocos falharam antes de o mapa guardado carregar → usa as ruas offline desde já
+        if (motor && (navigator.onLine === false || errosTile >= 3)) vetorAuto = true;
+        aplicarModoMapa(); ofertaUI();
+      })
       .catch(() => ofertaUI());
     (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 3000 }) : (f) => setTimeout(f, 600))(iniciar);
   }
