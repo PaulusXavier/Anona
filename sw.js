@@ -12,12 +12,12 @@
  *  - Firestore/Auth NÃO passam por aqui (dados e login sempre direto na rede).
  * Para forçar todo mundo a baixar tudo de novo, aumente o número de CACHE_NAME.
  */
-const CACHE_NAME = 'anona-app-shell-v45';
+const CACHE_NAME = 'anona-app-shell-v46';
 const PREFIXOS_ANTIGOS = ['anona-app-shell-', 'pbf-app-shell-'];
 
 const ARQUIVOS_LOCAIS = [
   './', 'index.html', 'styles.css', 'login.css', 'manifest.json',
-  'anona-tabelas.js', 'anona-rota.js', 'anona-mapa.js', 'anona-mascot.js', 'anona-presenca.js', 'anona-ia.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
+  'anona-tabelas.js', 'anona-rota.js', 'anona-mapa.js', 'anona-mapa-offline.js', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'anona-mascot.js', 'anona-presenca.js', 'anona-ia.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'
 ];
 const BIBLIOTECAS = [
@@ -35,6 +35,12 @@ const BIBLIOTECAS = [
 ];
 // Hosts de bibliotecas/fontes que podem ser guardados no cache durante o uso.
 const HOSTS_CACHEAVEIS = ['unpkg.com', 'cdn.jsdelivr.net', 'cdn.tailwindcss.com', 'cdnjs.cloudflare.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+
+// Blocos do mapa (OpenStreetMap) que o usuário já viu ficam guardados (até MAX_TILES), para reaparecerem sem internet.
+// Só guarda o que foi visto na tela — não baixa blocos em massa (o OpenStreetMap proíbe). O mapa OFFLINE de verdade (ruas) fica no IndexedDB.
+const CACHE_TILES = 'anona-mapa-tiles-v1';
+const MAX_TILES = 700;
+const ehTile = (h) => h === 'tile.openstreetmap.org' || /^[abc]\.tile\.openstreetmap\.org$/.test(h);
 
 const respostaBoa = (res) => !!res && (res.status === 200 || res.type === 'opaque');
 
@@ -98,10 +104,27 @@ async function guardadoPrimeiro(req) {
   return atualizar;
 }
 
+async function tilePrimeiro(req) {
+  const cache = await caches.open(CACHE_TILES);
+  const guardado = await cache.match(req.url);
+  if (guardado) return guardado;
+  // pedido CORS (não "opaco"): resposta opaca é contada como ~7 MB na cota do navegador, mesmo sendo um bloco de poucos KB
+  const res = await fetch(req.url, { mode: 'cors', credentials: 'omit' });
+  if (res && res.status === 200) {
+    try {
+      await cache.put(req.url, res.clone());
+      const chaves = await cache.keys();
+      if (chaves.length > MAX_TILES) await Promise.all(chaves.slice(0, chaves.length - MAX_TILES + 50).map((k) => cache.delete(k)));
+    } catch (e) { /* cota cheia: segue sem guardar */ }
+  }
+  return res;
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  if (ehTile(url.hostname)) { event.respondWith(tilePrimeiro(req).catch(() => Response.error())); return; }
   const mesmaOrigem = url.origin === self.location.origin;
   if (!mesmaOrigem && !HOSTS_CACHEAVEIS.includes(url.hostname)) return;     // Firestore, Auth etc.: direto na rede
   if (mesmaOrigem && req.mode === 'navigate') { event.respondWith(redePrimeiro(req, 'index.html')); return; }
