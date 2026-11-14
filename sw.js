@@ -12,12 +12,12 @@
  *  - Firestore/Auth/Gemini NÃO passam por aqui (dados e login sempre direto na rede).
  * Para forçar todo mundo a baixar tudo de novo, aumente o número de CACHE_NAME.
  */
-const CACHE_NAME = 'anona-app-shell-v40';
+const CACHE_NAME = 'anona-app-shell-v41';
 const PREFIXOS_ANTIGOS = ['anona-app-shell-', 'pbf-app-shell-'];
 
 const ARQUIVOS_LOCAIS = [
   './', 'index.html', 'styles.css', 'login.css', 'manifest.json',
-  'anona-tabelas.js', 'anona-rota.js', 'anona-mascot.js', 'anona-presenca.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
+  'anona-tabelas.js', 'anona-rota.js', 'anona-mascot.js', 'anona-presenca.js', 'anona-ia.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'
 ];
 const BIBLIOTECAS = [
