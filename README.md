@@ -19,6 +19,7 @@ Não precisa de servidor: você hospeda no próprio GitHub (GitHub Pages) e o Fi
 index.html                    -> o app inteiro (calendário + notas + login)
 manifest.json                  -> permite "instalar" o app no celular/computador
 sw.js                           -> deixa o app funcionando offline (guarda o "esqueleto" do app)
+anona-mapa.js / anona-mapa-offline.js -> "Mapa e rotas" (online e offline). Testes: `node tests/mapa-offline.test.js`
 anona-mascot.js                 -> mascote do app (cartãozinho que acena e dá dicas). Conhece o Bolsa Família: ~30 fatos em 6 assuntos (valores, entrada, pagamento, escola/saúde, descumprimento, recurso), responde perguntas offline (`AnonaMascot.responder`) e avisa o que está valendo no mês. Testes: `node tests/mascot.test.js`
 login.css                        -> tela de entrada (login): autocontida, sem Tailwind/Lucide; a régua de pagamento do mês vem do calendário do próprio app (CALENDARIOS_POR_ANO)
 anona-tabelas.js                -> cálculos e tabelas: Panorama do ano da calculadora, estilo padrão das planilhas .xlsx (com fórmulas), exportar .xlsx/.csv e copiar tabela. Testes: `node tests/tabelas.test.js`
