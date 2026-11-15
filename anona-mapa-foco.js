@@ -13,8 +13,8 @@
       pertence: /(?:\b13\b|treze|xiii)\s*(?:de\s+)?(?:setembro|set\b)/ },
     { id: 'araceli', rotulo: 'Araceli Souto Maior', curto: 'Araceli',
       variantes: ['Araceli Souto Maior', 'Aracelis Souto Maior', 'Professora Araceli Souto Maior', 'Araceli'],
-      achar: /(?:^|[\s,.-])(?:bairro\s+)?(?:(?:profa?|professora)\.?\s+)?arac[ei]ll?[ie]s?(?:\s+(?:s\.?|souto)(?:\s+(?:m\.?|maior))?)?(?![a-z])/,
-      pertence: /arac[ei]ll?[ie]s?/ }
+      achar: /(?:^|[\s,.-])(?:bairro\s+)?(?:(?:profa?|professora)\.?\s+)?arac[eiy]ll?[iey]s?(?:\s+(?:s\.?|souto)(?:\s+(?:m\.?|maior))?)?(?![a-z])/,
+      pertence: /arac[eiy]ll?[iey]s?/ }
   ];
 
   const TIPO_VIA = /(?:rua|r|av|avenida|tv|travessa|pca|praca|alameda|al|estrada|rodovia|beco|vila)\.?\s*$/;
