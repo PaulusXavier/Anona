@@ -161,7 +161,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
           if (rs.length) break;
         }
       }
-      if (!rs.length) rs = await nominatim('/search', Object.assign({ bounded: 1 }, base));
+      if (!rs.length && !(f && f.citado)) rs = await nominatim('/search', Object.assign({ bounded: 1 }, base));
       if (!rs.length) rs = await nominatim('/search', base);
       if (!rs.length) {
         const sn = U.semNumero(f ? (f.resto || q) : q);
@@ -766,6 +766,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     sec.querySelector('.mp-mais').classList.remove('is-recolhido');
     if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) { /* já saiu */ } }
     viaApi = false; ajustarMapa();
+    if (document.activeElement && document.activeElement.blur && sec.contains(document.activeElement)) document.activeElement.blur();   // fecha o teclado ao voltar
     try { sec.scrollIntoView({ block: 'start' }); } catch (e) { /* sem rolagem automática */ }
   }
   function sairCheia() {
@@ -780,7 +781,9 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   $('mapaPassosBtn').addEventListener('click', () => { const f = $('mapaResumo').classList.toggle('is-passos-fechados'); $('mapaPassosBtn').setAttribute('aria-expanded', f ? 'false' : 'true'); });
   // celular, fora da tela cheia: o mapa pequeno prendia a rolagem da página — tocar nele (ou na busca) abre a tela cheia
   $('mapaToqueAbrir').addEventListener('click', () => { if (!cheia) entrarCheia(); });
-  $('mapaBusca').addEventListener('focus', () => { if (!cheia && MOBILE()) { entrarCheia(); setTimeout(() => $('mapaBusca').focus(), 0); } });
+  const abrirPelaBusca = () => { if (!cheia && MOBILE()) { entrarCheia(); setTimeout(() => $('mapaBusca').focus(), 0); } };
+  $('mapaBusca').addEventListener('focus', abrirPelaBusca);
+  $('mapaBusca').addEventListener('click', abrirPelaBusca);   // o campo pode já estar focado ao voltar da tela cheia
   const ajuda = $('mapaAjuda'); if (ajuda && !MOBILE()) ajuda.open = true;   // no computador a ajuda já vem aberta
   window.addEventListener('popstate', fecharCheia);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cheia) sairCheia(); });
