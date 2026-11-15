@@ -403,5 +403,18 @@ Seção "Mapa e rotas" (atalho "Mapa" no cabeçalho): digite um endereço, e o a
   - **traça a rota** (carro/moto, a pé, bicicleta) com tempo, distância e passo a passo, respeitando mão única, rotatórias e vias particulares. A posição (GPS) já funciona sem internet.
   - Com internet, tudo continua como antes (Nominatim + OSRM); o mapa offline só entra se a rede falhar ou se você marcar "usar sempre". As coordenadas da partida padrão (Rua Santo Agostinho, 193) ficam guardadas na primeira busca online.
   - **Limites:** sem trânsito nem obras; proibições de conversão não são consideradas (só mão única); o bairro de cada rua é o do ponto de referência mais próximo; se o número da casa não existir no OpenStreetMap, o ponto é aproximado ou o meio da rua (a tela avisa); fora da área baixada (`BBOX` em `anona-mapa-offline.js`) não há rota offline. A qualidade depende do OpenStreetMap em Boa Vista. Use *Atualizar mapa offline* de vez em quando.
+  - **Melhorias do mapa offline (v2):**
+    - *Rotas alternativas* também offline (até 2 além da principal, num trecho só; as ruas já usadas ficam "mais caras" e a busca roda de novo). O tempo estimado agora inclui as **curvas** (esquerda custa mais que direita; retorno mais ainda).
+    - *Pontos em via solta:* se o ponto cai num pedaço de rua que não liga ao resto da rede, o app usa a via ligada mais próxima em vez de dizer "sem rota".
+    - *Busca por cruzamento:* "Rua A com Rua B", "Rua A esquina com Rua B", "Rua A x Rua B" ou "Rua A / Rua B" (aceita o bairro no fim). Ruas que não se cruzam não geram resultado inventado.
+    - *Mais locais:* saúde, escolas, CRAS/prefeitura, mercados, praças, hotéis, rodoviária, postos. Aparecem no mapa (zoom 16+; nome em 17+; **número das casas** em 18+) e, ao tocar num local, o endereço mostra o nome dele.
+    - *Download que retoma:* cada pedaço baixado é guardado por 24 h; se a conexão cair ou o servidor do OpenStreetMap estiver ocupado, o botão vira **Continuar download** e só baixa o que faltou. Há 3 servidores e mais tentativas, com espera crescente.
+    - *Zona rural (opcional):* marque "Incluir estradas e povoados do entorno" para baixar também as estradas principais e povoados numa moldura maior (lat 2,45–3,10 / lng −61,05 a −60,35). O download fica maior.
+    - *Ordem das paradas pelo tempo real:* o botão **Otimizar** passa a usar o mapa offline (mão única e curvas) em vez da linha reta, com solução exata até 9 paradas; fora da área ou sem o mapa, continua pela linha reta.
+    - *Busca que entende o som:* "chavier" acha "Xavier", "kassio" acha "Cássio" (voz e erro de ortografia); "Rua Sete de Setembro" = "Rua 7 de Setembro" (de dois a dez); palavras como "quero" e "por favor" são ignoradas.
+    - *Perto de você:* ruas de mesmo nome em lugares diferentes são resolvidas pela mais próxima da sua posição (ou da partida).
+    - O painel mostra o tamanho do mapa no aparelho e avisa quando ele tem mais de 3 meses.
+    - Dados guardados corrompidos ou de formato antigo são ignorados em vez de travar o app.
+    - Corrigido: o ícone `icon-512.png` estava com o nome `icon-512.png.png`, então o manifesto e o cache do service worker não o encontravam (cache subiu para `v50`).
   - Código: `anona-mapa-offline.js` (download, índice, busca, rota A*, passo a passo — sem DOM) e, em `anona-mapa.js`, a camada de desenho e o painel. Testes: `node tests/mapa-offline.test.js`.
 - Blocos do mapa online que você já viu ficam no cache (até 700), mas **não** há download em massa de blocos (o OpenStreetMap proíbe); por isso o mapa offline é desenhado a partir das ruas baixadas.
