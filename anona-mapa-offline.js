@@ -7,14 +7,23 @@
  *   - traça a rota (carro/moto, a pé, bicicleta) com passo a passo, mão única e rotatórias (A* no grafo das ruas);
  *   - entrega os traçados das ruas para anona-mapa.js desenhar o mapa em canvas.
  * Este arquivo só tem lógica (sem DOM): dá para testar no Node: node tests/mapa-offline.test.js
+ *   - rotas ALTERNATIVAS (penaliza as ruas já usadas e busca outro caminho), tempo de curva (esquerda custa mais que direita)
+ *     e "ilhas": ponto caído numa via solta é movido para a rede ligada mais próxima;
+ *   - busca por CRUZAMENTO ("Rua A com Rua B"), mais categorias de locais (saúde, escola, CRAS, mercado, praça...) e povoados;
+ *   - download que RETOMA de onde parou (pedaços já baixados ficam guardados por 24 h) e, opcionalmente, estradas do entorno (zona rural).
+ *   - ORDEM DAS PARADAS pelo tempo real de viagem (mão única, curvas), não pela linha reta: motor.ordenar();
+ *   - busca tolerante à FONÉTICA (voz/digitação: "xavier" = "chavier", "jose" = "zose"), números por extenso ("sete de setembro" = "7 de setembro")
+ *     e preferência por resultados perto de uma posição de referência.
  * Limites: sem trânsito/obras; proibições de conversão não são consideradas (só mão única).
  */
 (function (raiz) {
   'use strict';
 
   const BBOX = { sul: 2.74, oeste: -60.76, norte: 2.90, leste: -60.58 };      // Boa Vista e entorno
+  const AMPLIADA = { sul: 2.45, oeste: -61.05, norte: 3.10, leste: -60.35 };  // moldura em volta: estradas e povoados da zona rural (opcional)
   const CIDADE = 'Boa Vista';
-  const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+  const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  const VALIDADE_PARCIAL = 24 * 3600 * 1000;                                  // pedaços do download interrompido valem por 24 h
   const PERFIS = { carro: { bit: 1, vmax: 22.2 }, pe: { bit: 2, vmax: 1.4 }, bike: { bit: 4, vmax: 4.8 } };
   const KY = 111320, RAD = Math.PI / 180, CEL = 0.002;                        // metros por grau de latitude; célula da grade (graus)
 
@@ -71,10 +80,11 @@
   const ABREV = { av: 'avenida', avd: 'avenida', r: 'rua', tv: 'travessa', trav: 'travessa', pc: 'praca', pca: 'praca', al: 'alameda', rod: 'rodovia', est: 'estrada',
     pres: 'presidente', dr: 'doutor', dra: 'doutora', prof: 'professor', profa: 'professora', cel: 'coronel', gal: 'general', cap: 'capitao', ten: 'tenente',
     sen: 'senador', dep: 'deputado', eng: 'engenheiro', sta: 'santa', sto: 'santo', gov: 'governador', vereador: 'vereador', ver: 'vereador' };
-  const IGNORAR = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'ir', 'vou', 'para', 'pra', 'ate', 'numero', 'n', 'bairro', 'cep', 'levar', 'leve', 'me', 'navegar', 'destino', 'endereco', 'rota', 'roraima', 'rr', 'brasil', 'no', 'na', 'em']);
+  const NUMEXT = { dois: '2', tres: '3', quatro: '4', cinco: '5', seis: '6', sete: '7', oito: '8', nove: '9', dez: '10' };   // "Rua Sete de Setembro" = "Rua 7 de Setembro"
+  const IGNORAR = new Set(['quero', 'gostaria', 'favor', 'por', 'de', 'da', 'do', 'das', 'dos', 'e', 'ir', 'vou', 'para', 'pra', 'ate', 'numero', 'n', 'bairro', 'cep', 'levar', 'leve', 'me', 'navegar', 'destino', 'endereco', 'rota', 'roraima', 'rr', 'brasil', 'no', 'na', 'em']);
   const SOFT = new Set(['boa', 'vista']);
   const GENERICAS = new Set(['rua', 'avenida', 'travessa', 'alameda', 'praca', 'estrada', 'rodovia', 'beco', 'vila', 'via', 'largo', 'passagem']);
-  const tokens = (s) => { const t = norm(s).split(' ').filter(Boolean).map(x => ABREV[x] || x); const u = t.filter(x => !IGNORAR.has(x)); return u.length ? u : t; };
+  const tokens = (s) => { const t = norm(s).split(' ').filter(Boolean).map(x => ABREV[x] || NUMEXT[x] || x); const u = t.filter(x => !IGNORAR.has(x)); return u.length ? u : t; };
   const ehNum = (t) => /^\d+$/.test(t);
   const requerido = (t) => !GENERICAS.has(t) && !SOFT.has(t);
   function lev(a, b) {
@@ -83,12 +93,37 @@
     for (let i = 1; i <= m; i++) { q[0] = i; for (let j = 1; j <= n; j++) q[j] = Math.min(p[j] + 1, q[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); [p, q] = [q, p]; }
     return p[n];
   }
+  // Forma "de som" (português): ch/sh→x, ph→f, c/qu→k, ce/ci→s, ge/gi→j, ss/z→s, y→i, w→u, h mudo, letras dobradas viram uma.
+  const _fon = new Map();
+  function fon(t) {
+    let r = _fon.get(t); if (r !== undefined) return r;
+    r = t.replace(/ph/g, 'f').replace(/ch|sh/g, 'x').replace(/qu(?=[ei])/g, 'k').replace(/gu(?=[ei])/g, 'g').replace(/g(?=[ei])/g, 'j')
+      .replace(/c(?=[ei])/g, 's').replace(/c/g, 'k').replace(/z/g, 's').replace(/y/g, 'i').replace(/w/g, 'u').replace(/^h/, '').replace(/(.)\1+/g, '$1');
+    if (_fon.size > 20000) _fon.clear();
+    _fon.set(t, r); return r;
+  }
   function casaToken(q, s) {
     if (q === s) return true;
     if (ehNum(q) || ehNum(s)) return false;
     if (q.length >= 3 && s.startsWith(q)) return true;
     const lim = q.length >= 9 ? 2 : q.length >= 5 ? 1 : 0;
-    return lim > 0 && Math.abs(q.length - s.length) <= lim && lev(q, s) <= lim;
+    if (lim > 0 && Math.abs(q.length - s.length) <= lim && lev(q, s) <= lim) return true;
+    if (q.length >= 4 && s.length >= 4) {                      // soa igual? (erro de voz/ortografia que a distância de edição não pega)
+      const fq = fon(q), fs = fon(s);
+      if (fq === fs) return true;
+      if (lim > 0 && Math.abs(fq.length - fs.length) <= lim && lev(fq, fs) <= lim) return true;
+    }
+    return false;
+  }
+
+  // categoria do local (para o desenho no mapa): s = saúde, e = escola/biblioteca, g = governo/assistência (CRAS...), c = comércio, o = outros
+  function catLocal(t) {
+    const a = t.amenity || '';
+    if (t.healthcare || /^(clinic|hospital|doctors|dentist|pharmacy)$/.test(a)) return 's';
+    if (/^(school|kindergarten|college|university|library)$/.test(a)) return 'e';
+    if (/^(social_facility|townhall|community_centre|courthouse|police|fire_station)$/.test(a) || t.office === 'government') return 'g';
+    if (t.shop || /^(bank|marketplace|fuel|restaurant)$/.test(a)) return 'c';
+    return 'o';
   }
 
   // ---------- construtor do pacote (a partir de respostas da Overpass) ----------
@@ -120,15 +155,15 @@
         const la = e.lat !== undefined ? e.lat : e.center && e.center.lat, lo = e.lon !== undefined ? e.lon : e.center && e.center.lon;
         if (!isFinite(la) || !isFinite(lo)) continue;
         const t = e.tags;
-        if (/^(suburb|neighbourhood|quarter|city_district)$/.test(t.place || '') && t.name) {
+        if (/^(suburb|neighbourhood|quarter|city_district|village|hamlet|town|locality)$/.test(t.place || '') && t.name) {
           const nk = norm(t.name); if (!nomesBairro.has(nk)) { nomesBairro.add(nk); bairros.push({ n: t.name, lat: la, lng: lo }); }
         }
         if (t['addr:street'] && t['addr:housenumber']) enderecos.push({ r: t['addr:street'], n: String(t['addr:housenumber']), lat: la, lng: lo });
-        if (t.name && (t.amenity || t.healthcare) && !t.place) locais.push({ n: t.name, lat: la, lng: lo });
+        if (t.name && (t.amenity || t.healthcare || t.shop || t.leisure || t.tourism || t.office === 'government') && !t.place) locais.push({ n: t.name, lat: la, lng: lo, k: catLocal(t) });
       }
     }
-    function finalizar() {
-      return { v: 1, quando: Date.now(), nlat: Float64Array.from(nlat), nlng: Float64Array.from(nlng),
+    function finalizar(opc) {
+      return { v: 2, ampliada: !!(opc && opc.ampliada), quando: Date.now(), nlat: Float64Array.from(nlat), nlng: Float64Array.from(nlng),
         segs: { a: Int32Array.from(sa), b: Int32Array.from(sb), w: Int32Array.from(sw) }, ruas, bairros, enderecos, locais };
     }
     return { addVias, addExtras, finalizar };
@@ -137,7 +172,7 @@
   // ---------- motor ----------
   function criarMotor(p) {
     const nlat = p.nlat, nlng = p.nlng, sa = p.segs.a, sb = p.segs.b, sw = p.segs.w, ways = p.ruas, S = sa.length, N = nlat.length;
-    const lugares = p.bairros || [], ends = p.enderecos || [], locs = p.locais || [];
+    const lugares = p.bairros || [], ends = p.enderecos || [], locs = p.locais || [], AREA = p.ampliada ? AMPLIADA : BBOX;
     const slen = new Float32Array(S);
     for (let s = 0; s < S; s++) slen[s] = dist(nlat[sa[s]], nlng[sa[s]], nlat[sb[s]], nlng[sb[s]]);
 
@@ -158,7 +193,7 @@
       return out;
     }
     // ponto mais próximo de uma via que aceite algum dos meios em "bits"
-    function encaixar(bits, lat, lng, maxM) {
+    function encaixar(bits, lat, lng, maxM, filtro) {
       const k = kx(lat); let melhor = null; const y0 = cy(lat), x0 = cx(lng);
       for (let r = 0; r <= 4; r++) {
         for (let y = y0 - r; y <= y0 + r; y++) for (let x = x0 - r; x <= x0 + r; x++) {
@@ -166,6 +201,7 @@
           const l = grade.get(chave(y, x)); if (!l) continue;
           for (const s of l) {
             if (!(ways[sw[s]].ac & bits)) continue;
+            if (filtro && !filtro(s)) continue;
             const ax = (nlng[sa[s]] - lng) * k, ay = (nlat[sa[s]] - lat) * KY, bx = (nlng[sb[s]] - lng) * k - ax, by = (nlat[sb[s]] - lat) * KY - ay;
             const q = bx * bx + by * by; let t = q > 0 ? -(ax * bx + ay * by) / q : 0; t = Math.max(0, Math.min(1, t));
             const d = Math.hypot(ax + t * bx, ay + t * by);
@@ -176,7 +212,7 @@
       }
       return melhor && melhor.d <= maxM ? melhor : null;
     }
-    const dentro = (la, lo) => la >= BBOX.sul - 0.01 && la <= BBOX.norte + 0.01 && lo >= BBOX.oeste - 0.01 && lo <= BBOX.leste + 0.01;
+    const dentro = (la, lo) => la >= AREA.sul - 0.01 && la <= AREA.norte + 0.01 && lo >= AREA.oeste - 0.01 && lo <= AREA.leste + 0.01;
 
     // ---------- grafo por meio de transporte ----------
     const G = {};
@@ -193,11 +229,38 @@
       return (G[perfil] = { off, eTo, eSeg, eFrom, eFr, eCusto });
     }
 
-    function rotear(perfil, o, d) {
+    // Partes soltas da rede: pedaço de rua que não liga ao resto (para aquele meio de transporte).
+    const CP = {};
+    function componentes(perfil) {
+      if (CP[perfil]) return CP[perfil];
+      const bit = PERFIS[perfil].bit, pai = new Int32Array(N), tem = new Uint8Array(N);
+      for (let i = 0; i < N; i++) pai[i] = i;
+      const raiz = (x) => { while (pai[x] !== x) { pai[x] = pai[pai[x]]; x = pai[x]; } return x; };
+      for (let s = 0; s < S; s++) if (ways[sw[s]].ac & bit) { tem[sa[s]] = tem[sb[s]] = 1; const a = raiz(sa[s]), b = raiz(sb[s]); if (a !== b) pai[a] = b; }
+      const cont = new Int32Array(N); let principal = -1, maior = 0;
+      for (let i = 0; i < N; i++) if (tem[i]) { const r = raiz(i); if (++cont[r] > maior) { maior = cont[r]; principal = r; } }
+      return (CP[perfil] = { raiz, principal });
+    }
+    // Segundos perdidos numa curva em cruzamento (3 ou mais saídas): à esquerda custa mais (trânsito pela direita); retorno custa mais ainda.
+    const GIRO = { carro: { dir: 3, esq: 6, ret: 15 }, bike: { dir: 1.5, esq: 3, ret: 8 }, pe: { dir: 0, esq: 0, ret: 0 } };
+    function penalGiro(perfil, saidasNo, ang) {
+      if (saidasNo < 3) return 0;
+      const m = Math.abs(ang); if (m < 30) return 0;
+      const g = GIRO[perfil] || GIRO.carro;
+      return m >= 150 ? g.ret : ang > 0 ? g.dir : g.esq;
+    }
+
+    function rotearUnico(perfil, o, d, pen) {
       if (!PERFIS[perfil]) perfil = 'carro';
       if (!dentro(o.lat, o.lng) || !dentro(d.lat, d.lng)) return { erro: 'longe' };
-      const bit = PERFIS[perfil].bit, so = encaixar(bit, o.lat, o.lng, 600), sd = encaixar(bit, d.lat, d.lng, 600);
+      const bit = PERFIS[perfil].bit; let so = encaixar(bit, o.lat, o.lng, 600), sd = encaixar(bit, d.lat, d.lng, 600);
       if (!so || !sd) return { erro: 'longe' };
+      const cp = componentes(perfil);      // ponto caído numa via solta ("ilha"): usa a via ligada à rede principal mais próxima
+      if (cp.principal >= 0 && cp.raiz(sa[so.s]) !== cp.raiz(sa[sd.s])) {
+        const ligada = (s) => cp.raiz(sa[s]) === cp.principal;
+        if (cp.raiz(sa[so.s]) !== cp.principal) so = encaixar(bit, o.lat, o.lng, 600, ligada) || so;
+        if (cp.raiz(sa[sd.s]) !== cp.principal) sd = encaixar(bit, d.lat, d.lng, 600, ligada) || sd;
+      }
       const g = grafo(perfil), vmax = PERFIS[perfil].vmax;
       const sec = (s, m) => m / velSeg(perfil, ways[sw[s]]);
       const peca = (s, la1, lo1, la2, lo2, de, para) => {
@@ -233,7 +296,12 @@
           if (u === Ad && dist0[u] + extraA < melhor) { melhor = dist0[u] + extraA; fim = u; fimA = true; }
           if (u === Bd && dist0[u] + extraB < melhor) { melhor = dist0[u] + extraB; fim = u; fimA = false; }
           for (let e = g.off[u]; e < g.off[u + 1]; e++) {
-            const v = g.eTo[e], ng = dist0[u] + g.eCusto[e];
+            const v = g.eTo[e];
+            let ng = dist0[u] + g.eCusto[e] * (pen ? pen[g.eSeg[e]] : 1);
+            if (prev[u] >= 0 && !ways[sw[g.eSeg[e]]].rt) {     // tempo de curva (aproximado: só o melhor caminho até u é guardado)
+              const a0 = g.eFrom[prev[u]];
+              ng += penalGiro(perfil, g.off[u + 1] - g.off[u], angulo(rumo(nlat[a0], nlng[a0], nlat[u], nlng[u]), rumo(nlat[u], nlng[u], nlat[v], nlng[v])));
+            }
             if (ng < dist0[v]) { dist0[v] = ng; prev[v] = e; push(ng + h(v), v); }
           }
         }
@@ -253,6 +321,10 @@
       const coords = [[pecas[0].lo1, pecas[0].la1]];
       let distancia = 0, duracao = 0;
       for (const x of pecas) { coords.push([x.lo2, x.la2]); distancia += x.len; duracao += x.tempo; }
+      for (let i = 1; i < pecas.length; i++) {      // o tempo das curvas entra na duração (mesmas regras da escolha do caminho)
+        const a = pecas[i - 1], b = pecas[i];
+        if (a.para >= 0 && !b.rt) duracao += penalGiro(perfil, g.off[a.para + 1] - g.off[a.para], angulo(a.b, b.b));
+      }
 
       // ---------- passo a passo ----------
       const saidas = (v, exceto) => { let c = 0; for (let e = g.off[v]; e < g.off[v + 1]; e++) if (g.eSeg[e] !== exceto) c++; return c; };
@@ -287,7 +359,57 @@
         passos.push({ maneuver: { type: tipo, modifier: modDe(ang) }, name: b.nome, distance: b.len });
       }
       passos.push({ maneuver: { type: 'arrive' }, name: '', distance: 0 });
-      return { distance: distancia, duration: duracao, geometry: { type: 'LineString', coordinates: coords }, legs: [{ steps: passos }] };
+      return { distance: distancia, duration: duracao, geometry: { type: 'LineString', coordinates: coords }, legs: [{ steps: passos }], _segs: pecas.map(x => x.s) };
+    }
+
+    // Rota principal e, se pedido (opc.alternativas = quantas), caminhos alternativos: as ruas já usadas ficam "mais caras" e a busca
+    // roda de novo; só vale se o caminho for realmente outro (menos de 75% de trecho repetido) e não for lento demais.
+    function rotear(perfil, o, d, opc) {
+      if (!PERFIS[perfil]) perfil = 'carro';
+      const base = rotearUnico(perfil, o, d, null), quer = (opc && opc.alternativas) | 0;
+      if (base.erro || !quer) { delete base._segs; return base; }
+      const pen = new Float32Array(S).fill(1), usados = new Set(base._segs), alts = [];
+      const marcar = (r, f) => { for (const s of r._segs) if (pen[s] < f) pen[s] = f; };
+      marcar(base, 2.2);
+      for (let tent = 0; tent < 5 && alts.length < quer; tent++) {
+        const r = rotearUnico(perfil, o, d, pen); if (r.erro) break;
+        let total = 0, igual = 0; for (const s of r._segs) { total += slen[s]; if (usados.has(s)) igual += slen[s]; }
+        const parecida = total > 0 && igual / total > 0.75, lenta = r.duration > base.duration * 1.6 + 120 || r.distance > base.distance * 1.8;
+        if (!parecida && !lenta) { alts.push(r); r._segs.forEach(x => usados.add(x)); }
+        marcar(r, 3.5 + tent * 1.3);
+      }
+      alts.sort((x, y) => x.duration - y.duration);
+      alts.forEach(x => { delete x._segs; }); delete base._segs;
+      base.alternativas = alts;
+      return base;
+    }
+
+    // Melhor ordem das paradas pelo TEMPO real de viagem (Held-Karp: exato, até 9 paradas). Sem destino, o caminho termina na última parada.
+    // Devolve { ordem: [índices das paradas], duracao } ou { erro }. Pontos fora do mapa/sem caminho ficam de fora do cálculo (erro).
+    function ordenar(perfil, origem, paradas, destino) {
+      if (!PERFIS[perfil]) perfil = 'carro';
+      const n = paradas.length;
+      if (n < 2) return { ordem: paradas.map((_, i) => i), duracao: 0 };
+      if (n > 9) return { erro: 'muitas' };
+      const T = (a, b) => { const r = rotearUnico(perfil, a, b, null); return r.erro ? Infinity : r.duration; };
+      const dO = paradas.map(q => T(origem, q)), dF = paradas.map(q => destino ? T(q, destino) : 0);
+      const d = paradas.map((a, i) => paradas.map((b, j) => i === j ? 0 : T(a, b)));
+      const TOT = 1 << n, custo = new Float64Array(TOT * n).fill(Infinity), de = new Int8Array(TOT * n).fill(-1);
+      for (let j = 0; j < n; j++) custo[(1 << j) * n + j] = dO[j];
+      for (let m = 1; m < TOT; m++) for (let j = 0; j < n; j++) {
+        const c = custo[m * n + j]; if (!isFinite(c)) continue;
+        for (let k = 0; k < n; k++) {
+          if (m & (1 << k)) continue;
+          const nm = m | (1 << k), nc = c + d[j][k];
+          if (nc < custo[nm * n + k]) { custo[nm * n + k] = nc; de[nm * n + k] = j; }
+        }
+      }
+      let melhor = Infinity, fim = -1;
+      for (let j = 0; j < n; j++) { const c = custo[(TOT - 1) * n + j] + dF[j]; if (c < melhor) { melhor = c; fim = j; } }
+      if (!isFinite(melhor)) return { erro: 'semrota' };
+      const ordem = []; let m = TOT - 1, j = fim;
+      while (j >= 0) { ordem.push(j); const pj = de[m * n + j]; m &= ~(1 << j); j = pj; }
+      return { ordem: ordem.reverse(), duracao: melhor };
     }
 
     // ---------- busca ----------
@@ -370,12 +492,43 @@
       const pt = pontoNaRua(r, ref);
       return { lat: pt.lat, lng: pt.lng, rotulo: rot(r.nome, pt.lat, pt.lng), tipo: 'rua', exato: false, aviso: '' };
     }
-    function buscar(texto, max) {
+    // "Rua A com Rua B", "Rua A esquina com Rua B", "Rua A x Rua B", "Rua A / Rua B": acha o(s) nó(s) onde as duas ruas se encontram.
+    const SEP_CRUZ = /\s+(?:esquina\s+com|esquina|cruzamento\s+com|cruzando\s+com|intersecao\s+com|com|x)\s+|\s*[\/&×]\s*/i;
+    function cruzamentos(texto, max, perto) {
+      const t0 = String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, ''), m = SEP_CRUZ.exec(t0);
+      if (!m) return null;
+      const partes = [tokens(t0.slice(0, m.index)), tokens(t0.slice(m.index + m[0].length))];
+      if (!partes[0].some(requerido) || !partes[1].some(requerido)) return null;
+      let bpt = null;
+      for (let i = 1; i >= 0; i--) {                         // bairro citado em qualquer um dos lados ("... com Rua B, Calungá")
+        const b = achaBairro(partes[i]); if (!b) continue;
+        const resto = partes[i].filter((t, k) => !b.usados.has(k));
+        if (resto.some(requerido)) { bpt = bpt || b.bi.b; partes[i] = resto; }
+      }
+      const A = ruasQue(partes[0]).slice(0, 4), B = ruasQue(partes[1]).slice(0, 4), itens = [];
+      for (const ra of A) for (const rb of B) {
+        if (ra.r === rb.r) continue;
+        const nosA = new Set(); for (const s of ra.r.segs) { nosA.add(sa[s]); nosA.add(sb[s]); }
+        const comuns = new Set(); for (const s of rb.r.segs) { if (nosA.has(sa[s])) comuns.add(sa[s]); if (nosA.has(sb[s])) comuns.add(sb[s]); }
+        for (const n of comuns) {
+          const la = nlat[n], lo = nlng[n];
+          itens.push({ lat: la, lng: lo, rotulo: rot(ra.r.nome + ' com ' + rb.r.nome, la, lo), tipo: 'cruzamento', exato: true, aviso: '',
+            _s: ra.score + rb.score - (bpt ? Math.min(1, dist(la, lo, bpt.lat, bpt.lng) / 5000) : 0) - (perto ? Math.min(0.25, dist(la, lo, perto.lat, perto.lng) / 40000) : 0) });
+        }
+      }
+      itens.sort((x, y) => y._s - x._s);
+      const out = [], vistosR = new Set();
+      for (const it of itens) { if (vistosR.has(it.rotulo)) continue; vistosR.add(it.rotulo); delete it._s; out.push(it); if (out.length >= max) break; }
+      return out;
+    }
+    function buscar(texto, max, opc) {
       max = max || 6;
+      const perto = opc && opc.perto && isFinite(opc.perto.lat) && isFinite(opc.perto.lng) ? opc.perto : null;   // desempata a favor do que está mais perto
+      const cz = cruzamentos(texto, max, perto); if (cz && cz.length) return cz;
       const toks = tokens(texto); if (!toks.length) return [];
       let b = achaBairro(toks), rest = toks;
       if (b) { rest = toks.filter((t, i) => !b.usados.has(i)); if (!rest.some(requerido)) { rest = toks; b = null; } }
-      const bpt = b ? b.bi.b : null, itens = [];
+      const bpt = b ? b.bi.b : perto, itens = [];      // sem bairro citado, usa a posição de referência para escolher entre ruas de mesmo nome
       if (rest.some(requerido)) {
         const dig = rest.map((t, i) => ehNum(t) && t.length <= 5 ? i : -1).filter(i => i >= 0);
         let feito = false;
@@ -393,6 +546,7 @@
       }
       const reqT = toks.filter(requerido);
       if (reqT.length) for (const bi of bairrosIdx) if (reqT.every(q => bi.toks.some(t => casaToken(q, t)))) itens.push({ lat: bi.b.lat, lng: bi.b.lng, rotulo: bi.b.n + ' — ' + CIDADE, tipo: 'bairro', exato: false, aviso: '', _s: bi.toks.length === reqT.length ? 1.5 : 0.6 });
+      if (perto) for (const it of itens) it._s -= Math.min(0.25, dist(it.lat, it.lng, perto.lat, perto.lng) / 40000);
       itens.sort((x, y) => y._s - x._s);
       const out = [], vistosR = new Set();
       for (const it of itens) { if (vistosR.has(it.rotulo)) continue; vistosR.add(it.rotulo); delete it._s; out.push(it); if (out.length >= max) break; }
@@ -404,6 +558,9 @@
       if (!dentro(lat, lng)) return null;
       let m = null, dm = Infinity;
       for (const a of ends) { const d = dist(lat, lng, a.lat, a.lng); if (d < dm) { dm = d; m = a; } }
+      let ml = null, dl = Infinity;
+      for (const l of locs) { const d = dist(lat, lng, l.lat, l.lng); if (d < dl) { dl = d; ml = l; } }
+      if (ml && dl <= 30 && (!m || dl < dm || dm > 25)) return { rotulo: rot(ml.n, lat, lng), lat, lng };      // tocou num local conhecido (escola, UBS, CRAS...)
       if (m && dm <= 25) return { rotulo: rot(m.r + ', ' + m.n, lat, lng), lat, lng };
       const sn = encaixar(7, lat, lng, 80);
       if (sn) { const nome = ways[sw[sn.s]].n; if (nome) return { rotulo: rot(nome, lat, lng), lat, lng }; }
@@ -411,35 +568,93 @@
       return bp && dist(lat, lng, bp.lat, bp.lng) < 1500 ? { rotulo: bp.n + ' — ' + CIDADE, lat, lng } : null;
     }
 
-    const info = () => ({ quando: p.quando, ruas: listaRuas.length, segmentos: S, bairros: lugares.length, enderecos: ends.length, locais: locs.length });
+    const info = () => ({ bytes: nlat.byteLength * 2 + sa.byteLength * 3, quando: p.quando, ruas: listaRuas.length, segmentos: S, bairros: lugares.length, enderecos: ends.length, locais: locs.length, ampliada: !!p.ampliada });
+    // locais / números de casa dentro de uma caixa (para desenhar no mapa em zoom alto)
+    const naCaixa = (lista, s0, w0, n0, e0, max) => { const o = []; for (const x of lista) if (x.lat >= s0 && x.lat <= n0 && x.lng >= w0 && x.lng <= e0) { o.push(x); if (o.length >= max) break; } return o; };
+    const locaisNaCaixa = (s0, w0, n0, e0, max) => naCaixa(locs, s0, w0, n0, e0, max || 80);
+    const enderecosNaCaixa = (s0, w0, n0, e0, max) => naCaixa(ends, s0, w0, n0, e0, max || 150);
     const dados = { nlat, nlng, sa, sb, sw, ways, lugares, rank: (wi) => ways[wi] ? ways[wi].k : undefined };
-    return { rotear, buscar, reverso, dentro, info, segsNaCaixa, dados };
+    return { rotear, ordenar, buscar, reverso, dentro, info, segsNaCaixa, locaisNaCaixa, enderecosNaCaixa, dados };
   }
 
   // ---------- download (Overpass) ----------
   const FILTRO_VIAS = '["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified|residential|living_street|road|service|track|footway|pedestrian|path|cycleway|steps)$"]["service"!~"^(parking_aisle|driveway|drive-through)$"]';
+  const FILTRO_ESTRADAS = '["highway"~"^(motorway|motorway_link|trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified|track)$"]';
   const caixa = (s, w, n, e) => '(' + s + ',' + w + ',' + n + ',' + e + ')';
   const consultaVias = (c) => '[out:json][timeout:120];way' + FILTRO_VIAS + caixa(c[0], c[1], c[2], c[3]) + ';out geom;';
-  const consultaExtras = () => '[out:json][timeout:120];(nwr["place"~"^(suburb|neighbourhood|quarter|city_district)$"]["name"]' + caixa(BBOX.sul, BBOX.oeste, BBOX.norte, BBOX.leste) +
-    ';nwr["addr:housenumber"]["addr:street"]' + caixa(BBOX.sul, BBOX.oeste, BBOX.norte, BBOX.leste) +
-    ';nwr["name"]["amenity"~"^(school|kindergarten|college|university|clinic|hospital|doctors|pharmacy|social_facility|townhall|police|fire_station|community_centre|bank|marketplace|place_of_worship)$"]' + caixa(BBOX.sul, BBOX.oeste, BBOX.norte, BBOX.leste) + ';);out center;';
+  const consultaEstradas = (c) => '[out:json][timeout:180];way' + FILTRO_ESTRADAS + caixa(c[0], c[1], c[2], c[3]) + ';out geom;';
+  const consultaExtras = () => {
+    const bx = caixa(BBOX.sul, BBOX.oeste, BBOX.norte, BBOX.leste);
+    return '[out:json][timeout:120];(nwr["place"~"^(suburb|neighbourhood|quarter|city_district|village|hamlet|town|locality)$"]["name"]' + bx +
+      ';nwr["addr:housenumber"]["addr:street"]' + bx +
+      ';nwr["name"]["amenity"~"^(school|kindergarten|college|university|library|clinic|hospital|doctors|dentist|pharmacy|social_facility|townhall|courthouse|police|fire_station|community_centre|bank|marketplace|place_of_worship|bus_station|fuel)$"]' + bx +
+      ';nwr["name"]["healthcare"]' + bx +
+      ';nwr["name"]["shop"~"^(supermarket|mall|department_store)$"]' + bx +
+      ';nwr["name"]["leisure"~"^(park|stadium|sports_centre)$"]' + bx +
+      ';nwr["name"]["tourism"~"^(hotel|museum|attraction)$"]' + bx +
+      ';nwr["name"]["office"="government"]' + bx + ';);out center;';
+  };
+  const consultaPovoados = () => '[out:json][timeout:120];nwr["place"~"^(village|hamlet|town|locality|suburb)$"]["name"]' + caixa(AMPLIADA.sul, AMPLIADA.oeste, AMPLIADA.norte, AMPLIADA.leste) + ';out center;';
   function pedacos() {
     const lats = [2.74, 2.82, 2.90], lngs = [-60.76, -60.70, -60.64, -60.58], out = [];
     for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) out.push([lats[i], lngs[j], lats[i + 1], lngs[j + 1]]);
     return out;
   }
+  function pedacosAmpliados() {                       // 3x3 em volta; o do meio é a área principal (já baixada por inteiro)
+    const lats = [AMPLIADA.sul, BBOX.sul, BBOX.norte, AMPLIADA.norte], lngs = [AMPLIADA.oeste, BBOX.oeste, BBOX.leste, AMPLIADA.leste], out = [];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (!(i === 1 && j === 1)) out.push([lats[i], lngs[j], lats[i + 1], lngs[j + 1]]);
+    return out;
+  }
   const dorme = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // Guarda só o que o pacote usa: pedaços interrompidos ocupam bem menos espaço.
+  const TAGS_VIA = ['highway', 'name', 'ref', 'oneway', 'junction', 'maxspeed', 'access', 'motorcar', 'motor_vehicle', 'vehicle', 'foot', 'bicycle', 'service'];
+  const TAGS_EXTRA = ['place', 'name', 'addr:street', 'addr:housenumber', 'amenity', 'healthcare', 'shop', 'leisure', 'tourism', 'office'];
+  function enxuto(e) {
+    if (!e || !e.tags) return null;
+    const lista = e.type === 'way' && e.geometry ? TAGS_VIA : TAGS_EXTRA, tags = {};
+    for (const k of lista) if (e.tags[k] !== undefined) tags[k] = e.tags[k];
+    const o = { type: e.type, id: e.id, tags };
+    if (e.nodes) o.nodes = e.nodes;
+    if (e.geometry) o.geometry = e.geometry.map(g => g && { lat: g.lat, lon: g.lon });
+    if (e.lat !== undefined) { o.lat = e.lat; o.lon = e.lon; }
+    if (e.center) o.center = e.center;
+    return o;
+  }
+
+  const semParcial = { ler: async () => null, gravar: async () => {}, limpar: async () => {} };
+  const parcialIDB = {
+    async ler(k) { const r = await ide('readonly', (st) => st.get('parcial:' + k)); return r && Array.isArray(r.els) && Date.now() - r.quando < VALIDADE_PARCIAL ? r.els : null; },
+    gravar: (k, els) => ide('readwrite', (st) => { st.put({ quando: Date.now(), els }, 'parcial:' + k); st.put({ quando: Date.now() }, 'parcial-info'); }),
+    limpar: () => ide('readwrite', (st) => { st.delete(IDBKeyRange.bound('parcial:', 'parcial:\uffff')); st.delete('parcial-info'); })
+  };
+  // quantos pedaços de um download interrompido ainda valem (0 = nada para retomar)
+  async function parciais() {
+    try {
+      const info = await ide('readonly', (st) => st.get('parcial-info'));
+      if (!info || Date.now() - info.quando >= VALIDADE_PARCIAL) return 0;
+      const ks = await ide('readonly', (st) => st.getAllKeys(IDBKeyRange.bound('parcial:', 'parcial:\uffff')));
+      return ks ? ks.length : 0;
+    } catch (e) { return 0; }
+  }
 
   async function baixar(op) {
     op = op || {};
-    const buscarFn = op.buscar || ((u, o) => fetch(u, o)), pausa = op.pausa === undefined ? 1000 : op.pausa;
-    const partes = pedacos(), total = partes.length + 1, c = novoConstrutor();
-    let feito = 0;
-    const avisa = (texto) => { if (op.onProgresso) op.onProgresso({ feito, total, texto }); };
+    const buscarFn = op.buscar || ((u, o) => fetch(u, o)), pausa = op.pausa === undefined ? 1000 : op.pausa, amp = !!op.ampliada;
+    const arm = op.parcial || (op.semGuardar ? semParcial : parcialIDB);
+    const tarefas = pedacos().map((c, i, l) => ({ k: 'v' + i, tipo: 'vias', q: consultaVias(c), texto: 'Baixando as ruas (parte ' + (i + 1) + ' de ' + l.length + ')…' }));
+    tarefas.push({ k: 'x', tipo: 'extras', q: consultaExtras(), texto: 'Baixando bairros, endereços e locais…' });
+    if (amp) {
+      pedacosAmpliados().forEach((c, i, l) => tarefas.push({ k: 'e' + i, tipo: 'vias', q: consultaEstradas(c), texto: 'Baixando as estradas do entorno (parte ' + (i + 1) + ' de ' + l.length + ')…' }));
+      tarefas.push({ k: 'p', tipo: 'extras', q: consultaPovoados(), texto: 'Baixando povoados do entorno…' });
+    }
+    const total = tarefas.length, c = novoConstrutor();
+    let feito = 0, retomadas = 0;
+    const avisa = (texto) => { if (op.onProgresso) op.onProgresso({ feito, total, texto, retomadas }); };
     const cancelado = () => { if (op.sinal && op.sinal.aborted) throw new Error('Download cancelado.'); };
     async function pedir(consulta) {
       let ultimo = null;
-      for (let tentativa = 0; tentativa < 2; tentativa++) for (const url of OVERPASS) {
+      for (let tentativa = 0; tentativa < 3; tentativa++) for (const url of OVERPASS) {
         cancelado();
         const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 150000);
         const fora = () => ctl.abort(); if (op.sinal) op.sinal.addEventListener('abort', fora, { once: true });
@@ -448,24 +663,32 @@
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const j = await r.json(); if (!j || !Array.isArray(j.elements)) throw new Error('resposta inválida');
           return j.elements;
-        } catch (e) { cancelado(); ultimo = e; await dorme(pausa * 2); }
+        } catch (e) { cancelado(); ultimo = e; await dorme(pausa * 2 * (tentativa + 1)); }     // espera cada vez mais entre as tentativas
         finally { clearTimeout(t); if (op.sinal) op.sinal.removeEventListener('abort', fora); }
       }
-      throw new Error('Não consegui baixar o mapa agora (o servidor do OpenStreetMap está ocupado ou sem conexão). Tente de novo em alguns minutos.' + (ultimo && ultimo.message ? ' [' + ultimo.message + ']' : ''));
+      throw new Error('Não consegui baixar o mapa agora (o servidor do OpenStreetMap está ocupado ou sem conexão). O que já foi baixado fica guardado: tente de novo em alguns minutos e o download continua de onde parou.' + (ultimo && ultimo.message ? ' [' + ultimo.message + ']' : ''));
     }
-    for (let i = 0; i < partes.length; i++) {
-      avisa('Baixando as ruas (parte ' + (i + 1) + ' de ' + partes.length + ')…');
-      c.addVias(await pedir(consultaVias(partes[i]))); feito++;
-      if (pausa) await dorme(pausa);
+    for (const t of tarefas) {
+      cancelado();
+      let els = null;
+      try { els = await arm.ler(t.k); } catch (e) { els = null; }
+      if (els) { retomadas++; avisa('Retomando: esta parte já estava baixada…'); }
+      else {
+        avisa(t.texto);
+        els = (await pedir(t.q)).map(enxuto).filter(Boolean);
+        try { await arm.gravar(t.k, els); } catch (e) { /* sem espaço para o parcial: segue sem poder retomar */ }
+        if (pausa) await dorme(pausa);
+      }
+      if (t.tipo === 'vias') c.addVias(els); else c.addExtras(els);
+      feito++;
     }
-    avisa('Baixando bairros, endereços e locais…');
-    c.addExtras(await pedir(consultaExtras())); feito++;
     avisa('Organizando o mapa…');
-    const pacote = c.finalizar();
-    if (pacote.segs.a.length < (op.minSegmentos || 200)) throw new Error('O mapa baixado veio quase vazio. Tente de novo mais tarde.');
+    const pacote = c.finalizar({ ampliada: amp });
+    if (pacote.segs.a.length < (op.minSegmentos || 200)) { try { await arm.limpar(); } catch (e) { /* ignora */ } throw new Error('O mapa baixado veio quase vazio. Tente de novo mais tarde.'); }
     let meta = null, erroGuardar = null;
     if (!op.semGuardar) { try { meta = await guardar(pacote); } catch (e) { erroGuardar = e; } }   // sem espaço: ainda dá para usar nesta sessão
-    return { pacote, meta, erroGuardar };
+    if (!erroGuardar) { try { await arm.limpar(); } catch (e) { /* ignora */ } }
+    return { pacote, meta, erroGuardar, retomadas };
   }
 
   // ---------- armazenamento (IndexedDB) ----------
@@ -491,17 +714,19 @@
     } finally { db.close(); }
   }
   async function guardar(pacote) {
-    const meta = { quando: pacote.quando, ruas: pacote.ruas.length, bairros: pacote.bairros.length, enderecos: pacote.enderecos.length, locais: pacote.locais.length,
+    const meta = { quando: pacote.quando, ampliada: !!pacote.ampliada, ruas: pacote.ruas.length, bairros: pacote.bairros.length, enderecos: pacote.enderecos.length, locais: pacote.locais.length,
       bytes: pacote.nlat.byteLength * 2 + pacote.segs.a.byteLength * 3 };
     await ide('readwrite', (st) => { st.put(pacote, 'pacote'); st.put(meta, 'meta'); });
     return meta;
   }
-  const carregar = async () => (await ide('readonly', (st) => st.get('pacote'))) || null;
+  const pacoteValido = (p) => !!p && p.nlat instanceof Float64Array && p.nlng instanceof Float64Array && !!p.segs && p.segs.a instanceof Int32Array &&
+    p.segs.b instanceof Int32Array && p.segs.w instanceof Int32Array && p.nlat.length === p.nlng.length && Array.isArray(p.ruas);
+  const carregar = async () => { const p = await ide('readonly', (st) => st.get('pacote')); return pacoteValido(p) ? p : null; };   // dado corrompido/antigo = como se não houvesse
   const lerMeta = async () => (await ide('readonly', (st) => st.get('meta'))) || null;
-  const apagar = () => ide('readwrite', (st) => { st.delete('pacote'); st.delete('meta'); });
+  const apagar = () => ide('readwrite', (st) => { st.delete('pacote'); st.delete('meta'); st.delete(IDBKeyRange.bound('parcial:', 'parcial:\uffff')); st.delete('parcial-info'); });
 
-  const api = { BBOX, baixar, criarMotor, novoConstrutor, carregar, apagar, lerMeta, guardar,
-    _teste: { rumo, angulo, modDe, acessoVia, oneway, tokens, casaToken } };
+  const api = { BBOX, AMPLIADA, parciais, baixar, criarMotor, novoConstrutor, carregar, apagar, lerMeta, guardar,
+    _teste: { rumo, angulo, modDe, acessoVia, oneway, tokens, casaToken, fon, enxuto, catLocal } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AnonaMapaOffline = api;
 })(typeof window !== 'undefined' ? window : this);
