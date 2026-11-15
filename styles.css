@@ -940,3 +940,58 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
 #mapaRotas .mp-pop{ display:flex; flex-direction:column; gap:.35rem; font-size:.78rem; min-width:9rem; }
 #mapaRotas .mp-pop p{ margin:0; overflow-wrap:anywhere; }
 #mapaRotas.is-tela-cheia .mp-plano small{ display:none; }
+
+/* ===== Mapa e rotas: ergonomia no celular (v2) ===== */
+#mapaRotas .mp-ajuda summary{ cursor:pointer; font-size:.78rem; font-weight:700; color:var(--verde); padding:.35rem 0; list-style:none; display:inline-flex; align-items:center; gap:.35rem; min-height:2.25rem; }
+#mapaRotas .mp-ajuda summary::-webkit-details-marker{ display:none; }
+#mapaRotas .mp-ajuda summary::before{ content:"?"; display:inline-flex; align-items:center; justify-content:center; width:1.25rem; height:1.25rem; border-radius:50%; background:var(--verde-soft); font-size:.75rem; }
+#mapaRotas .mp-ajuda[open] summary{ margin-bottom:.35rem; }
+#mapaRotas.is-tela-cheia .mp-ajuda{ display:none; }
+#mapaRotas .mp-mapa{ position:relative; }
+#mapaRotas .mp-toque-abrir{ display:none; }
+@media (max-width:1023px){
+  #mapaRotas:not(.is-tela-cheia) .mp-toque-abrir{ display:flex; position:absolute; inset:0; z-index:1100; align-items:flex-end; justify-content:center; padding:0 0 1rem; background:transparent; border:0; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  #mapaRotas .mp-toque-abrir span{ display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.96); color:var(--verde); border:1px solid var(--verde); border-radius:999px; padding:.55rem 1rem; font-size:.8rem; font-weight:800; box-shadow:0 4px 14px -4px rgba(13,46,99,.45); }
+  #mapaRotas:not(.is-tela-cheia) .mp-busca .mp-voz, #mapaRotas .mp-busca .mp-voz{ min-height:2.75rem; width:2.75rem; }
+  #mapaRotas .mp-modos button{ min-height:2.75rem; }
+  #mapaRotas .mp-busca .access-input{ min-height:2.75rem; }
+  #mapaRotas .mp-busca .mp-btn{ min-height:2.75rem; }
+
+  /* tela cheia: o mapa precisa de espaço — painéis enxutos */
+  #mapaRotas.is-tela-cheia .mp-txt-busca{ display:none; }
+  #mapaRotas.is-tela-cheia .mp-busca .mp-btn{ width:2.75rem; padding:0; flex:0 0 auto; }
+  #mapaRotas.is-tela-cheia .mp-resultados{ max-height:min(42vh,16rem); overscroll-behavior:contain; }
+  #mapaRotas.is-tela-cheia .mp-resultados button{ min-height:2.75rem; font-size:.85rem; }
+  #mapaRotas.is-tela-cheia .mp-topo{ max-height:calc(100% - 1.2rem - env(safe-area-inset-top,0px) - 4rem); overscroll-behavior:contain; }
+  /* com rota traçada e sem digitar: só busca, modos e destino numa linha */
+  #mapaRotas.is-tela-cheia:has(#mapaDestinoBox:not(.hidden)) .mp-topo:not(:focus-within) .mp-mais,
+  #mapaRotas.is-tela-cheia:has(#mapaDestinoBox:not(.hidden)) .mp-topo:not(:focus-within) .mp-destino-txt small{ display:none; }
+  #mapaRotas.is-tela-cheia:has(#mapaDestinoBox:not(.hidden)) .mp-topo:not(:focus-within) .mp-modos button{ min-height:2.25rem; padding:.25rem .2rem; font-size:.7rem; }
+  #mapaRotas.is-tela-cheia .mp-destino-txt{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  #mapaRotas.is-tela-cheia .mp-deate, #mapaRotas.is-tela-cheia .mp-chegada small{ display:none; }
+  #mapaRotas.is-tela-cheia .mp-resumo.is-passos-fechados .mp-plano{ display:none; }
+  #mapaRotas.is-tela-cheia .mp-resumo{ max-height:min(60vh,26rem); overflow:auto; overscroll-behavior:contain; padding:.55rem .65rem; gap:.35rem; }
+  #mapaRotas.is-tela-cheia .mp-total{ display:flex; align-items:baseline; gap:.2rem; }
+  #mapaRotas.is-tela-cheia .mp-chegada{ font-size:.72rem; }
+  #mapaRotas.is-tela-cheia .mp-resumo .mp-acoes{ display:grid; grid-template-columns:repeat(3,1fr); gap:.35rem; }
+  #mapaRotas.is-tela-cheia .mp-resumo .mp-acoes .mp-btn{ flex:none; min-height:2.9rem; padding:.3rem .2rem; flex-direction:column; gap:.15rem; font-size:.66rem; line-height:1.15; text-align:center; }
+  #mapaRotas.is-tela-cheia .mp-resumo #mapaSeguir{ grid-column:1/-1; flex-direction:row; font-size:.9rem; min-height:3rem; gap:.4rem; }
+}
+@media (max-height:480px) and (max-width:1023px){
+  #mapaRotas.is-tela-cheia .mp-topo, #mapaRotas.is-tela-cheia .mp-base{ right:auto; width:min(24rem,52%); }
+}
+@media (max-width:1023px){
+  /* fora da tela cheia só busca + meios de transporte: partida/offline ficam na tela cheia, e o mapa aparece logo */
+  #mapaRotas:not(.is-tela-cheia) .mp-mais{ display:none; }
+  #mapaRotas:not(.is-tela-cheia) #mapaCanvas{ height:48vh; min-height:16rem; }
+}
+
+/* ===== Mapa e rotas: bairros de foco ===== */
+#mapaRotas .mp-focos{ display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; }
+#mapaRotas .mp-focos-t{ font-size:.7rem; font-weight:700; color:#64748b; }
+#mapaRotas .mp-focos button{ border:1px solid var(--line); background:#fff; color:var(--azul-deep); border-radius:999px; padding:.3rem .75rem; font-size:.74rem; font-weight:700; cursor:pointer; min-height:2.25rem; }
+#mapaRotas .mp-focos button[aria-pressed="true"]{ background:var(--verde); border-color:var(--verde); color:#fff; }
+#mapaRotas .mp-focos button:focus-visible{ outline:3px solid rgba(13,46,99,.3); outline-offset:2px; }
+@media (max-width:1023px){
+  #mapaRotas.is-tela-cheia:has(#mapaDestinoBox:not(.hidden)) .mp-topo:not(:focus-within) .mp-focos{ display:none; }
+}
