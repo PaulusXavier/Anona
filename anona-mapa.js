@@ -4,16 +4,20 @@
  * Com internet, só o texto do endereço digitado e as coordenadas (posição/destino) saem do aparelho; nada é guardado.
  * OFFLINE: depois de "Baixar mapa offline" (anona-mapa-offline.js: ruas de Boa Vista guardadas no aparelho), a busca, o
  * toque no mapa, a rota com passo a passo e o desenho das ruas funcionam sem internet — automaticamente quando a rede
- * falha, ou sempre, se o usuário marcar "Usar sempre o mapa offline". */
+ * falha, ou sempre, se o usuário marcar "Usar sempre o mapa offline".
+ * Funções puras (coordenadas coladas, distância ao traçado, posição dos passos…) ficam em anona-mapa-util.js (testes: tests/mapa-util.test.js). */
 (function () {
   'use strict';
   const sec = document.getElementById('mapaRotas');
   if (!sec) return;
   const $ = (id) => document.getElementById(id);
+  const U = window.AnonaMapaUtil;
+  if (!U) { const st = $('mapaStatus'); if (st) { st.textContent = 'Não consegui carregar o mapa (arquivo anona-mapa-util.js ausente).'; st.className = 'mp-status is-erro'; } return; }
 
   const PARTIDA = { rotulo: 'Rua Santo Agostinho, 193 — Centenário, Boa Vista/RR', consulta: 'Rua Santo Agostinho 193, Centenário, Boa Vista, Roraima' };
   const CENTRO = [2.8235, -60.6758];                 // Boa Vista/RR
-  const VIEWBOX = '-60.85,2.95,-60.55,2.70';         // esquerda,topo,direita,base: dá preferência a Boa Vista (não limita a busca)
+  const VIEWBOX = '-60.85,2.95,-60.55,2.70';         // esquerda,topo,direita,base: Boa Vista e entorno
+const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no modo Acompanhar, a rota é recalculada
   const PERFIS = {
     carro: { caminho: 'routed-car', google: 'driving' },
     pe:    { caminho: 'routed-foot', google: 'walking' },
@@ -34,6 +38,11 @@
   let camadaTiles = null, vetor = null, ClasseVetor = null, vetorAuto = false, errosTile = 0, baixando = null;
   let sempreOffline = lerPref('anonaMapaSempreOffline', '0') === '1';
   let avisoDestino = '';         // ex.: "o número 193 não está no mapa offline"
+  let rotas = [], rotaSel = 0, origemAtual = null, trilha = null;   // rotas: alternativas; trilha: pontos/acumulado/passos da escolhida
+  let paradas = [], grupoParadas = null;   // paradas no meio do caminho: [{ lat, lng, rotulo }] (o destino fica sempre por último)
+  let origemOutro = null;        // partida escolhida por "Inverter": { lat, lng, rotulo }
+  let mPasso = null, ultimoRecalculo = 0, seguindo = false, vigia = null, travaTela = null;
+  const cacheBusca = new Map();  // só na memória desta sessão: repete a mesma busca sem gastar internet
   const PARTIDA_CHAVE = 'anonaMapaPartida';
   const usarOffline = () => !!motor && (sempreOffline || navigator.onLine === false);
   const DICA_OFFLINE = ' Dica: baixe o mapa offline (em "Partida, posição e mapa offline") para usar sem internet.';
@@ -90,14 +99,16 @@
   }
 
   // ---------- Nominatim (máx. 1 pedido por segundo) ----------
-  async function nominatim(caminho, params) {
+  const esperar = (ms) => new Promise(r => setTimeout(r, ms));
+  async function nominatim(caminho, params, tentativa) {
     const espera = ultimoNominatim + 1100 - Date.now();
-    if (espera > 0) await new Promise(r => setTimeout(r, espera));
+    if (espera > 0) await esperar(espera);
     ultimoNominatim = Date.now();
     const url = NOMINATIM + caminho + '?' + new URLSearchParams(Object.assign({ format: 'jsonv2', 'accept-language': 'pt-BR' }, params));
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 15000);
     try {
       const r = await fetch(url, { signal: ctl.signal });
+      if ((r.status === 429 || r.status === 503) && !tentativa) { clearTimeout(t); await esperar(2500); return await nominatim(caminho, params, true); }
       if (!r.ok) throw new Error('O serviço de busca respondeu com erro (' + r.status + ').');
       return await r.json();
     } catch (e) {
@@ -108,17 +119,43 @@
       throw er;
     } finally { clearTimeout(t); }
   }
+  // repete a mesma busca sem gastar internet (só na memória desta sessão; nada vai para o armazenamento do aparelho)
+  async function comCache(chave, buscarDeVerdade) {
+    if (cacheBusca.has(chave)) return cacheBusca.get(chave);
+    const v = await buscarDeVerdade();
+    if (cacheBusca.size >= 60) cacheBusca.delete(cacheBusca.keys().next().value);
+    cacheBusca.set(chave, v);
+    return v;
+  }
   // Resultados do mapa offline têm o mesmo formato dos do Nominatim (lat/lon/display_name) + _rotulo (já pronto) e _aviso.
   const buscarOffline = (q) => motor.buscar(q, 6).map(x => ({ lat: x.lat, lon: x.lng, display_name: x.rotulo, _rotulo: x.rotulo, _aviso: x.aviso || '' }));
+  // 1º só em Boa Vista e entorno; 2º Brasil inteiro (Boa Vista tem preferência); 3º sem o número da casa, avisando.
+  function buscarOnline(q) {
+    return comCache('b:' + q.toLowerCase(), async () => {
+      const base = { q, limit: 6, countrycodes: 'br', viewbox: VIEWBOX, addressdetails: 1 };
+      let rs = await nominatim('/search', Object.assign({ bounded: 1 }, base));
+      if (!rs.length) rs = await nominatim('/search', base);
+      if (!rs.length) {
+        const sn = U.semNumero(q);
+        if (sn) {
+          const b2 = Object.assign({}, base, { q: sn.texto });
+          rs = await nominatim('/search', Object.assign({ bounded: 1 }, b2));
+          if (!rs.length) rs = await nominatim('/search', b2);
+          rs.forEach((r) => { r._aviso = 'Não achei o número ' + sn.numero + ' no mapa: mostrei a rua. Arraste o pino ou toque no mapa para ajustar.'; });
+        }
+      }
+      return rs;
+    });
+  }
   async function buscarEndereco(q) {
     if (usarOffline()) return buscarOffline(q);
-    try { return await nominatim('/search', { q, limit: 6, countrycodes: 'br', viewbox: VIEWBOX, addressdetails: 1 }); }
+    try { return await buscarOnline(q); }
     catch (e) { if (motor && e && e.rede) return buscarOffline(q); throw e; }
   }
   async function buscarCoordenada(lat, lng) {
     const offline = () => { const r = motor.reverso(lat, lng); return r ? { display_name: r.rotulo, _rotulo: r.rotulo } : null; };
     if (usarOffline()) return offline();
-    try { return await nominatim('/reverse', { lat: lat.toFixed(6), lon: lng.toFixed(6), zoom: 18 }); }
+    try { return await comCache('r:' + lat.toFixed(5) + ',' + lng.toFixed(5), () => nominatim('/reverse', { lat: lat.toFixed(6), lon: lng.toFixed(6), zoom: 18 })); }
     catch (e) { if (motor && e && e.rede) return offline(); throw e; }
   }
 
@@ -134,15 +171,18 @@
   }
 
   // ---------- origem ----------
+  function msgGeo(e) {
+    return e && e.code === 1 ? 'A localização foi negada. Permita o acesso à localização no navegador (ícone de cadeado, ao lado do endereço) ou escolha outro ponto de partida.'
+      : e && e.code === 3 ? 'Não consegui obter sua posição a tempo. Vá para um local aberto e tente de novo.'
+      : 'Não consegui obter sua posição agora.';
+  }
   function lerPosicao() {
     return new Promise((ok, falha) => {
       if (!navigator.geolocation) return falha(new Error('Este aparelho/navegador não informa a localização.'));
       navigator.geolocation.getCurrentPosition(
-        (p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy || 0 }),
-        (e) => falha(new Error(e && e.code === 1 ? 'A localização foi negada. Permita o acesso à localização no navegador (ícone de cadeado, ao lado do endereço) ou escolha outro ponto de partida.'
-          : e && e.code === 3 ? 'Não consegui obter sua posição a tempo. Vá para um local aberto e tente de novo.'
-          : 'Não consegui obter sua posição agora.')),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+        (p) => ok({ lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy || 0, quando: Date.now() }),
+        (e) => falha(new Error(msgGeo(e))),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
     });
   }
 
@@ -168,7 +208,11 @@
   async function obterOrigem() {
     const tipo = $('mapaOrigem').value;
     if (tipo === 'pos') {
-      const p = posicao || await usarMinhaPosicao(false);
+      let p = posicao;
+      // posição com mais de 90 s (e sem "Acompanhar" ligado) é lida de novo: quem andou não pode sair da rota errada
+      if (!p || (!vigia && Date.now() - (p.quando || 0) > 90000)) {
+        try { p = await usarMinhaPosicao(false); } catch (e) { if (!p) throw e; }   // posição antiga é melhor que nenhuma
+      }
       return { lat: p.lat, lng: p.lng, rotulo: 'Minha posição' };
     }
     if (tipo === 'partida') {
@@ -186,6 +230,9 @@
     }
     const txt = ($('mapaOrigemTexto').value || '').trim();
     if (!txt) throw new Error('Digite o endereço de partida.');
+    if (origemOutro && origemOutro.rotulo === txt) return origemOutro;           // veio de "Inverter": já tem coordenadas exatas
+    const c = U.lerCoordenadas(txt);
+    if (c) return { lat: c.lat, lng: c.lng, rotulo: txt };
     const r = await buscarEndereco(txt);
     if (!r.length) throw new Error('Não encontrei o endereço de partida "' + txt + '".');
     return { lat: +r[0].lat, lng: +r[0].lon, rotulo: rotuloCurto(r[0]) || txt };
@@ -196,7 +243,8 @@
     destino = d;
     await garantirMapa();
     if (mDestino) mapa.removeLayer(mDestino);
-    mDestino = L.marker([d.lat, d.lng], { icon: icone('mp-pino-dest', 26), title: d.rotulo, keyboard: false }).addTo(mapa);
+    mDestino = L.marker([d.lat, d.lng], { icon: icone('mp-pino-dest', 26), title: d.rotulo + ' — arraste para ajustar', draggable: true, keyboard: false }).addTo(mapa);
+    mDestino.on('dragend', () => { const ll = mDestino.getLatLng(); escolherNoMapa(ll.lat, ll.lng); });
     $('mapaDestinoTexto').textContent = d.rotulo;
     $('mapaDestinoBox').classList.remove('hidden');
   }
@@ -220,30 +268,40 @@
   }
 
   // ---------- busca ----------
-  function listarResultados(rs) {
+  const fecharResultados = () => $('mapaResultados').classList.add('hidden');
+  function listarResultados(rs, opc) {
+    opc = opc || {};
     const ul = $('mapaResultados'); ul.textContent = '';
-    if (rs.length < 2) { ul.classList.add('hidden'); return; }
-    rs.slice(1).forEach((r) => {
+    const lista = opc.todos ? rs : rs.slice(1);
+    if (!lista.length) { ul.classList.add('hidden'); return; }
+    lista.forEach((r) => {
       const li = document.createElement('li'); const b = document.createElement('button'); b.type = 'button';
       b.textContent = rotuloCurto(r) || r.display_name;
-      b.addEventListener('click', () => { senha++; avisoDestino = r._aviso || ''; ul.classList.add('hidden'); escolherDestino({ lat: +r.lat, lng: +r.lon, rotulo: b.textContent }).catch(mostrarErro); });
+      b.addEventListener('click', () => { senha++; avisoDestino = r._aviso || ''; ul.classList.add('hidden'); $('mapaBusca').value = b.textContent; escolherDestino({ lat: +r.lat, lng: +r.lon, rotulo: b.textContent }).catch(mostrarErro); });
       li.appendChild(b); ul.appendChild(li);
     });
-    const t = document.createElement('li'); t.className = 'mp-res-titulo'; t.textContent = 'Outros resultados'; ul.insertBefore(t, ul.firstChild);
+    const t = document.createElement('li'); t.className = 'mp-res-titulo'; t.textContent = opc.titulo || 'Outros resultados'; ul.insertBefore(t, ul.firstChild);
     ul.classList.remove('hidden');
   }
 
   async function buscar(ev) {
     ev.preventDefault();
+    clearTimeout(tSug);
     const q = ($('mapaBusca').value || '').trim();
     if (q.length < 3) { status('Digite o endereço (rua, número, bairro) para buscar.', 'erro'); return; }
+    const c = U.lerCoordenadas(q);                  // coordenadas ou link do Google Maps colados no campo
+    if (c) {
+      fecharResultados(); ocupado(true);
+      try { await garantirMapa(); mapa.setView([c.lat, c.lng], 17); await escolherNoMapa(c.lat, c.lng); } catch (e) { mostrarErro(e); }
+      return;
+    }
     const minha = ++senha;
     status('Procurando o endereço…'); ocupado(true);
     try {
       await garantirMapa();
       const rs = await buscarEndereco(q);
       if (minha !== senha) return;
-      if (!rs.length) { listarResultados([]); status('Não encontrei esse endereço. Tente só a rua e o bairro (ex.: "Rua Santo Agostinho, Centenário") ou toque no mapa para marcar o ponto.', 'erro'); return; }
+      if (!rs.length) { listarResultados([]); status('Não encontrei esse endereço. Tente só a rua e o bairro (ex.: "Rua Santo Agostinho, Centenário"), cole as coordenadas, ou toque no mapa para marcar o ponto.', 'erro'); return; }
       listarResultados(rs); avisoDestino = rs[0]._aviso || '';
       await escolherDestino({ lat: +rs[0].lat, lng: +rs[0].lon, rotulo: rotuloCurto(rs[0]) || q });
     } catch (e) { mostrarErro(e); }
@@ -254,6 +312,7 @@
   const MOD = { left: 'à esquerda', right: 'à direita', 'slight left': 'levemente à esquerda', 'slight right': 'levemente à direita',
     'sharp left': 'fechando à esquerda', 'sharp right': 'fechando à direita', straight: 'em frente', uturn: 'e faça o retorno' };
   function instrucao(s) {
+    if (s._parada) return 'Parada ' + s._parada + ' alcançada';
     const m = s.maneuver || {}, nome = s.name ? ' em ' + s.name : '', mod = MOD[m.modifier] || '';
     switch (m.type) {
       case 'depart': return 'Siga' + (s.name ? ' por ' + s.name : '') + (mod && m.modifier !== 'straight' ? ' ' + mod : '');
@@ -268,34 +327,43 @@
       default: return 'Continue' + (s.name ? ' por ' + s.name : ' em frente');
     }
   }
-  const fmtDist = (m) => m < 1000 ? Math.round(m / 10) * 10 + ' m' : (m / 1000).toFixed(m < 10000 ? 1 : 0).replace('.', ',') + ' km';
-  function fmtTempo(s) {
-    const min = Math.max(1, Math.round(s / 60));
-    return min < 60 ? min + ' min' : Math.floor(min / 60) + ' h' + (min % 60 ? ' ' + String(min % 60).padStart(2, '0') + ' min' : '');
-  }
+  const fmtDist = U.fmtDist, fmtTempo = U.fmtTempo;
 
   async function rotaOnline(o) {
     const perfil = PERFIS[modo];
-    const url = `${ROTAS}/${perfil.caminho}/route/v1/driving/${o.lng},${o.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson&steps=true`;
-    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 20000);
-    try {
-      const r = await fetch(url, { signal: ctl.signal });
-      const dados = await r.json().catch(() => null);
-      if (!r.ok && !(dados && dados.code)) throw new Error('O serviço de rotas respondeu com erro (' + r.status + ').');
-      return dados;
-    } catch (e) {
-      let er = e;
-      if (e && e.name === 'AbortError') er = new Error('O cálculo da rota demorou demais. Tente de novo.');
-      else if (e instanceof TypeError) er = new Error('Sem conexão com o serviço de rotas. Confira a internet.');
-      if (er && typeof er === 'object') er.rede = true;
-      throw er;
-    } finally { clearTimeout(t); }
+    const coords = pontosRota(o).map(q => q.lng + ',' + q.lat).join(';');
+    const url = `${ROTAS}/${perfil.caminho}/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=true&alternatives=${paradas.length ? 'false' : 'true'}`;
+    for (let tent = 0; ; tent++) {      // uma nova tentativa se o servidor público engasgar
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 15000);
+      try {
+        const r = await fetch(url, { signal: ctl.signal });
+        if (r.status >= 500 && tent < 1) { await esperar(1500); continue; }
+        const dados = await r.json().catch(() => null);
+        if (!r.ok && !(dados && dados.code)) throw new Error('O serviço de rotas respondeu com erro (' + r.status + ').');
+        return dados;
+      } catch (e) {
+        const rede = e && (e.name === 'AbortError' || e instanceof TypeError);
+        if (rede && tent < 1) { await esperar(1200); continue; }
+        let er = e;
+        if (e && e.name === 'AbortError') er = new Error('O cálculo da rota demorou demais. Tente de novo.');
+        else if (e instanceof TypeError) er = new Error('Sem conexão com o serviço de rotas. Confira a internet.');
+        if (er && typeof er === 'object') er.rede = true;
+        throw er;
+      } finally { clearTimeout(t); }
+    }
   }
+  const pontosRota = (o) => [o].concat(paradas, [destino]);
   function rotaOffline(o) {
-    const r = motor.rotear(modo, { lat: o.lat, lng: o.lng }, { lat: destino.lat, lng: destino.lng });
-    if (r.erro === 'longe') throw new Error('A partida ou o destino está fora da área do mapa offline (Boa Vista e entorno), ou longe de qualquer rua para esse meio de transporte.');
-    if (r.erro) throw new Error('Não achei caminho entre os dois pontos para esse meio de transporte (mapa offline).');
-    return { code: 'Ok', routes: [r] };
+    const pts = pontosRota(o), pernas = [], coords = []; let dist = 0, dur = 0;
+    for (let k = 0; k < pts.length - 1; k++) {
+      const r = motor.rotear(modo, { lat: pts[k].lat, lng: pts[k].lng }, { lat: pts[k + 1].lat, lng: pts[k + 1].lng });
+      const onde = pts.length > 2 ? ' (trecho ' + (k + 1) + ' de ' + (pts.length - 1) + ')' : '';
+      if (r.erro === 'longe') throw new Error('A partida, uma parada ou o destino está fora da área do mapa offline (Boa Vista e entorno), ou longe de qualquer rua para esse meio de transporte' + onde + '.');
+      if (r.erro) throw new Error('Não achei caminho entre os pontos para esse meio de transporte (mapa offline)' + onde + '.');
+      pernas.push(r.legs[0]); dist += r.distance; dur += r.duration;
+      r.geometry.coordinates.forEach((c, n) => { if (k === 0 || n > 0) coords.push(c); });
+    }
+    return { code: 'Ok', routes: [{ distance: dist, duration: dur, geometry: { type: 'LineString', coordinates: coords }, legs: pernas }] };
   }
 
   async function tracarRota() {
@@ -314,10 +382,10 @@
       }
       if (minha !== senha) return;
       if (!dados || dados.code !== 'Ok' || !dados.routes || !dados.routes.length) {
-        limparRota();
+        limparRota(); seguir(false);
         throw new Error(dados && dados.code === 'NoRoute' ? 'Não achei caminho entre os dois pontos para esse meio de transporte.' : 'Não consegui traçar a rota agora.');
       }
-      desenharRota(o, dados.routes[0]);
+      mostrarRotas(o, dados.routes.slice(0, 3));
       const msg = [offline ? 'Rota calculada pelo mapa offline (sem internet): sem trânsito e sem obras.' : '', avisoDestino].filter(Boolean).join(' ');
       status(msg, offline ? 'ok' : '');
       avisoDestino = '';
@@ -325,45 +393,237 @@
     finally { if (minha === senha) ocupado(false); }
   }
 
-  function limparRota() {
+  function apagarCamadas() {
     if (camadaRota) { mapa.removeLayer(camadaRota); camadaRota = null; }
     if (mOrigem) { mapa.removeLayer(mOrigem); mOrigem = null; }
-    $('mapaResumo').classList.add('hidden'); $('mapaPassos').textContent = '';
+    if (mPasso) { mapa.removeLayer(mPasso); mPasso = null; }
+  }
+  function limparRota() {
+    if (mapa) apagarCamadas();
+    rotas = []; trilha = null; origemAtual = null;
+    $('mapaResumo').classList.add('hidden'); $('mapaPassos').textContent = ''; $('mapaAlternativas').textContent = ''; $('mapaProximo').classList.add('hidden');
   }
 
-  function desenharRota(o, rota) {
-    limparRota();
-    const pontos = rota.geometry.coordinates.map(c => [c[1], c[0]]);
-    camadaRota = L.layerGroup([
-      L.polyline(pontos, { color: '#ffffff', weight: 9, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }),
-      L.polyline(pontos, { color: '#146B47', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' })
-    ]).addTo(mapa);
-    if (o.rotulo !== 'Minha posição') mOrigem = L.marker([o.lat, o.lng], { icon: icone('mp-pino-orig', 16), title: o.rotulo, keyboard: false }).addTo(mapa);
-    $('mapaDist').textContent = fmtDist(rota.distance);
-    $('mapaTempo').textContent = fmtTempo(rota.duration);
-    $('mapaDeAte').textContent = o.rotulo + ' → ' + destino.rotulo;
-    $('mapaGoogle').href = 'https://www.google.com/maps/dir/?api=1&origin=' + o.lat + ',' + o.lng + '&destination=' + destino.lat + ',' + destino.lng + '&travelmode=' + PERFIS[modo].google;
+  const coordsDe = (r) => r.geometry.coordinates.map(c => [c[1], c[0]]);
+  const passosDe = (r) => {          // junta os trechos; a chegada de cada trecho intermediário vira "Parada n alcançada"
+    const L = r.legs || [], out = [];
+    L.forEach((leg, li) => (leg.steps || []).forEach((st) => { out.push(li < L.length - 1 && st.maneuver && st.maneuver.type === 'arrive' ? Object.assign({}, st, { _parada: li + 1 }) : st); }));
+    return out;
+  };
+
+  function pintarRotas() {
+    apagarCamadas();
+    const estilo = (cor, larg, op) => ({ color: cor, weight: larg, opacity: op, lineCap: 'round', lineJoin: 'round' });
+    camadaRota = L.layerGroup().addTo(mapa);
+    rotas.forEach((r, i) => {                      // alternativas (cinza) por baixo; tocar numa delas a escolhe
+      if (i === rotaSel) return;
+      const pts = coordsDe(r), dica = 'Rota alternativa: ' + fmtTempo(r.duration) + ' · ' + fmtDist(r.distance) + ' (toque para escolher)';
+      [L.polyline(pts, estilo('#ffffff', 9, 0.85)), L.polyline(pts, estilo('#7b8aa0', 5, 0.95))].forEach((l) => {
+        l.on('click', (ev) => { L.DomEvent.stopPropagation(ev); selecionarRota(i); });
+        l.bindTooltip(dica, { sticky: true });
+        camadaRota.addLayer(l);
+      });
+    });
+    const pts = coordsDe(rotas[rotaSel]);
+    camadaRota.addLayer(L.polyline(pts, estilo('#ffffff', 9, 0.9)));
+    camadaRota.addLayer(L.polyline(pts, estilo('#146B47', 5, 0.95)));
+    const cum = U.acumulado(pts), steps = passosDe(rotas[rotaSel]);
+    trilha = { pontos: pts, cum, steps, passos: U.localizarPassos(steps, pts, cum), atual: -1 };
+    if (origemAtual && origemAtual.rotulo !== 'Minha posição') mOrigem = L.marker([origemAtual.lat, origemAtual.lng], { icon: icone('mp-pino-orig', 16), title: origemAtual.rotulo, keyboard: false }).addTo(mapa);
+  }
+
+  function linkGoogle(o) {
+    const base = 'https://www.google.com/maps/dir/?api=1&destination=' + destino.lat + ',' + destino.lng + '&travelmode=' + PERFIS[modo].google;
+    const via = paradas.length ? '&waypoints=' + paradas.map(q => q.lat + ',' + q.lng).join('%7C') : '';
+    return (o.rotulo === 'Minha posição' ? base : base + '&origin=' + o.lat + ',' + o.lng) + via;   // sem origem, o Google usa a posição em tempo real
+  }
+
+  function preencherResumo() {
+    const r = rotas[rotaSel], o = origemAtual;
+    $('mapaDist').textContent = fmtDist(r.distance);
+    $('mapaTempo').textContent = fmtTempo(r.duration);
+    $('mapaChegada').textContent = 'Chegada por volta de ' + U.horaChegada(r.duration) + ' (saindo agora)';
+    $('mapaDeAte').textContent = o.rotulo + (paradas.length ? ' → ' + paradas.length + (paradas.length === 1 ? ' parada' : ' paradas') : '') + ' → ' + destino.rotulo;
+    $('mapaGoogle').href = linkGoogle(o);
+    $('mapaSeguir').classList.toggle('hidden', o.rotulo !== 'Minha posição' || !navigator.geolocation);
+    const alt = $('mapaAlternativas'); alt.textContent = '';
+    if (rotas.length > 1) {
+      const rapida = rotas.reduce((m, x, i) => x.duration < rotas[m].duration ? i : m, 0);
+      rotas.forEach((x, i) => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'mp-alt'; b.setAttribute('aria-pressed', i === rotaSel ? 'true' : 'false');
+        b.textContent = fmtTempo(x.duration) + ' · ' + fmtDist(x.distance) + (i === rapida ? ' · mais rápida' : '');
+        b.addEventListener('click', () => selecionarRota(i));
+        alt.appendChild(b);
+      });
+      alt.classList.remove('hidden');
+    } else alt.classList.add('hidden');
     const ol = $('mapaPassos'); ol.textContent = '';
-    ((rota.legs && rota.legs[0] && rota.legs[0].steps) || []).forEach((s) => {
-      const li = document.createElement('li');
-      const a = document.createElement('span'); a.textContent = instrucao(s);
-      li.appendChild(a);
-      if (s.distance && s.maneuver && s.maneuver.type !== 'arrive') { const d = document.createElement('small'); d.textContent = fmtDist(s.distance); li.appendChild(d); }
-      ol.appendChild(li);
+    trilha.steps.forEach((s, i) => {
+      const li = document.createElement('li'), b = document.createElement('button'); b.type = 'button'; b.className = 'mp-passo';
+      const ic = document.createElement('span'); ic.className = 'mp-seta-passo'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = U.seta(s);
+      const tx = document.createElement('span'); tx.className = 'mp-passo-txt'; tx.textContent = instrucao(s);
+      if (s.distance && s.maneuver && s.maneuver.type !== 'arrive') { const d = document.createElement('small'); d.textContent = fmtDist(s.distance); tx.appendChild(d); }
+      b.append(ic, tx); b.addEventListener('click', () => irParaPasso(i)); li.appendChild(b); ol.appendChild(li);
     });
     $('mapaResumo').classList.remove('hidden');
+  }
+
+  function mostrarRotas(o, lista) {
+    origemAtual = o; rotas = lista; rotaSel = 0;
+    pintarRotas(); preencherResumo();
     if (cheia && MOBILE()) recolherMais(true);
-    mapa.fitBounds(L.latLngBounds(pontos), margens());
+    if (!seguindo) mapa.fitBounds(L.latLngBounds(trilha.pontos), margens());
+  }
+  function selecionarRota(i) {
+    if (!rotas[i] || i === rotaSel) return;
+    rotaSel = i; pintarRotas(); preencherResumo();
+    if (!seguindo) mapa.fitBounds(L.latLngBounds(trilha.pontos), margens());
+  }
+
+  function marcarPassoAtual(i) {
+    if (!trilha || trilha.atual === i) return;
+    trilha.atual = i;
+    sec.querySelectorAll('#mapaPassos li').forEach((li, k) => li.classList.toggle('is-atual', k === i));
+    const li = sec.querySelectorAll('#mapaPassos li')[i];
+    if (li && li.scrollIntoView) { try { li.scrollIntoView({ block: 'nearest' }); } catch (e) { /* sem rolagem */ } }
+  }
+  function irParaPasso(i) {
+    const l = trilha && trilha.passos[i]; if (!l) return;
+    if (mPasso) mapa.removeLayer(mPasso);
+    mPasso = L.circleMarker([l.lat, l.lng], { radius: 11, color: '#146B47', weight: 3, fillColor: '#ffffff', fillOpacity: 0.9, interactive: false }).addTo(mapa);
+    mapa.setView([l.lat, l.lng], Math.max(mapa.getZoom(), 17));
+    sec.querySelectorAll('#mapaPassos li').forEach((li, k) => li.classList.toggle('is-sel', k === i));
+    if (cheia && MOBILE()) { $('mapaResumo').classList.add('is-passos-fechados'); $('mapaPassosBtn').setAttribute('aria-expanded', 'false'); }   // abre espaço para ver o ponto no mapa
+  }
+
+  // ---------- acompanhar (GPS ligado): destaca o passo atual e recalcula se sair da rota ----------
+  async function pedirTelaLigada() { try { if (navigator.wakeLock) travaTela = await navigator.wakeLock.request('screen'); } catch (e) { /* a tela pode apagar: o app continua */ } }
+  function soltarTela() { try { if (travaTela) travaTela.release(); } catch (e) { /* já solta */ } travaTela = null; }
+  function aoMoverPosicao(p) {
+    posicao = { lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy || 0, quando: Date.now() };
+    mostrarPosicao(posicao).catch(() => {});
+    if (!trilha || !destino) return;
+    if (U.distM(posicao, destino) < 30) { status('Você chegou ao destino.', 'ok'); $('mapaProximo').classList.add('hidden'); seguir(false); return; }
+    const pr = U.projetar(posicao, trilha.pontos, trilha.cum);
+    if (pr && pr.dist > Math.max(LIMITE_ROTA_FORA, (posicao.precisao || 0) * 1.5)) {
+      if (Date.now() - ultimoRecalculo > 20000) { ultimoRecalculo = Date.now(); status('Você saiu da rota. Recalculando…'); tracarRota(); }
+      return;
+    }
+    if (pr) {
+      const i = U.passoAtual(trilha.passos, pr.ao_longo); marcarPassoAtual(i);
+      const prox = trilha.steps[i + 1], loc = trilha.passos[i + 1];
+      const el = $('mapaProximo');
+      if (prox && loc) { el.textContent = 'Em ' + fmtDist(Math.max(0, loc.inicio - pr.ao_longo)) + ': ' + instrucao(prox); el.classList.remove('hidden'); }
+      else el.classList.add('hidden');
+    }
+    if (mapa) mapa.panTo([posicao.lat, posicao.lng], { animate: true });
+  }
+  function seguir(sim) {
+    sim = !!sim;
+    if (sim === seguindo) return;
+    const btn = $('mapaSeguir');
+    if (sim) {
+      if (!navigator.geolocation) { status('Este aparelho/navegador não informa a localização.', 'erro'); return; }
+      seguindo = true;
+      vigia = navigator.geolocation.watchPosition(aoMoverPosicao,
+        (e) => { if (e && e.code === 1) { status(msgGeo(e), 'erro'); seguir(false); } else status('Sinal de GPS fraco. Vá para um local aberto.'); },
+        { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 });
+      pedirTelaLigada();
+      if (posicao && mapa) mapa.setView([posicao.lat, posicao.lng], Math.max(mapa.getZoom(), 17));
+      status('Acompanhando a sua posição. A tela fica acesa enquanto estiver ligado.', 'ok');
+    } else {
+      seguindo = false;
+      if (vigia !== null && navigator.geolocation) navigator.geolocation.clearWatch(vigia);
+      vigia = null; soltarTela(); $('mapaProximo').classList.add('hidden');
+      sec.querySelectorAll('#mapaPassos li.is-atual').forEach(li => li.classList.remove('is-atual')); if (trilha) trilha.atual = -1;
+    }
+    btn.setAttribute('aria-pressed', seguindo ? 'true' : 'false');
+    btn.querySelector('span').textContent = seguindo ? 'Parar de acompanhar' : 'Acompanhar';
+  }
+
+  // ---------- paradas (rota com vários endereços) ----------
+  function desenharParadas() {
+    if (!mapa) return;
+    if (grupoParadas) { mapa.removeLayer(grupoParadas); grupoParadas = null; }
+    if (!paradas.length) return;
+    grupoParadas = L.layerGroup().addTo(mapa);
+    paradas.forEach((q, i) => grupoParadas.addLayer(L.marker([q.lat, q.lng], { icon: L.divIcon({ className: 'mp-pino mp-pino-parada', iconSize: [24, 24], iconAnchor: [12, 12], html: '<span>' + (i + 1) + '</span>' }), title: 'Parada ' + (i + 1) + ': ' + q.rotulo, keyboard: false })));
+  }
+  function renderParadas() {
+    const box = $('mapaParadasBox'), ol = $('mapaParadas'); ol.textContent = '';
+    box.classList.toggle('hidden', !paradas.length);
+    paradas.forEach((q, i) => {
+      const li = document.createElement('li');
+      const n = document.createElement('span'); n.className = 'mp-parada-n'; n.textContent = String(i + 1);
+      const t = document.createElement('span'); t.className = 'mp-parada-t'; t.textContent = q.rotulo;
+      li.append(n, t);
+      const mk = (txt, rot, fn, off) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'mp-mini mp-mini-peq'; b.textContent = txt; b.setAttribute('aria-label', rot); b.title = rot; b.disabled = !!off; b.addEventListener('click', fn); li.appendChild(b); };
+      mk('↑', 'Subir a parada ' + (i + 1), () => moverParada(i, -1), i === 0);
+      mk('↓', 'Descer a parada ' + (i + 1), () => moverParada(i, 1), i === paradas.length - 1);
+      mk('✕', 'Remover a parada ' + (i + 1), () => removerParada(i));
+      ol.appendChild(li);
+    });
+    $('mapaOtimizar').classList.toggle('hidden', paradas.length < 2);
+    desenharParadas();
+  }
+  function aposMudarParadas() { renderParadas(); if (destino) tracarRota(); }
+  function moverParada(i, d) { const j = i + d; if (j < 0 || j >= paradas.length) return; const t = paradas[i]; paradas[i] = paradas[j]; paradas[j] = t; aposMudarParadas(); }
+  function removerParada(i) { paradas.splice(i, 1); aposMudarParadas(); }
+  async function adicionarParada() {
+    if (!destino) { status('Escolha primeiro um destino; ele vira a parada e você busca o próximo.', 'erro'); return; }
+    if (paradas.length >= 8) { status('Limite de 8 paradas (mais o destino final).', 'erro'); return; }
+    seguir(false);
+    paradas.push({ lat: destino.lat, lng: destino.lng, rotulo: destino.rotulo });
+    senha++; destino = null;
+    if (mDestino) { mapa.removeLayer(mDestino); mDestino = null; }
+    limparRota();
+    $('mapaBusca').value = ''; fecharResultados(); $('mapaDestinoBox').classList.add('hidden');
+    renderParadas();
+    status('Parada ' + paradas.length + ' adicionada. Busque o próximo endereço (ou toque no mapa): ele será o próximo ponto da rota.', 'ok');
+    $('mapaBusca').focus();
+  }
+  async function otimizarParadas() {
+    if (paradas.length < 2) return;
+    try {
+      const o = origemAtual || await obterOrigem();
+      paradas = U.ordenarParadas(o, paradas, destino || null);
+      status('Paradas reordenadas pela menor distância em linha reta. Confira a ordem e ajuste se precisar.', 'ok');
+      aposMudarParadas();
+    } catch (e) { mostrarErro(e); }
+  }
+
+  // ---------- inverter e compartilhar ----------
+  async function inverter() {
+    if (!destino) return;
+    let o = origemAtual;
+    if (!o) { try { o = await obterOrigem(); } catch (e) { mostrarErro(e); return; } }
+    seguir(false);
+    const d = destino;
+    origemOutro = { lat: d.lat, lng: d.lng, rotulo: d.rotulo };      // o antigo destino vira a partida
+    if (paradas.length) { paradas.reverse(); renderParadas(); }
+    selOrigem.value = 'outro'; ajustarOrigem(); $('mapaOrigemTexto').value = d.rotulo;
+    $('mapaBusca').value = o.rotulo === 'Minha posição' ? '' : o.rotulo;
+    senha++; avisoDestino = '';
+    try { await marcarDestino({ lat: o.lat, lng: o.lng, rotulo: o.rotulo }); await tracarRota(); } catch (e) { mostrarErro(e); }
+  }
+  async function compartilhar() {
+    if (!destino) return;
+    const url = $('mapaGoogle').href, texto = 'Destino: ' + destino.rotulo;
+    try { if (navigator.share) { await navigator.share({ title: 'Rota até o destino', text: texto, url }); return; } }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(texto + '\n' + url); status('Link da rota copiado.', 'ok'); }
+    catch (e) { status('Não consegui copiar. Use "Abrir no Google Maps" e compartilhe de lá.', 'erro'); }
   }
 
   function mostrarErro(e) { status(((e && e.message) || 'Algo deu errado.') + (e && e.rede && !motor && AMO ? DICA_OFFLINE : ''), 'erro'); ocupado(false); }
 
   function limparTudo() {
     senha++;
-    destino = null;
+    seguir(false);
+    destino = null; origemOutro = null; paradas = [];
     if (mapa) { if (mDestino) { mapa.removeLayer(mDestino); mDestino = null; } limparRota(); }
     $('mapaBusca').value = ''; $('mapaResultados').classList.add('hidden'); $('mapaDestinoBox').classList.add('hidden');
-    status(''); ocupado(false);
+    renderParadas(); status(''); ocupado(false);
   }
 
   // ---------- ligações ----------
@@ -490,6 +750,34 @@
     catch (e) { mostrarErro(e); }
   });
   $('mapaLimpar').addEventListener('click', limparTudo);
+  $('mapaInverter').addEventListener('click', inverter);
+  $('mapaAddParada').addEventListener('click', adicionarParada);
+  $('mapaOtimizar').addEventListener('click', otimizarParadas);
+  $('mapaSeguir').addEventListener('click', () => seguir(!seguindo));
+  $('mapaCompartilhar').addEventListener('click', compartilhar);
+  document.addEventListener('visibilitychange', () => { if (seguindo && document.visibilityState === 'visible' && !travaTela) pedirTelaLigada(); });
+
+  // sugestões enquanto digita: só com o mapa offline em uso (a busca online não pode ser disparada a cada letra)
+  let tSug = null;
+  $('mapaBusca').addEventListener('input', () => {
+    clearTimeout(tSug);
+    const q = $('mapaBusca').value.trim();
+    if (q.length < 3) { fecharResultados(); return; }
+    if (!motor || !usarOffline()) return;
+    tSug = setTimeout(() => { try { listarResultados(buscarOffline(q), { todos: true, titulo: 'Sugestões (mapa offline)' }); } catch (e) { /* sem sugestões */ } }, 250);
+  });
+  // teclado: ↓ vai para a lista, ↑/↓ percorrem, Esc fecha
+  $('mapaBusca').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') fecharResultados();
+    if (e.key === 'ArrowDown') { const b = $('mapaResultados').querySelector('button'); if (b) { e.preventDefault(); b.focus(); } }
+  });
+  $('mapaResultados').addEventListener('keydown', (e) => {
+    const bs = Array.from($('mapaResultados').querySelectorAll('button')), i = bs.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' && i < bs.length - 1) { e.preventDefault(); bs[i + 1].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (i > 0) bs[i - 1].focus(); else $('mapaBusca').focus(); }
+    else if (e.key === 'Escape') { fecharResultados(); $('mapaBusca').focus(); }
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest || !e.target.closest('#mapaForm, #mapaResultados')) fecharResultados(); });
 
   // ---------- mapa offline: camada de ruas (canvas), download e painel ----------
   const MINZ = [0, 0, 12, 13, 14, 15, 16];                                  // zoom mínimo para desenhar cada classe de via
