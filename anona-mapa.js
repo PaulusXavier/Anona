@@ -12,6 +12,8 @@
   if (!sec) return;
   const $ = (id) => document.getElementById(id);
   const U = window.AnonaMapaUtil;
+  const FOCO = window.AnonaMapaFoco || null;   // bairros de foco (13 de Setembro e Araceli): anona-mapa-foco.js
+  let escopo = (FOCO && FOCO.porId(lerPref('anonaMapaEscopo', ''))) ? lerPref('anonaMapaEscopo', '') : '';   // bairro fixado nos chips de busca
   if (!U) { const st = $('mapaStatus'); if (st) { st.textContent = 'Não consegui carregar o mapa (arquivo anona-mapa-util.js ausente).'; st.className = 'mp-status is-erro'; } return; }
 
   const PARTIDA = { rotulo: 'Rua Santo Agostinho, 193 — Centenário, Boa Vista/RR', consulta: 'Rua Santo Agostinho 193, Centenário, Boa Vista, Roraima' };
@@ -131,23 +133,46 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   // Resultados do mapa offline têm o mesmo formato dos do Nominatim (lat/lon/display_name) + _rotulo (já pronto) e _aviso.
   const referencia = () => { const r = posicao || origemAtual || partidaCache; return r && isFinite(r.lat) && isFinite(r.lng) ? { lat: r.lat, lng: r.lng } : null; };   // desempata ruas de mesmo nome pela que está mais perto
-  const buscarOffline = (q) => motor.buscar(q, 6, { perto: referencia() }).map(x => ({ lat: x.lat, lon: x.lng, display_name: x.rotulo, _rotulo: x.rotulo, _aviso: x.aviso || '' }));
+  const paraItem = (x) => ({ lat: x.lat, lon: x.lng, display_name: x.rotulo, _rotulo: x.rotulo, _aviso: x.aviso || '' });
+  // bairro de foco: o citado no texto ("…, 13 de setembro", "treze de setembro", "aracelis") ou o fixado nos chips
+  function focoDaBusca(q) {
+    if (!FOCO) return null;
+    const d = FOCO.detectar(q);
+    return d ? { foco: d.foco, resto: d.resto, citado: true } : (escopo ? { foco: FOCO.porId(escopo), resto: q, citado: false } : null);
+  }
+  const avisoBairro = (rs, f) => { if (f && rs.length && !FOCO.doBairro(rs[0], f.foco)) rs[0]._aviso = (rs[0]._aviso ? rs[0]._aviso + ' ' : '') + 'Não confirmei que fica no bairro ' + f.foco.rotulo + ': confira o ponto no mapa.'; return rs; };
+  const buscarOffline = (q) => {
+    const f = focoDaBusca(q), perto = referencia();
+    let itens = [];
+    if (f) for (const v of f.foco.variantes.slice(0, 3)) { itens = motor.buscar((f.resto ? f.resto + ', ' : '') + v, 6, { perto }); if (itens.length) break; }
+    if (!itens.length) itens = motor.buscar(q, 6, { perto });
+    const rs = itens.map(paraItem);
+    return f ? avisoBairro(FOCO.priorizar(rs, f.foco), f) : (FOCO ? FOCO.priorizar(rs) : rs);
+  };
   // 1º só em Boa Vista e entorno; 2º Brasil inteiro (Boa Vista tem preferência); 3º sem o número da casa, avisando.
   function buscarOnline(q) {
-    return comCache('b:' + q.toLowerCase(), async () => {
+    const f = focoDaBusca(q);
+    return comCache('b:' + (f ? f.foco.id + ':' : '') + q.toLowerCase(), async () => {
       const base = { q, limit: 6, countrycodes: 'br', viewbox: VIEWBOX, addressdetails: 1 };
-      let rs = await nominatim('/search', Object.assign({ bounded: 1 }, base));
+      let rs = [];
+      if (f) {   // rua + bairro de foco: tenta as grafias do bairro (no máx. 2 pedidos) antes de buscar na cidade toda
+        for (const c of FOCO.consultas(f.foco, f.resto).slice(0, 2)) {
+          rs = await nominatim('/search', Object.assign({}, base, { q: c, bounded: 1 }));
+          if (rs.length) break;
+        }
+      }
+      if (!rs.length) rs = await nominatim('/search', Object.assign({ bounded: 1 }, base));
       if (!rs.length) rs = await nominatim('/search', base);
       if (!rs.length) {
-        const sn = U.semNumero(q);
+        const sn = U.semNumero(f ? (f.resto || q) : q);
         if (sn) {
-          const b2 = Object.assign({}, base, { q: sn.texto });
+          const b2 = Object.assign({}, base, { q: sn.texto + (f ? ', ' + f.foco.variantes[0] : '') });
           rs = await nominatim('/search', Object.assign({ bounded: 1 }, b2));
-          if (!rs.length) rs = await nominatim('/search', b2);
+          if (!rs.length && f) rs = await nominatim('/search', Object.assign({ bounded: 1 }, base, { q: sn.texto }));
           rs.forEach((r) => { r._aviso = 'Não achei o número ' + sn.numero + ' no mapa: mostrei a rua. Arraste o pino ou toque no mapa para ajustar.'; });
         }
       }
-      return rs;
+      return f ? avisoBairro(FOCO.priorizar(rs, f.foco), f) : (FOCO ? FOCO.priorizar(rs) : rs);
     });
   }
   async function buscarEndereco(q) {
@@ -753,6 +778,10 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   $('mapaSairCheia').addEventListener('click', sairCheia);
   $('mapaMais').addEventListener('click', () => recolherMais(!sec.querySelector('.mp-mais').classList.contains('is-recolhido')));
   $('mapaPassosBtn').addEventListener('click', () => { const f = $('mapaResumo').classList.toggle('is-passos-fechados'); $('mapaPassosBtn').setAttribute('aria-expanded', f ? 'false' : 'true'); });
+  // celular, fora da tela cheia: o mapa pequeno prendia a rolagem da página — tocar nele (ou na busca) abre a tela cheia
+  $('mapaToqueAbrir').addEventListener('click', () => { if (!cheia) entrarCheia(); });
+  $('mapaBusca').addEventListener('focus', () => { if (!cheia && MOBILE()) { entrarCheia(); setTimeout(() => $('mapaBusca').focus(), 0); } });
+  const ajuda = $('mapaAjuda'); if (ajuda && !MOBILE()) ajuda.open = true;   // no computador a ajuda já vem aberta
   window.addEventListener('popstate', fecharCheia);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cheia) sairCheia(); });
   document.addEventListener('fullscreenchange', () => { if (cheia && viaApi && !document.fullscreenElement) sairCheia(); else ajustarMapa(); });
@@ -830,6 +859,16 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   document.addEventListener('visibilitychange', () => { if (seguindo && document.visibilityState === 'visible' && !travaTela) pedirTelaLigada(); });
 
   // sugestões enquanto digita: só com o mapa offline em uso (a busca online não pode ser disparada a cada letra)
+  // chips "Buscar em": fixa a busca num dos bairros de foco (13 de Setembro / Araceli); tocar de novo solta
+  function marcarEscopo() {
+    sec.querySelectorAll('[data-foco]').forEach(b => b.setAttribute('aria-pressed', b.dataset.foco === escopo ? 'true' : 'false'));
+    const f = FOCO && FOCO.porId(escopo);
+    $('mapaBusca').placeholder = f ? 'Rua e número' : 'Destino: digite ou fale o endereço';
+  }
+  sec.querySelectorAll('[data-foco]').forEach(b => b.addEventListener('click', () => {
+    escopo = escopo === b.dataset.foco ? '' : b.dataset.foco; gravarPref('anonaMapaEscopo', escopo); marcarEscopo(); $('mapaBusca').focus();
+  }));
+  marcarEscopo();
   let tSug = null;
   $('mapaBusca').addEventListener('input', () => {
     clearTimeout(tSug);
