@@ -956,7 +956,7 @@
       </h2>
       <button type="button" id="mapaTelaCheia" class="mp-btn mp-btn-sec mp-btn-peq" aria-pressed="false"><i data-lucide="maximize" class="w-3.5 h-3.5"></i> Tela cheia</button>
     </div>
-    <p class="text-xs text-slate-500 mb-3 mp-intro">Digite ou fale um endereço — ou toque no mapa — e veja o caminho a partir da sua posição, como no Google Maps. Dá para colar coordenadas ou um link do Google Maps, arrastar o pino para acertar o ponto, escolher entre rotas alternativas e montar uma rota com várias <strong>paradas</strong> (botão <strong>+</strong>), com sugestão da melhor ordem. No celular, <strong>Tela cheia</strong> deixa o mapa maior e <strong>Acompanhar</strong> vai destacando cada passo e recalcula se você sair da rota. <strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas funcionam sem conexão.</p>
+    <p class="text-xs text-slate-500 mb-3 mp-intro">Digite ou fale um endereço — ou toque no mapa — e veja o caminho a partir da sua posição, como no Google Maps. Dá para colar coordenadas ou um link do Google Maps, arrastar o pino para acertar o ponto, escolher entre rotas alternativas e montar uma rota com várias <strong>paradas</strong> (botão <strong>+</strong>), com sugestão da melhor ordem, <strong>horário previsto em cada parada</strong> (com hora de saída e tempo de visita) e <strong>Copiar roteiro</strong> para colar onde precisar. No celular, <strong>Tela cheia</strong> deixa o mapa maior e <strong>Acompanhar</strong> vai destacando cada passo e recalcula se você sair da rota — e, numa rota com paradas, vai riscando as que você já alcançou. <strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas funcionam sem conexão.</p>
     <div class="mp-grid">
       <div class="mp-painel">
         <div class="mp-topo">
@@ -1009,7 +1009,7 @@
 
           <p id="mapaStatus" class="mp-status hidden" role="status" aria-live="polite"></p>
           <div id="mapaDestinoBox" class="mp-destino hidden">
-            <div class="mp-destino-txt"><b>Destino:</b> <span id="mapaDestinoTexto"></span><small>Arraste o pino vermelho para ajustar o ponto.</small></div>
+            <div class="mp-destino-txt"><b>Destino:</b> <span id="mapaDestinoTexto"></span><small>Arraste o pino vermelho para ajustar o ponto.</small><small id="mapaDestinoEta" class="mp-eta hidden"></small></div>
             <button type="button" id="mapaAddParada" class="mp-mini" aria-label="Adicionar este endereço como parada e buscar outro" title="Adicionar como parada e buscar outro endereço"><i data-lucide="plus" class="w-4 h-4">+</i></button>
             <button type="button" id="mapaInverter" class="mp-mini" aria-label="Inverter partida e destino" title="Inverter partida e destino"><i data-lucide="arrow-up-down" class="w-4 h-4">⇅</i></button>
           </div>
@@ -1024,12 +1024,22 @@
             <div class="mp-total"><strong id="mapaTempo"></strong> <span id="mapaDist"></span></div>
             <p id="mapaChegada" class="mp-chegada"></p>
             <p id="mapaDeAte" class="mp-deate"></p>
+            <div class="mp-plano" role="group" aria-label="Horário de saída e tempo de visita">
+              <label for="mapaSaida">Sair às <input id="mapaSaida" type="time" class="mp-select" aria-describedby="mapaSaidaDica"></label>
+              <label id="mapaVisitaBox" for="mapaVisita" class="hidden">Visita por parada
+                <select id="mapaVisita" class="mp-select">
+                  <option value="0">sem tempo</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 h</option>
+                </select>
+              </label>
+              <small id="mapaSaidaDica">Deixe a hora vazia para “saindo agora”.</small>
+            </div>
             <div id="mapaAlternativas" class="mp-alts hidden" role="group" aria-label="Rotas alternativas"></div>
             <p id="mapaProximo" class="mp-proximo hidden" role="status" aria-live="polite"></p>
             <div class="mp-acoes">
               <button type="button" id="mapaSeguir" class="mp-btn hidden" aria-pressed="false"><i data-lucide="navigation" class="w-3.5 h-3.5"></i> <span>Acompanhar</span></button>
               <a id="mapaGoogle" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir no Google Maps</a>
               <button type="button" id="mapaCompartilhar" class="mp-btn mp-btn-sec"><i data-lucide="share-2" class="w-3.5 h-3.5"></i> Compartilhar</button>
+              <button type="button" id="mapaCopiar" class="mp-btn mp-btn-sec hidden"><i data-lucide="clipboard-copy" class="w-3.5 h-3.5"></i> Copiar roteiro</button>
               <button type="button" id="mapaPassosBtn" class="mp-btn mp-btn-sec mp-so-cheia" aria-expanded="false"><i data-lucide="list" class="w-3.5 h-3.5"></i> Passo a passo</button>
             </div>
             <ol id="mapaPassos" class="mp-passos"></ol>
@@ -1037,7 +1047,7 @@
 
           <details class="tv-more mp-priv">
             <summary>Privacidade</summary>
-            <p class="tv-hint">O que você digita (só o endereço) vai ao OpenStreetMap/Nominatim para achar o ponto no mapa, e as coordenadas da partida e do destino vão ao serviço de rotas (routing.openstreetmap.de). Sua posição só é lida quando você pede (ou enquanto <em>Acompanhar</em> estiver ligado) e não é guardada; ao recalcular uma rota, só as coordenadas vão ao serviço de rotas. Endereços buscados ficam apenas na memória da página, nunca no aparelho. <em>Compartilhar</em> só envia o que você escolher enviar. Se usar o microfone, o <strong>áudio é enviado ao serviço de voz do próprio navegador</strong> (no Chrome, o do Google) para virar texto. <strong>Não diga nem digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca. <strong>Mapa offline:</strong> ao baixar, o app pede ao servidor público Overpass (OpenStreetMap) as ruas, bairros e locais da área de Boa Vista — nenhum dado seu vai junto — e guarda tudo só neste aparelho. Com o mapa offline em uso, nada do que você digita ou marca sai do aparelho.</p>
+            <p class="tv-hint">O que você digita (só o endereço) vai ao OpenStreetMap/Nominatim para achar o ponto no mapa, e as coordenadas da partida e do destino vão ao serviço de rotas (routing.openstreetmap.de). Sua posição só é lida quando você pede (ou enquanto <em>Acompanhar</em> estiver ligado) e não é guardada; ao recalcular uma rota, só as coordenadas vão ao serviço de rotas. Endereços buscados ficam apenas na memória da página, nunca no aparelho. <em>Compartilhar</em> e <em>Copiar roteiro</em> só enviam ou copiam o que você escolher (o roteiro copiado traz os endereços que você digitou: não coloque nome de pessoa nele). A hora de saída e o tempo de visita não vão a lugar nenhum — são só contas feitas no aparelho. Se usar o microfone, o <strong>áudio é enviado ao serviço de voz do próprio navegador</strong> (no Chrome, o do Google) para virar texto. <strong>Não diga nem digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca. <strong>Mapa offline:</strong> ao baixar, o app pede ao servidor público Overpass (OpenStreetMap) as ruas, bairros e locais da área de Boa Vista — nenhum dado seu vai junto — e guarda tudo só neste aparelho. Com o mapa offline em uso, nada do que você digita ou marca sai do aparelho.</p>
           </details>
         </div>
       </div>
