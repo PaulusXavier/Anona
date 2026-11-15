@@ -823,8 +823,8 @@ body:not(.anona-imprimindo) .no-print{ display:none !important; }
 #mapaRotas .mp-total{ font-size:1.05rem; color:var(--verde); }
 #mapaRotas .mp-total span{ font-size:.85rem; color:#475569; margin-left:.35rem; }
 #mapaRotas .mp-deate{ font-size:.72rem; color:#64748b; margin:0; }
-#mapaRotas .mp-passos{ list-style:decimal; margin:0; padding-left:1.25rem; max-height:15rem; overflow:auto; font-size:.76rem; color:var(--ink); }
-#mapaRotas .mp-passos li{ padding:.25rem 0; border-top:1px solid var(--line-soft); }
+#mapaRotas .mp-passos{ list-style:none; margin:0; padding:0; max-height:15rem; overflow:auto; font-size:.76rem; color:var(--ink); }
+#mapaRotas .mp-passos li{ border-top:1px solid var(--line-soft); }
 #mapaRotas .mp-passos li:first-child{ border-top:0; }
 #mapaRotas .mp-passos small{ display:block; color:#64748b; font-size:.68rem; }
 #mapaRotas .mp-mapa{ border:1px solid var(--line); border-radius:.85rem; overflow:hidden; min-height:20rem; }
@@ -890,3 +890,42 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
   #mapaRotas.is-tela-cheia .mp-topo, #mapaRotas.is-tela-cheia .mp-base{ right:auto; width:24rem; }
 }
 #mapaRotas.is-tela-cheia .mp-topo, #mapaRotas.is-tela-cheia .mp-base, #mapaRotas.is-tela-cheia .mp-resumo{ box-sizing:border-box; }
+
+/* ===== Mapa e rotas: alternativas, passo a passo clicável, Acompanhar, inverter ===== */
+#mapaRotas .mp-destino{ display:flex; align-items:flex-start; gap:.5rem; }
+#mapaRotas .mp-destino-txt{ flex:1; min-width:0; overflow-wrap:anywhere; }
+#mapaRotas .mp-destino-txt small{ display:block; margin-top:.15rem; font-size:.66rem; color:#64748b; }
+#mapaRotas .mp-mini{ flex:0 0 auto; width:2.25rem; height:2.25rem; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--line); background:#fff; color:var(--verde); border-radius:.6rem; cursor:pointer; }
+#mapaRotas .mp-mini:hover{ background:var(--verde-soft); }
+#mapaRotas .mp-mini:focus-visible, #mapaRotas .mp-alt:focus-visible, #mapaRotas .mp-passo:focus-visible{ outline:3px solid rgba(13,46,99,.3); outline-offset:2px; }
+#mapaRotas .mp-chegada{ margin:0; font-size:.74rem; color:#475569; }
+#mapaRotas .mp-alts{ display:flex; flex-wrap:wrap; gap:.35rem; }
+#mapaRotas .mp-alt{ border:1px solid var(--line); background:#fff; color:var(--azul-deep); border-radius:999px; padding:.35rem .7rem; font-size:.72rem; font-weight:700; cursor:pointer; }
+#mapaRotas .mp-alt[aria-pressed="true"]{ background:var(--verde-soft); border-color:var(--verde); color:var(--verde); }
+#mapaRotas .mp-proximo{ margin:0; padding:.55rem .7rem; border-radius:.6rem; background:var(--verde); color:#fff; font-size:.85rem; font-weight:700; }
+#mapaRotas .mp-btn[aria-pressed="true"]{ background:#C62828; border-color:#C62828; color:#fff; }
+#mapaRotas .mp-passo{ display:flex; align-items:flex-start; gap:.55rem; width:100%; text-align:left; background:none; border:0; padding:.4rem .2rem; font:inherit; color:inherit; cursor:pointer; border-radius:.4rem; }
+#mapaRotas .mp-passo:hover{ background:var(--line-soft); }
+#mapaRotas .mp-seta-passo{ flex:0 0 1.6rem; height:1.6rem; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:var(--verde-soft); color:var(--verde); font-weight:800; font-size:.95rem; line-height:1; }
+#mapaRotas .mp-passo-txt{ flex:1; min-width:0; }
+#mapaRotas .mp-passos li.is-atual .mp-passo{ background:var(--verde-soft); box-shadow:inset 3px 0 0 var(--verde); }
+#mapaRotas .mp-passos li.is-sel .mp-seta-passo{ background:var(--verde); color:#fff; }
+@media (max-width:1023px){
+  #mapaRotas .mp-alt, #mapaRotas .mp-passo{ min-height:2.5rem; }
+  #mapaRotas .mp-mini{ width:2.5rem; height:2.5rem; }
+}
+#mapaRotas.is-tela-cheia .mp-proximo{ pointer-events:auto; }
+
+/* paradas */
+#mapaRotas .mp-paradas{ border:1px solid var(--line); border-radius:.6rem; background:#fff; padding:.5rem .6rem; display:flex; flex-direction:column; gap:.4rem; }
+#mapaRotas .mp-paradas-cab{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; font-size:.74rem; color:var(--azul-deep); }
+#mapaRotas .mp-paradas-cab .mp-btn-peq{ margin:0; }
+#mapaRotas .mp-paradas-lista{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.3rem; max-height:11rem; overflow:auto; }
+#mapaRotas .mp-paradas-lista li{ display:flex; align-items:center; gap:.4rem; font-size:.75rem; }
+#mapaRotas .mp-parada-n{ flex:0 0 1.4rem; height:1.4rem; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:#F9A825; color:#1b1b1b; font-weight:800; font-size:.72rem; }
+#mapaRotas .mp-parada-t{ flex:1; min-width:0; overflow-wrap:anywhere; }
+#mapaRotas .mp-mini-peq{ width:1.9rem; height:1.9rem; font-size:.8rem; font-weight:800; }
+#mapaRotas .mp-mini:disabled{ opacity:.35; cursor:default; }
+#mapaRotas .mp-pino-parada{ display:flex; }
+#mapaRotas .mp-pino-parada span{ display:flex; align-items:center; justify-content:center; background:#F9A825; color:#1b1b1b; font-weight:800; font-size:.8rem; border:3px solid #fff; box-shadow:0 1px 5px rgba(0,0,0,.45); }
+@media (max-width:1023px){ #mapaRotas .mp-mini-peq{ width:2.25rem; height:2.25rem; } }
