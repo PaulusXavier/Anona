@@ -996,3 +996,17 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
   #mapaRotas.is-tela-cheia:has(#mapaDestinoBox:not(.hidden)) .mp-topo:not(:focus-within) .mp-focos{ display:none; }
 }
 @media (max-width:1023px){ #mapaRotas:not(.is-tela-cheia) .leaflet-control-zoom{ display:none; } }   /* o mapa pequeno só abre a tela cheia: sem botões de zoom escondidos sob o toque */
+#mapaRotas .mp-resultados .mp-res-tag{ display:inline-block; margin-left:.4rem; padding:.05rem .45rem; border-radius:999px; background:var(--verde-soft); color:var(--verde); font-size:.62rem; font-weight:800; vertical-align:middle; white-space:nowrap; }
+
+/* ===== Acompanhar (celular, tela cheia): só o essencial — próximo passo grande, tempo restante e parar ===== */
+@media (max-width:1023px){
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-topo .mp-modos, #mapaRotas.is-tela-cheia.is-seguindo .mp-topo .mp-focos, #mapaRotas.is-tela-cheia.is-seguindo .mp-topo .mp-mais,
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-topo .mp-destino small, #mapaRotas.is-tela-cheia.is-seguindo .mp-topo .mp-paradas{ display:none; }
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-destino .mp-mini{ display:none; }
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-resumo .mp-plano, #mapaRotas.is-tela-cheia.is-seguindo .mp-resumo .mp-alts,
+  #mapaRotas.is-tela-cheia.is-seguindo #mapaGoogle, #mapaRotas.is-tela-cheia.is-seguindo #mapaCompartilhar, #mapaRotas.is-tela-cheia.is-seguindo #mapaCopiar{ display:none; }
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-resumo .mp-acoes{ grid-template-columns:1fr; }
+  #mapaRotas.is-tela-cheia.is-seguindo #mapaPassosBtn{ min-height:2.5rem; flex-direction:row; font-size:.8rem; gap:.4rem; }
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-proximo{ order:-1; font-size:1.2rem; line-height:1.25; padding:.8rem .9rem; border-radius:.75rem; box-shadow:0 4px 14px -4px rgba(13,46,99,.5); }
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-resumo .mp-total{ font-size:1.15rem; }
+}
