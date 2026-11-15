@@ -995,3 +995,4 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
 @media (max-width:1023px){
   #mapaRotas.is-tela-cheia:has(#mapaDestinoBox:not(.hidden)) .mp-topo:not(:focus-within) .mp-focos{ display:none; }
 }
+@media (max-width:1023px){ #mapaRotas:not(.is-tela-cheia) .leaflet-control-zoom{ display:none; } }   /* o mapa pequeno só abre a tela cheia: sem botões de zoom escondidos sob o toque */
