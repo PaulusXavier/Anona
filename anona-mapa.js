@@ -37,6 +37,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   let motor = null;              // mapa offline carregado (ou null)
   let camadaTiles = null, vetor = null, ClasseVetor = null, vetorAuto = false, errosTile = 0, baixando = null;
   let sempreOffline = lerPref('anonaMapaSempreOffline', '0') === '1';
+  let ampliadaPref = lerPref('anonaMapaAmpliada', '0') === '1';   // baixar também estradas/povoados do entorno
+  let parciaisN = 0;             // pedaços de um download interrompido que ainda dá para retomar
   let avisoDestino = '';         // ex.: "o número 193 não está no mapa offline"
   let rotas = [], rotaSel = 0, origemAtual = null, trilha = null;   // rotas: alternativas; trilha: pontos/acumulado/passos da escolhida
   let paradas = [], grupoParadas = null;   // paradas no meio do caminho: [{ lat, lng, rotulo }] (o destino fica sempre por último)
@@ -128,7 +130,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     return v;
   }
   // Resultados do mapa offline têm o mesmo formato dos do Nominatim (lat/lon/display_name) + _rotulo (já pronto) e _aviso.
-  const buscarOffline = (q) => motor.buscar(q, 6).map(x => ({ lat: x.lat, lon: x.lng, display_name: x.rotulo, _rotulo: x.rotulo, _aviso: x.aviso || '' }));
+  const referencia = () => { const r = posicao || origemAtual || partidaCache; return r && isFinite(r.lat) && isFinite(r.lng) ? { lat: r.lat, lng: r.lng } : null; };   // desempata ruas de mesmo nome pela que está mais perto
+  const buscarOffline = (q) => motor.buscar(q, 6, { perto: referencia() }).map(x => ({ lat: x.lat, lon: x.lng, display_name: x.rotulo, _rotulo: x.rotulo, _aviso: x.aviso || '' }));
   // 1º só em Boa Vista e entorno; 2º Brasil inteiro (Boa Vista tem preferência); 3º sem o número da casa, avisando.
   function buscarOnline(q) {
     return comCache('b:' + q.toLowerCase(), async () => {
@@ -354,16 +357,20 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   const pontosRota = (o) => [o].concat(paradas, [destino]);
   function rotaOffline(o) {
-    const pts = pontosRota(o), pernas = [], coords = []; let dist = 0, dur = 0;
+    const pts = pontosRota(o), pernas = [], coords = []; let dist = 0, dur = 0, alternativas = [];
+    const unica = pts.length === 2;       // alternativas só quando é um trecho só (com paradas, a rota fica como está)
     for (let k = 0; k < pts.length - 1; k++) {
-      const r = motor.rotear(modo, { lat: pts[k].lat, lng: pts[k].lng }, { lat: pts[k + 1].lat, lng: pts[k + 1].lng });
+      const r = motor.rotear(modo, { lat: pts[k].lat, lng: pts[k].lng }, { lat: pts[k + 1].lat, lng: pts[k + 1].lng }, unica ? { alternativas: 2 } : undefined);
       const onde = pts.length > 2 ? ' (trecho ' + (k + 1) + ' de ' + (pts.length - 1) + ')' : '';
-      if (r.erro === 'longe') throw new Error('A partida, uma parada ou o destino está fora da área do mapa offline (Boa Vista e entorno), ou longe de qualquer rua para esse meio de transporte' + onde + '.');
+      if (r.erro === 'longe') throw new Error('A partida, uma parada ou o destino está fora da área do mapa offline (' + (motor.info().ampliada ? 'Boa Vista e região' : 'Boa Vista e entorno') + '), ou longe de qualquer rua para esse meio de transporte' + onde + '.' + (motor.info().ampliada ? '' : ' Para a zona rural, atualize o mapa offline marcando a opção das estradas do entorno.'));
       if (r.erro) throw new Error('Não achei caminho entre os pontos para esse meio de transporte (mapa offline)' + onde + '.');
       pernas.push(Object.assign({}, r.legs[0], { distance: r.distance, duration: r.duration })); dist += r.distance; dur += r.duration;
       r.geometry.coordinates.forEach((c, n) => { if (k === 0 || n > 0) coords.push(c); });
+      if (unica && r.alternativas) alternativas = r.alternativas;
     }
-    return { code: 'Ok', routes: [{ distance: dist, duration: dur, geometry: { type: 'LineString', coordinates: coords }, legs: pernas }] };
+    const principal = { distance: dist, duration: dur, geometry: { type: 'LineString', coordinates: coords }, legs: pernas };
+    const alts = alternativas.map(x => ({ distance: x.distance, duration: x.duration, geometry: x.geometry, legs: x.legs }));
+    return { code: 'Ok', routes: [principal].concat(alts) };
   }
 
   async function tracarRota() {
@@ -386,7 +393,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
         throw new Error(dados && dados.code === 'NoRoute' ? 'Não achei caminho entre os dois pontos para esse meio de transporte.' : 'Não consegui traçar a rota agora.');
       }
       mostrarRotas(o, dados.routes.slice(0, 3));
-      const msg = [offline ? 'Rota calculada pelo mapa offline (sem internet): sem trânsito e sem obras.' : '', avisoDestino].filter(Boolean).join(' ');
+      const msg = [offline ? 'Rota calculada pelo mapa offline (sem internet): sem trânsito e sem obras.' + (dados.routes.length > 1 ? ' Há ' + (dados.routes.length - 1) + ' caminho(s) alternativo(s) — toque no que preferir.' : '') : '', avisoDestino].filter(Boolean).join(' ');
       status(msg, offline ? 'ok' : '');
       avisoDestino = '';
     } catch (e) { mostrarErro(e); }
@@ -631,8 +638,15 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (paradas.length < 2) return;
     try {
       const o = origemAtual || await obterOrigem();
-      paradas = U.ordenarParadas(o, paradas, destino || null);
-      status('Paradas reordenadas pela menor distância em linha reta. Confira a ordem e ajuste se precisar.', 'ok');
+      // Com o mapa offline: ordem pelo TEMPO real de viagem (mão única e curvas). Sem ele (ou fora da área): linha reta.
+      let ordem = null;
+      if (motor && motor.ordenar && paradas.length <= 9 && [o].concat(paradas, destino ? [destino] : []).every(q => motor.dentro(q.lat, q.lng))) {
+        status('Calculando a melhor ordem pelo tempo de viagem…'); await new Promise((r) => setTimeout(r, 30));
+        const res = motor.ordenar(modo, o, paradas, destino || null);
+        if (!res.erro) ordem = res.ordem;
+      }
+      if (ordem) { const ant = paradas; paradas = ordem.map(i => ant[i]); status('Paradas reordenadas pelo menor tempo de viagem (mapa offline, respeitando mão única). Confira a ordem e ajuste se precisar.', 'ok'); }
+      else { paradas = U.ordenarParadas(o, paradas, destino || null); status('Paradas reordenadas pela menor distância em linha reta. Confira a ordem e ajuste se precisar.', 'ok'); }
       aposMudarParadas();
     } catch (e) { mostrarErro(e); }
   }
@@ -914,6 +928,23 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
             ctx.restore();
           }
         }
+        if (z >= 16 && motor.locaisNaCaixa) {          // locais (escola, UBS, CRAS, mercado...) e, mais perto, números das casas
+          const COR_LOCAL = { s: '#d9534f', e: '#3a7bd5', g: '#8e5bd0', c: '#d98a1c', o: '#6b7a86' }, SIGLA = { s: '+', e: 'E', g: 'G', c: '$', o: '•' };
+          const ls = motor.locaisNaCaixa(b.getSouth(), b.getWest(), b.getNorth(), b.getEast(), 70);
+          ctx.font = '600 10px ' + FONTE;
+          for (const l of ls) {
+            const x = X(l.lng), y = Y(l.lat), cor = COR_LOCAL[l.k] || COR_LOCAL.o;
+            ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fillStyle = cor; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.fillText(SIGLA[l.k] || SIGLA.o, x, y + 0.5);
+            if (z >= 17) { ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.92)'; ctx.strokeText(l.n, x, y + 16); ctx.fillStyle = '#2d2d2d'; ctx.fillText(l.n, x, y + 16); }
+          }
+          if (z >= 18) {
+            ctx.font = '600 10px ' + FONTE;
+            for (const a of motor.enderecosNaCaixa(b.getSouth(), b.getWest(), b.getNorth(), b.getEast(), 150)) {
+              const x = X(a.lng), y = Y(a.lat); ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(a.n, x, y); ctx.fillStyle = '#7a5c2e'; ctx.fillText(a.n, x, y);
+            }
+          }
+        }
         if (z >= 12 && z <= 15) {           // nomes dos bairros
           ctx.font = '700 ' + (z <= 13 ? 11 : 12) + 'px ' + FONTE;
           for (const q of D.lugares) {
@@ -953,10 +984,12 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (ocup) t = baixando.texto || 'Baixando…';
     else if (info) {
       const d = new Date(info.quando), data = isNaN(d) ? '' : d.toLocaleDateString('pt-BR');
-      t = 'Mapa offline pronto' + (data ? ' (baixado em ' + data + ')' : '') + ' · ' + info.ruas.toLocaleString('pt-BR') + ' ruas, ' + info.bairros + ' bairros.' + (vetorAuto && !sempreOffline ? ' Sem internet agora: usando o mapa offline.' : '');
-    } else t = 'Mapa offline: ainda não baixado. Baixe uma vez (de preferência no Wi-Fi) para buscar endereços, ver o mapa e traçar rotas sem internet.';
+      t = 'Mapa offline pronto' + (data ? ' (baixado em ' + data + ')' : '') + ' · ' + info.ruas.toLocaleString('pt-BR') + ' ruas, ' + info.bairros + ' bairros, ' + info.locais.toLocaleString('pt-BR') + ' locais' + (info.ampliada ? ', com a zona rural do entorno' : '') + ' (' + Math.max(1, Math.round((info.bytes || 0) / 1048576)) + ' MB no aparelho).' + (Date.now() - info.quando > 90 * 86400000 ? ' O mapa tem mais de 3 meses: vale atualizar para incluir ruas novas.' : '') + (vetorAuto && !sempreOffline ? ' Sem internet agora: usando o mapa offline.' : '');
+    } else t = parciaisN ? 'Um download do mapa offline foi interrompido: ' + parciaisN + ' pedaço(s) já estão guardados. Toque em "Continuar download" para terminar sem baixar tudo de novo.' : 'Mapa offline: ainda não baixado. Baixe uma vez (de preferência no Wi-Fi) para buscar endereços, ver o mapa e traçar rotas sem internet.';
+    if (!ocup && parciaisN && info) t += ' Há também um download interrompido: toque em "Continuar download".';
     $('mapaOffTexto').textContent = t;
-    $('mapaOffBaixar').textContent = info ? 'Atualizar mapa offline' : 'Baixar mapa offline';
+    $('mapaOffBaixar').textContent = parciaisN ? 'Continuar download' : info ? 'Atualizar mapa offline' : 'Baixar mapa offline';
+    const ab = $('mapaOffAmpBox'); if (ab) { ab.classList.toggle('hidden', ocup); $('mapaOffAmp').checked = ampliadaPref; }
     $('mapaOffBaixar').classList.toggle('hidden', ocup);
     $('mapaOffCancelar').classList.toggle('hidden', !ocup);
     $('mapaOffApagar').classList.toggle('hidden', ocup || !info);
@@ -967,17 +1000,19 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
 
   async function baixarOffline() {
     if (!AMO || baixando) return;
-    if (!window.confirm('Baixar o mapa de Boa Vista para usar sem internet?\n\nDemora alguns minutos e usa algumas dezenas de MB de internet — de preferência no Wi-Fi. Depois fica guardado no aparelho.')) return;
+    const amp = ampliadaPref;
+    if (!parciaisN && !window.confirm('Baixar o mapa de Boa Vista' + (amp ? ' e das estradas do entorno (zona rural)' : '') + ' para usar sem internet?\n\nDemora alguns minutos e usa ' + (amp ? 'cerca de cem MB' : 'algumas dezenas de MB') + ' de internet — de preferência no Wi-Fi. Se a conexão cair, o download continua de onde parou. Depois fica guardado no aparelho.')) return;
     const ctl = new AbortController(); baixando = { ctl, texto: 'Iniciando o download…', pct: 0 }; ofertaUI(); status('');
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* o navegador decide sozinho */ }
     try {
-      const r = await AMO.baixar({ sinal: ctl.signal, onProgresso: (p) => { baixando.texto = p.texto; baixando.pct = Math.round(p.feito / p.total * 100); ofertaUI(); } });
+      const r = await AMO.baixar({ sinal: ctl.signal, ampliada: amp, onProgresso: (p) => { baixando.texto = p.texto; baixando.pct = Math.round(p.feito / p.total * 100); ofertaUI(); } });
+      parciaisN = 0;
       motor = AMO.criarMotor(r.pacote); vetorAuto = false; errosTile = 0;
       if (r.erroGuardar) status('O mapa foi baixado e já funciona agora, mas NÃO ficou guardado no aparelho (vale só até fechar o app). ' + r.erroGuardar.message, 'erro');
       else status('Mapa offline pronto: a busca, o mapa e as rotas já funcionam sem internet.', 'ok');
       aplicarModoMapa();
     } catch (e) { status((e && e.message) || 'Não consegui baixar o mapa offline.', 'erro'); }
-    finally { baixando = null; ofertaUI(); }
+    finally { baixando = null; if (AMO.parciais) { try { parciaisN = await AMO.parciais(); } catch (e) { parciaisN = 0; } } ofertaUI(); }
   }
 
   if (offBox && !AMO) offBox.classList.add('hidden');
@@ -986,10 +1021,11 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     $('mapaOffCancelar').addEventListener('click', () => { if (baixando) baixando.ctl.abort(); });
     $('mapaOffApagar').addEventListener('click', async () => {
       if (!window.confirm('Apagar o mapa offline deste aparelho? Você poderá baixar de novo quando quiser.')) return;
-      try { await AMO.apagar(); motor = null; vetorAuto = false; aplicarModoMapa(); status('Mapa offline apagado deste aparelho.', 'ok'); }
+      try { await AMO.apagar(); motor = null; parciaisN = 0; vetorAuto = false; aplicarModoMapa(); status('Mapa offline apagado deste aparelho.', 'ok'); }
       catch (e) { status((e && e.message) || 'Não consegui apagar o mapa offline.', 'erro'); }
       ofertaUI();
     });
+    const ampEl = $('mapaOffAmp'); if (ampEl) ampEl.addEventListener('change', (ev) => { ampliadaPref = !!ev.target.checked; gravarPref('anonaMapaAmpliada', ampliadaPref ? '1' : '0'); });
     $('mapaOffSempre').addEventListener('change', (ev) => {
       sempreOffline = !!ev.target.checked; gravarPref('anonaMapaSempreOffline', sempreOffline ? '1' : '0');
       aplicarModoMapa(); ofertaUI(); if (destino) tracarRota();
@@ -1004,7 +1040,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
         if (motor && (navigator.onLine === false || errosTile >= 3)) vetorAuto = true;
         aplicarModoMapa(); ofertaUI();
       })
-      .catch(() => ofertaUI());
+      .catch(() => ofertaUI())
+      .then(() => AMO.parciais ? AMO.parciais() : 0).then((n) => { parciaisN = n || 0; if (parciaisN) ofertaUI(); }, () => {});
     (window.requestIdleCallback ? (f) => window.requestIdleCallback(f, { timeout: 3000 }) : (f) => setTimeout(f, 600))(iniciar);
   }
 
