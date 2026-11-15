@@ -304,8 +304,11 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (!lista.length) { ul.classList.add('hidden'); return; }
     lista.forEach((r) => {
       const li = document.createElement('li'); const b = document.createElement('button'); b.type = 'button';
-      b.textContent = rotuloCurto(r) || r.display_name;
-      b.addEventListener('click', () => { senha++; avisoDestino = r._aviso || ''; ul.classList.add('hidden'); $('mapaBusca').value = b.textContent; escolherDestino({ lat: +r.lat, lng: +r.lon, rotulo: b.textContent }).catch(mostrarErro); });
+      const rotulo = rotuloCurto(r) || r.display_name;
+      b.textContent = rotulo;
+      const bf = FOCO && FOCO.FOCOS.find(f => FOCO.doBairro(r, f));
+      if (bf && !bf.pertence.test(FOCO.norm(rotulo))) { const tag = document.createElement('span'); tag.className = 'mp-res-tag'; tag.textContent = bf.curto; b.appendChild(tag); }   // etiqueta: resultado dentro de um bairro de foco
+      b.addEventListener('click', () => { senha++; avisoDestino = r._aviso || ''; ul.classList.add('hidden'); $('mapaBusca').value = rotulo; escolherDestino({ lat: +r.lat, lng: +r.lon, rotulo }).catch(mostrarErro); });
       li.appendChild(b); ul.appendChild(li);
     });
     const t = document.createElement('li'); t.className = 'mp-res-titulo'; t.textContent = opc.titulo || 'Outros resultados'; ul.insertBefore(t, ul.firstChild);
@@ -324,11 +327,13 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       return;
     }
     const minha = ++senha;
-    status('Procurando o endereço…'); ocupado(true);
+    const fb = focoDaBusca(q);
+    status(fb ? 'Procurando no ' + fb.foco.rotulo + '…' : 'Procurando o endereço…'); ocupado(true);
     try {
       await garantirMapa();
       const rs = await buscarEndereco(q);
       if (minha !== senha) return;
+      if (!rs.length && fb) { listarResultados([]); status('Não achei "' + (fb.resto || q) + '" no ' + fb.foco.rotulo + ' nem no resto de Boa Vista. Tente só o nome da rua (sem o número), outra grafia, ou toque no mapa para marcar o ponto.', 'erro'); return; }
       if (!rs.length) { listarResultados([]); status('Não encontrei esse endereço. Tente só a rua e o bairro (ex.: "Rua Santo Agostinho, Centenário"), cole as coordenadas, ou toque no mapa para marcar o ponto.', 'erro'); return; }
       listarResultados(rs); avisoDestino = rs[0]._aviso || '';
       await escolherDestino({ lat: +rs[0].lat, lng: +rs[0].lon, rotulo: rotuloCurto(rs[0]) || q });
@@ -591,6 +596,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (sim) {
       if (!navigator.geolocation) { status('Este aparelho/navegador não informa a localização.', 'erro'); return; }
       seguindo = true;
+      if (MOBILE() && !cheia) entrarCheia();   // no celular acompanhar é em tela cheia: o mapa grande e o próximo passo à vista
       vigia = navigator.geolocation.watchPosition(aoMoverPosicao,
         (e) => { if (e && e.code === 1) { status(msgGeo(e), 'erro'); seguir(false); } else status('Sinal de GPS fraco. Vá para um local aberto.'); },
         { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 });
@@ -603,6 +609,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       vigia = null; soltarTela(); $('mapaProximo').classList.add('hidden');
       sec.querySelectorAll('#mapaPassos li.is-atual').forEach(li => li.classList.remove('is-atual')); if (trilha) trilha.atual = -1;
     }
+    sec.classList.toggle('is-seguindo', seguindo);   // o CSS enxuga os painéis enquanto acompanha
     btn.setAttribute('aria-pressed', seguindo ? 'true' : 'false');
     btn.querySelector('span').textContent = seguindo ? 'Parar de acompanhar' : 'Acompanhar';
   }
