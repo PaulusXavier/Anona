@@ -360,7 +360,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       const onde = pts.length > 2 ? ' (trecho ' + (k + 1) + ' de ' + (pts.length - 1) + ')' : '';
       if (r.erro === 'longe') throw new Error('A partida, uma parada ou o destino está fora da área do mapa offline (Boa Vista e entorno), ou longe de qualquer rua para esse meio de transporte' + onde + '.');
       if (r.erro) throw new Error('Não achei caminho entre os pontos para esse meio de transporte (mapa offline)' + onde + '.');
-      pernas.push(r.legs[0]); dist += r.distance; dur += r.duration;
+      pernas.push(Object.assign({}, r.legs[0], { distance: r.distance, duration: r.duration })); dist += r.distance; dur += r.duration;
       r.geometry.coordinates.forEach((c, n) => { if (k === 0 || n > 0) coords.push(c); });
     }
     return { code: 'Ok', routes: [{ distance: dist, duration: dur, geometry: { type: 'LineString', coordinates: coords }, legs: pernas }] };
@@ -438,14 +438,42 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     return (o.rotulo === 'Minha posição' ? base : base + '&origin=' + o.lat + ',' + o.lng) + via;   // sem origem, o Google usa a posição em tempo real
   }
 
+  // ---------- horários: saída (agora ou planejada) + tempo de visita em cada parada ----------
+  function cronogramaAtual() {
+    const r = rotas[rotaSel]; if (!r) return null;
+    const pernas = (r.legs || []).map((l) => ({ distance: l.distance, duration: l.duration }));
+    if (!pernas.length || pernas.some((p) => !isFinite(p.duration) || !isFinite(p.distance))) return null;
+    return U.cronograma(pernas, { inicio: U.inicioDe($('mapaSaida').value), visitaMin: paradas.length ? +$('mapaVisita').value || 0 : 0 });
+  }
+  function atualizarCronograma() {
+    const r = rotas[rotaSel]; if (!r || !destino) return;
+    const cr = cronogramaAtual(), plan = /^\d{1,2}:\d{2}$/.test($('mapaSaida').value);
+    $('mapaVisitaBox').classList.toggle('hidden', !paradas.length);
+    $('mapaCopiar').classList.toggle('hidden', !paradas.length);
+    const dica = $('mapaDestinoEta'), infos = sec.querySelectorAll('#mapaParadas .mp-parada-info');
+    if (!cr) {        // sem duração por trecho: só o total, como antes
+      $('mapaChegada').textContent = 'Chegada por volta de ' + U.horaChegada(r.duration) + ' (saindo agora)';
+      dica.classList.add('hidden'); infos.forEach((el) => { el.textContent = ''; });
+      return;
+    }
+    const saindo = plan ? 'saindo às ' + $('mapaSaida').value : 'saindo agora';
+    $('mapaChegada').textContent = cr.parado
+      ? 'Deslocamento ' + fmtTempo(cr.dur) + ' + ' + fmtTempo(cr.parado) + ' de visitas · fim por volta de ' + U.fmtHora(cr.fim) + ' (' + saindo + ')'
+      : 'Chegada por volta de ' + U.fmtHora(cr.fim) + ' (' + saindo + ')';
+    infos.forEach((el, i) => { const e = cr.etapas[i]; el.textContent = e ? 'chegada ' + U.fmtHora(e.chegada) + ' · ' + fmtDist(e.dist) + ' · ' + fmtTempo(e.dur) : ''; });
+    const ult = cr.etapas[cr.etapas.length - 1];
+    dica.textContent = paradas.length && ult ? 'Chegada ao destino: ' + U.fmtHora(ult.chegada) + ' · último trecho ' + fmtDist(ult.dist) : '';
+    dica.classList.toggle('hidden', !dica.textContent);
+  }
+
   function preencherResumo() {
     const r = rotas[rotaSel], o = origemAtual;
     $('mapaDist').textContent = fmtDist(r.distance);
     $('mapaTempo').textContent = fmtTempo(r.duration);
-    $('mapaChegada').textContent = 'Chegada por volta de ' + U.horaChegada(r.duration) + ' (saindo agora)';
     $('mapaDeAte').textContent = o.rotulo + (paradas.length ? ' → ' + paradas.length + (paradas.length === 1 ? ' parada' : ' paradas') : '') + ' → ' + destino.rotulo;
     $('mapaGoogle').href = linkGoogle(o);
     $('mapaSeguir').classList.toggle('hidden', o.rotulo !== 'Minha posição' || !navigator.geolocation);
+    atualizarCronograma();
     const alt = $('mapaAlternativas'); alt.textContent = '';
     if (rotas.length > 1) {
       const rapida = rotas.reduce((m, x, i) => x.duration < rotas[m].duration ? i : m, 0);
@@ -503,6 +531,12 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     posicao = { lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy || 0, quando: Date.now() };
     mostrarPosicao(posicao).catch(() => {});
     if (!trilha || !destino) return;
+    if (paradas.length && Date.now() - ultimoRecalculo > 4000 && U.alcancouParada(posicao, paradas[0], posicao.precisao)) {
+      const q = paradas.shift();       // parada cumprida: sai da lista e a rota é refeita daqui até a próxima
+      ultimoRecalculo = Date.now(); renderParadas();
+      avisoDestino = 'Parada alcançada: ' + q.rotulo + '. ' + (paradas.length ? 'Seguindo para a próxima.' : 'Seguindo para o destino final.');   // aparece quando a rota nova ficar pronta
+      tracarRota(); return;
+    }
     if (U.distM(posicao, destino) < 30) { status('Você chegou ao destino.', 'ok'); $('mapaProximo').classList.add('hidden'); seguir(false); return; }
     const pr = U.projetar(posicao, trilha.pontos, trilha.cum);
     if (pr && pr.dist > Math.max(LIMITE_ROTA_FORA, (posicao.precisao || 0) * 1.5)) {
@@ -547,7 +581,16 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (grupoParadas) { mapa.removeLayer(grupoParadas); grupoParadas = null; }
     if (!paradas.length) return;
     grupoParadas = L.layerGroup().addTo(mapa);
-    paradas.forEach((q, i) => grupoParadas.addLayer(L.marker([q.lat, q.lng], { icon: L.divIcon({ className: 'mp-pino mp-pino-parada', iconSize: [24, 24], iconAnchor: [12, 12], html: '<span>' + (i + 1) + '</span>' }), title: 'Parada ' + (i + 1) + ': ' + q.rotulo, keyboard: false })));
+    paradas.forEach((q, i) => {
+      const mk = L.marker([q.lat, q.lng], { icon: L.divIcon({ className: 'mp-pino mp-pino-parada', iconSize: [24, 24], iconAnchor: [12, 12], html: '<span>' + (i + 1) + '</span>' }), title: 'Parada ' + (i + 1) + ': ' + q.rotulo, keyboard: false });
+      const pop = document.createElement('div'); pop.className = 'mp-pop';
+      const tit = document.createElement('b'); tit.textContent = 'Parada ' + (i + 1);
+      const end = document.createElement('p'); end.textContent = q.rotulo;
+      const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'mp-btn mp-btn-sec mp-btn-peq'; rm.textContent = 'Remover esta parada';
+      rm.addEventListener('click', () => { mapa.closePopup(); removerParada(i); });
+      pop.append(tit, end, rm); mk.bindPopup(pop);
+      grupoParadas.addLayer(mk);
+    });
   }
   function renderParadas() {
     const box = $('mapaParadasBox'), ol = $('mapaParadas'); ol.textContent = '';
@@ -555,7 +598,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     paradas.forEach((q, i) => {
       const li = document.createElement('li');
       const n = document.createElement('span'); n.className = 'mp-parada-n'; n.textContent = String(i + 1);
-      const t = document.createElement('span'); t.className = 'mp-parada-t'; t.textContent = q.rotulo;
+      const t = document.createElement('span'); t.className = 'mp-parada-t'; t.appendChild(document.createTextNode(q.rotulo));
+      const inf = document.createElement('small'); inf.className = 'mp-parada-info'; t.appendChild(inf);
       li.append(n, t);
       const mk = (txt, rot, fn, off) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'mp-mini mp-mini-peq'; b.textContent = txt; b.setAttribute('aria-label', rot); b.title = rot; b.disabled = !!off; b.addEventListener('click', fn); li.appendChild(b); };
       mk('↑', 'Subir a parada ' + (i + 1), () => moverParada(i, -1), i === 0);
@@ -564,6 +608,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       ol.appendChild(li);
     });
     $('mapaOtimizar').classList.toggle('hidden', paradas.length < 2);
+    $('mapaVisitaBox').classList.toggle('hidden', !paradas.length); $('mapaCopiar').classList.toggle('hidden', !paradas.length);
     desenharParadas();
   }
   function aposMudarParadas() { renderParadas(); if (destino) tracarRota(); }
@@ -613,6 +658,14 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     catch (e) { if (e && e.name === 'AbortError') return; }
     try { await navigator.clipboard.writeText(texto + '\n' + url); status('Link da rota copiado.', 'ok'); }
     catch (e) { status('Não consegui copiar. Use "Abrir no Google Maps" e compartilhe de lá.', 'erro'); }
+  }
+
+  async function copiarRoteiro() {
+    if (!destino || !rotas.length || !origemAtual) return;
+    const cr = cronogramaAtual(), nomes = { carro: 'carro/moto', pe: 'a pé', bike: 'bicicleta' };
+    const txt = U.roteiroTexto({ modo: nomes[modo] || modo, origem: origemAtual.rotulo, paradas, destino, cron: cr, inicio: U.inicioDe($('mapaSaida').value), planejado: /^\d{1,2}:\d{2}$/.test($('mapaSaida').value) });
+    try { await navigator.clipboard.writeText(txt); status('Roteiro copiado. Cole onde precisar (WhatsApp, ficha de visita…).', 'ok'); }
+    catch (e) { status('Não consegui copiar automaticamente. Use \"Compartilhar\" ou \"Abrir no Google Maps\".', 'erro'); }
   }
 
   function mostrarErro(e) { status(((e && e.message) || 'Algo deu errado.') + (e && e.rede && !motor && AMO ? DICA_OFFLINE : ''), 'erro'); ocupado(false); }
@@ -755,6 +808,11 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   $('mapaOtimizar').addEventListener('click', otimizarParadas);
   $('mapaSeguir').addEventListener('click', () => seguir(!seguindo));
   $('mapaCompartilhar').addEventListener('click', compartilhar);
+  $('mapaCopiar').addEventListener('click', copiarRoteiro);
+  const visitaSalva = lerPref('anonaMapaVisita', '0');
+  if (Array.from($('mapaVisita').options).some((o) => o.value === visitaSalva)) $('mapaVisita').value = visitaSalva;
+  $('mapaVisita').addEventListener('change', () => { gravarPref('anonaMapaVisita', $('mapaVisita').value); atualizarCronograma(); });
+  $('mapaSaida').addEventListener('input', atualizarCronograma);
   document.addEventListener('visibilitychange', () => { if (seguindo && document.visibilityState === 'visible' && !travaTela) pedirTelaLigada(); });
 
   // sugestões enquanto digita: só com o mapa offline em uso (a busca online não pode ser disparada a cada letra)
