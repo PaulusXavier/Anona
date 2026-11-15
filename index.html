@@ -956,7 +956,7 @@
       </h2>
       <button type="button" id="mapaTelaCheia" class="mp-btn mp-btn-sec mp-btn-peq" aria-pressed="false"><i data-lucide="maximize" class="w-3.5 h-3.5"></i> Tela cheia</button>
     </div>
-    <p class="text-xs text-slate-500 mb-3 mp-intro">Digite ou fale um endereço — ou toque no mapa — e veja o caminho a partir da sua posição, como no Google Maps. Dá para colar coordenadas ou um link do Google Maps, arrastar o pino para acertar o ponto, escolher entre rotas alternativas e montar uma rota com várias <strong>paradas</strong> (botão <strong>+</strong>), com sugestão da melhor ordem, <strong>horário previsto em cada parada</strong> (com hora de saída e tempo de visita) e <strong>Copiar roteiro</strong> para colar onde precisar. No celular, <strong>Tela cheia</strong> deixa o mapa maior e <strong>Acompanhar</strong> vai destacando cada passo e recalcula se você sair da rota — e, numa rota com paradas, vai riscando as que você já alcançou. <strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas funcionam sem conexão.</p>
+    <details class="mp-ajuda mb-3" id="mapaAjuda"><summary>Como usar o mapa e as rotas</summary><p class="text-xs text-slate-500 mp-intro">Digite ou fale um endereço — ou toque no mapa — e veja o caminho a partir da sua posição, como no Google Maps. Dá para colar coordenadas ou um link do Google Maps, arrastar o pino para acertar o ponto, escolher entre rotas alternativas e montar uma rota com várias <strong>paradas</strong> (botão <strong>+</strong>), com sugestão da melhor ordem, <strong>horário previsto em cada parada</strong> (com hora de saída e tempo de visita) e <strong>Copiar roteiro</strong> para colar onde precisar. No celular, <strong>Tela cheia</strong> deixa o mapa maior e <strong>Acompanhar</strong> vai destacando cada passo e recalcula se você sair da rota — e, numa rota com paradas, vai riscando as que você já alcançou. <strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas funcionam sem conexão.</p></details>
     <div class="mp-grid">
       <div class="mp-painel">
         <div class="mp-topo">
@@ -965,8 +965,13 @@
             <label for="mapaBusca" class="sr-only">Endereço de destino</label>
             <input id="mapaBusca" type="search" class="access-input" placeholder="Destino: digite ou fale o endereço" autocomplete="off" enterkeyhint="search" inputmode="search" autocapitalize="words" spellcheck="false">
             <button type="button" id="mapaVoz" class="mp-voz" aria-label="Falar o endereço de destino" aria-pressed="false" title="Falar o endereço"><i data-lucide="mic" class="w-4 h-4"></i></button>
-            <button type="submit" class="mp-btn" id="mapaBuscar"><i data-lucide="search" class="w-3.5 h-3.5"></i> Buscar</button>
+            <button type="submit" class="mp-btn" id="mapaBuscar"><i data-lucide="search" class="w-3.5 h-3.5"></i> <span class="mp-txt-busca">Buscar</span></button>
           </form>
+          <div class="mp-focos" role="group" aria-label="Buscar só num bairro">
+            <span class="mp-focos-t">Buscar em:</span>
+            <button type="button" data-foco="13s" aria-pressed="false">13 de Setembro</button>
+            <button type="button" data-foco="araceli" aria-pressed="false">Araceli</button>
+          </div>
           <ul id="mapaResultados" class="mp-resultados hidden"></ul>
 
           <div class="mp-modos" role="group" aria-label="Meio de transporte">
@@ -1052,7 +1057,7 @@
           </details>
         </div>
       </div>
-      <div class="mp-mapa"><div id="mapaCanvas" role="application" aria-label="Mapa de Boa Vista"></div></div>
+      <div class="mp-mapa"><div id="mapaCanvas" role="application" aria-label="Mapa de Boa Vista"></div><button type="button" id="mapaToqueAbrir" class="mp-toque-abrir" aria-label="Abrir o mapa em tela cheia"><span><i data-lucide="maximize" class="w-4 h-4"></i> Toque para abrir o mapa</span></button></div>
     </div>
   </section>
 </main>
@@ -7088,6 +7093,7 @@ if ('serviceWorker' in navigator) {
      da página (defer). -->
 <script src="anona-rota.js" defer></script>
 <script src="anona-mapa-util.js" defer></script>
+<script src="anona-mapa-foco.js" defer></script>
 <script src="anona-mapa-offline.js" defer></script>
 <script src="anona-mapa.js" defer></script>
 <script src="anona-tabelas.js" defer></script>
