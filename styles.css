@@ -929,3 +929,14 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
 #mapaRotas .mp-pino-parada{ display:flex; }
 #mapaRotas .mp-pino-parada span{ display:flex; align-items:center; justify-content:center; background:#F9A825; color:#1b1b1b; font-weight:800; font-size:.8rem; border:3px solid #fff; box-shadow:0 1px 5px rgba(0,0,0,.45); }
 @media (max-width:1023px){ #mapaRotas .mp-mini-peq{ width:2.25rem; height:2.25rem; } }
+
+/* Mapa e rotas — horário previsto por parada, saída e tempo de visita */
+#mapaRotas .mp-plano{ display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .7rem; font-size:.72rem; font-weight:700; color:var(--azul-deep); }
+#mapaRotas .mp-plano label{ display:inline-flex; align-items:center; gap:.4rem; }
+#mapaRotas .mp-plano .mp-select{ flex:0 0 auto; width:auto; padding:.3rem .4rem; }
+#mapaRotas .mp-plano small{ flex:1 1 100%; font-weight:400; font-size:.66rem; color:#64748b; }
+#mapaRotas .mp-parada-t small.mp-parada-info{ display:block; margin-top:.1rem; font-size:.66rem; color:#475569; font-weight:600; }
+#mapaRotas .mp-eta{ color:var(--verde); font-weight:700; }
+#mapaRotas .mp-pop{ display:flex; flex-direction:column; gap:.35rem; font-size:.78rem; min-width:9rem; }
+#mapaRotas .mp-pop p{ margin:0; overflow-wrap:anywhere; }
+#mapaRotas.is-tela-cheia .mp-plano small{ display:none; }
