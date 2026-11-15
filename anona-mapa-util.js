@@ -116,6 +116,60 @@
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
+
+  const doisDig = (n) => String(n).padStart(2, '0');
+  // "HH:MM" de um instante em milissegundos
+  const fmtHora = (ms) => { const d = new Date(ms); return doisDig(d.getHours()) + ':' + doisDig(d.getMinutes()); };
+  // "08:30" (campo de horário) → instante de hoje nesse horário; vazio ou inválido → agora
+  function inicioDe(hhmm, agora) {
+    const a = agora != null ? agora : Date.now();
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || '').trim());
+    if (!m || +m[1] > 23 || +m[2] > 59) return a;
+    const d = new Date(a); d.setHours(+m[1], +m[2], 0, 0); return d.getTime();
+  }
+
+  // Horário previsto de cada ponto da rota. pernas: [{ distance (m), duration (s) }] (uma por trecho: partida→parada 1, …, última parada→destino).
+  // opc: { inicio (ms), visitaMin (minutos que se fica em cada parada intermediária; no destino não conta) }.
+  // Devolve { etapas: [{ dist, dur, chegada, saida }], fim, dist, dur, parado (segundos de visita) }.
+  function cronograma(pernas, opc) {
+    opc = opc || {};
+    const visita = Math.max(0, +opc.visitaMin || 0) * 60;
+    let t = opc.inicio != null ? opc.inicio : Date.now(), dist = 0, dur = 0;
+    const etapas = (pernas || []).map((p, i, todas) => {
+      const d = Math.max(0, +p.distance || 0), s = Math.max(0, +p.duration || 0);
+      t += s * 1000; dist += d; dur += s;
+      const chegada = t;
+      if (i < todas.length - 1) t += visita * 1000;      // numa parada do meio a pessoa fica um tempo; no destino a rota acaba
+      return { dist: d, dur: s, chegada, saida: t };
+    });
+    const paradas = Math.max(0, etapas.length - 1);
+    return { etapas, fim: t, dist, dur, parado: visita * paradas };
+  }
+
+  // Chegou na parada? Raio = precisão do GPS (entre 35 e 80 m), para não "pular" parada por causa de um GPS ruim nem deixar de contar uma que já passou.
+  function alcancouParada(pos, parada, precisao) {
+    if (!pos || !parada) return false;
+    return distM(pos, parada) <= Math.max(35, Math.min(80, +precisao || 0));
+  }
+
+  // Texto do roteiro para copiar/colar (WhatsApp, ficha de visita…). d: { modo, origem, paradas: [{ rotulo }], destino: { rotulo }, cron, inicio, visitaMin, planejado }
+  function roteiroTexto(d) {
+    const c = d.cron, L = [];
+    L.push('Roteiro (' + d.modo + ') — saída ' + (d.planejado ? 'às ' + fmtHora(d.inicio) : 'agora (' + fmtHora(d.inicio) + ')'));
+    L.push('Partida: ' + d.origem);
+    const pts = (d.paradas || []).concat([d.destino]);
+    pts.forEach((q, i) => {
+      const e = c && c.etapas[i], ultimo = i === pts.length - 1;
+      const rot = ultimo ? 'Destino' : 'Parada ' + (i + 1);
+      L.push(rot + ': ' + q.rotulo + (e ? ' — chegada ' + fmtHora(e.chegada) + ' (' + fmtDist(e.dist) + ', ' + fmtTempo(e.dur) + ')' : ''));
+    });
+    if (c) {
+      L.push('Deslocamento: ' + fmtDist(c.dist) + ' · ' + fmtTempo(c.dur) + (c.parado ? ' + ' + fmtTempo(c.parado) + ' de visitas' : ''));
+      if (c.parado) L.push('Fim previsto: ' + fmtHora(c.fim));
+    }
+    return L.join('\n');
+  }
+
   // seta que acompanha cada instrução (só enfeite: o texto da instrução sempre existe)
   const SETA = { left: '↰', right: '↱', 'slight left': '↖', 'slight right': '↗', 'sharp left': '↙', 'sharp right': '↘', straight: '↑', uturn: '↶' };
   function seta(s) {
@@ -148,7 +202,7 @@
     return seq;
   }
 
-  const api = { ordenarParadas, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
+  const api = { fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AnonaMapaUtil = api;
 })(typeof window !== 'undefined' ? window : this);
