@@ -133,17 +133,19 @@
   // Devolve { etapas: [{ dist, dur, chegada, saida }], fim, dist, dur, parado (segundos de visita) }.
   function cronograma(pernas, opc) {
     opc = opc || {};
-    const visita = Math.max(0, +opc.visitaMin || 0) * 60;
-    let t = opc.inicio != null ? opc.inicio : Date.now(), dist = 0, dur = 0;
+    const padrao = Math.max(0, +opc.visitaMin || 0) * 60, vis = opc.visitas || [];   // visitas[i]: minutos da parada i (null = padrão)
+    let t = opc.inicio != null ? opc.inicio : Date.now(), dist = 0, dur = 0, parado = 0;
     const etapas = (pernas || []).map((p, i, todas) => {
       const d = Math.max(0, +p.distance || 0), s = Math.max(0, +p.duration || 0);
       t += s * 1000; dist += d; dur += s;
       const chegada = t;
-      if (i < todas.length - 1) t += visita * 1000;      // numa parada do meio a pessoa fica um tempo; no destino a rota acaba
+      if (i < todas.length - 1) {      // numa parada do meio a pessoa fica um tempo; no destino a rota acaba
+        const v = vis[i] != null && isFinite(vis[i]) ? Math.max(0, +vis[i]) * 60 : padrao;
+        t += v * 1000; parado += v;
+      }
       return { dist: d, dur: s, chegada, saida: t };
     });
-    const paradas = Math.max(0, etapas.length - 1);
-    return { etapas, fim: t, dist, dur, parado: visita * paradas };
+    return { etapas, fim: t, dist, dur, parado };
   }
 
   // Chegou na parada? Raio = precisão do GPS (entre 35 e 80 m), para não "pular" parada por causa de um GPS ruim nem deixar de contar uma que já passou.
@@ -161,7 +163,8 @@
     pts.forEach((q, i) => {
       const e = c && c.etapas[i], ultimo = i === pts.length - 1;
       const rot = ultimo ? 'Destino' : 'Parada ' + (i + 1);
-      L.push(rot + ': ' + q.rotulo + (e ? ' — chegada ' + fmtHora(e.chegada) + ' (' + fmtDist(e.dist) + ', ' + fmtTempo(e.dur) + ')' : ''));
+      const fica = e && !ultimo ? Math.round((e.saida - e.chegada) / 60000) : 0;
+      L.push(rot + ': ' + q.rotulo + (e ? ' — chegada ' + fmtHora(e.chegada) + ' (' + fmtDist(e.dist) + ', ' + fmtTempo(e.dur) + ')' + (fica > 0 ? ' · visita ' + fica + ' min' : '') : ''));
     });
     if (c) {
       L.push('Deslocamento: ' + fmtDist(c.dist) + ' · ' + fmtTempo(c.dur) + (c.parado ? ' + ' + fmtTempo(c.parado) + ' de visitas' : ''));
@@ -202,7 +205,54 @@
     return seq;
   }
 
-  const api = { fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
+  // ---------- navegação por voz, "faltam", lista colada, horário limite e atalhos de compartilhamento ----------
+  // distância para falar em voz alta: "400 metros", "1 quilômetro", "2,5 quilômetros" (o leitor de voz lê "400 m" mal)
+  function distFala(m) {
+    m = Math.max(0, +m || 0);
+    if (m < 1000) { const n = Math.max(10, Math.round(m / 50) * 50 || 10); return n + ' metros'; }
+    const k = Math.round(m / 100) / 10;
+    return (k === 1 ? '1 quilômetro' : String(k).replace('.', ',') + ' quilômetros');
+  }
+  // Em que "estágio" de aviso o motorista está, dado quanto falta para a próxima manobra (metros) e o tamanho do trecho atual.
+  // 0 = longe, 1 = "em 400 metros…" (só em trechos longos), 2 = "em 150 metros…", 3 = "agora".
+  function estagioAviso(dist, trecho) {
+    if (!isFinite(dist)) return 0;
+    if (dist <= 40) return 3;
+    if (dist <= 150) return 2;
+    if (dist <= 400 && (trecho == null || trecho > 550)) return 1;
+    return 0;
+  }
+  // quanto falta (distância e tempo proporcional) dado o percorrido ao longo do traçado
+  function restante(total, aoLongo, duracao) {
+    const t = Math.max(0, +total || 0), r = Math.max(0, t - Math.max(0, +aoLongo || 0));
+    return { dist: r, dur: t ? (+duracao || 0) * (r / t) : 0 };
+  }
+  // Lista de endereços colada (um por linha): tira numeração/marcadores, linhas vazias e repetidas.
+  function listaDeEnderecos(txt, max) {
+    const vistos = new Set(), out = [];
+    String(txt || '').split(/\r?\n|;\s*(?=\S)/).forEach((l) => {
+      const s = l.replace(/^\s*(?:[-•*·–—]+|\(?\d{1,2}\s*[).:\-–]\s+)\s*/, '').replace(/\s+/g, ' ').trim();
+      if (s.length < 3) return;
+      const k = s.toLowerCase(); if (vistos.has(k)) return;
+      vistos.add(k); out.push(s);
+    });
+    return { itens: out.slice(0, max || 9), cortados: Math.max(0, out.length - (max || 9)) };
+  }
+  // Folga até o horário limite do expediente: minutos que sobram (positivo) ou que passam (negativo). Sem horário válido → null.
+  function folga(fimMs, limiteHHMM) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(limiteHHMM || '').trim());
+    if (!m || +m[1] > 23 || +m[2] > 59 || !isFinite(fimMs)) return null;
+    const d = new Date(fimMs); d.setHours(+m[1], +m[2], 0, 0);
+    return Math.round((d.getTime() - fimMs) / 60000);
+  }
+  const linkWaze = (p) => 'https://waze.com/ul?ll=' + (+p.lat).toFixed(6) + ',' + (+p.lng).toFixed(6) + '&navigate=yes';
+  const linkWhats = (texto) => 'https://wa.me/?text=' + encodeURIComponent(String(texto || ''));
+
+  // comprimento em linha reta (metros) de origem → pts… → fim (opcional): serve para comparar duas ordens de visita
+  function comprimento(origem, pts, fim) {
+    let t = 0, a = origem; (pts || []).forEach((q) => { t += distM(a, q); a = q; }); if (fim) t += distM(a, fim); return t;
+  }
+  const api = { comprimento, distFala, estagioAviso, restante, listaDeEnderecos, folga, linkWaze, linkWhats, fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AnonaMapaUtil = api;
 })(typeof window !== 'undefined' ? window : this);
