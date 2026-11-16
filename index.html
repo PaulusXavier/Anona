@@ -1050,6 +1050,7 @@
 
         <div class="mp-base">
           <div id="mapaResumo" class="mp-resumo hidden">
+            <button type="button" id="mapaAlca" class="mp-alca" aria-label="Mostrar ou ocultar o passo a passo" aria-controls="mapaPassos"><span></span></button>
             <div class="mp-total"><strong id="mapaTempo"></strong> <span id="mapaDist"></span></div>
             <p id="mapaChegada" class="mp-chegada"></p>
             <p id="mapaDeAte" class="mp-deate"></p>
@@ -1067,18 +1068,23 @@
             <div id="mapaAlternativas" class="mp-alts hidden" role="group" aria-label="Rotas alternativas"></div>
             <p id="mapaProximo" class="mp-proximo hidden" role="status" aria-live="polite"></p>
             <p id="mapaFaltam" class="mp-faltam hidden" role="status"></p>
-            <div class="mp-acoes">
+            <div class="mp-acoes mp-acoes-prim">
               <button type="button" id="mapaSeguir" class="mp-btn hidden" aria-pressed="false"><i data-lucide="navigation" class="w-3.5 h-3.5"></i> <span>Acompanhar</span></button>
               <button type="button" id="mapaCheguei" class="mp-btn hidden"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> <span>Cheguei na parada 1</span></button>
               <button type="button" id="mapaVozNav" class="mp-btn mp-btn-sec hidden" aria-pressed="true" title="Avisos falados das curvas no modo Acompanhar"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i> <span>Voz ligada</span></button>
-              <a id="mapaGoogle" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir no Google Maps</a>
-              <a id="mapaWaze" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="navigation-2" class="w-3.5 h-3.5"></i> <span id="mapaWazeTxt">Waze</span></a>
-              <button type="button" id="mapaCompartilhar" class="mp-btn mp-btn-sec"><i data-lucide="share-2" class="w-3.5 h-3.5"></i> Compartilhar</button>
-              <button type="button" id="mapaWhats" class="mp-btn mp-btn-sec"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp</button>
-              <button type="button" id="mapaPdf" class="mp-btn mp-btn-sec"><i data-lucide="file-down" class="w-3.5 h-3.5"></i> Roteiro em PDF</button>
-              <button type="button" id="mapaCopiar" class="mp-btn mp-btn-sec hidden"><i data-lucide="clipboard-copy" class="w-3.5 h-3.5"></i> Copiar roteiro</button>
-              <button type="button" id="mapaPassosBtn" class="mp-btn mp-btn-sec mp-so-cheia" aria-expanded="false"><i data-lucide="list" class="w-3.5 h-3.5"></i> Passo a passo</button>
+              <button type="button" id="mapaPassosBtn" class="mp-btn mp-btn-sec mp-so-cheia" aria-expanded="false"><i data-lucide="list" class="w-3.5 h-3.5"></i> <span>Passo a passo</span></button>
             </div>
+            <details class="mp-envio" id="mapaEnvio">
+              <summary><i data-lucide="send" class="w-3.5 h-3.5"></i> Enviar ou salvar a rota</summary>
+              <div class="mp-acoes mp-acoes-env">
+                <a id="mapaGoogle" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> <span>Google Maps</span></a>
+                <a id="mapaWaze" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="navigation-2" class="w-3.5 h-3.5"></i> <span id="mapaWazeTxt">Waze</span></a>
+                <button type="button" id="mapaCompartilhar" class="mp-btn mp-btn-sec"><i data-lucide="share-2" class="w-3.5 h-3.5"></i> Compartilhar</button>
+                <button type="button" id="mapaWhats" class="mp-btn mp-btn-sec"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp</button>
+                <button type="button" id="mapaPdf" class="mp-btn mp-btn-sec"><i data-lucide="file-down" class="w-3.5 h-3.5"></i> Roteiro em PDF</button>
+                <button type="button" id="mapaCopiar" class="mp-btn mp-btn-sec hidden"><i data-lucide="clipboard-copy" class="w-3.5 h-3.5"></i> Copiar roteiro</button>
+              </div>
+            </details>
             <ol id="mapaPassos" class="mp-passos"></ol>
           </div>
 
@@ -1096,7 +1102,7 @@
           </details>
         </div>
       </div>
-      <div class="mp-mapa"><div id="mapaCanvas" role="application" aria-label="Mapa de Boa Vista"></div><button type="button" id="mapaCamada" class="mp-camada" aria-pressed="false" title="Alternar entre mapa de ruas e imagem de satélite"><i data-lucide="layers" class="w-3.5 h-3.5"></i> <span>Satélite</span></button><button type="button" id="mapaToqueAbrir" class="mp-toque-abrir" aria-label="Abrir o mapa em tela cheia"><span><i data-lucide="maximize" class="w-4 h-4"></i> Toque para abrir o mapa</span></button></div>
+      <div class="mp-mapa"><div id="mapaCanvas" role="application" aria-label="Mapa de Boa Vista"></div><button type="button" id="mapaLocalizar" class="mp-localizar" aria-label="Centralizar o mapa na minha posição" title="Minha posição"><i data-lucide="locate-fixed" class="w-5 h-5"></i></button><button type="button" id="mapaCamada" class="mp-camada" aria-pressed="false" title="Alternar entre mapa de ruas e imagem de satélite"><i data-lucide="layers" class="w-3.5 h-3.5"></i> <span>Satélite</span></button><button type="button" id="mapaToqueAbrir" class="mp-toque-abrir" aria-label="Abrir o mapa em tela cheia"><span><i data-lucide="maximize" class="w-4 h-4"></i> Toque para abrir o mapa</span></button></div>
     </div>
   </section>
 </main>
