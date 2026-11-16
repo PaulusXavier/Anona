@@ -9,28 +9,32 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@0.469.0"></script>
-<!-- Estas quatro bibliotecas só são usadas quando a pessoa gera um PDF/planilha
-     (Repercussão, Território Volante, Unificar Folhas, Exportar anotações) —
-     não são necessárias para mostrar o calendário. Juntas somam ~2 MB, então
-     "defer" evita que elas atrasem a primeira tela (o calendário aparece
-     mais rápido, especialmente em conexão de celular). Continuam sendo
-     baixadas em paralelo e ficam prontas bem antes de alguém conseguir
-     clicar em qualquer botão de gerar PDF/planilha; o service worker
-     (sw.js) também já baixa as quatro de antemão para funcionarem offline. -->
-<script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
-<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js" defer></script>
-<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js" defer></script>
+<!-- SEGURANÇA (ver SEGURANCA.md): política de conteúdo + proteção contra abrir o app dentro de outro site (clickjacking).
+     Todas as bibliotecas ficam em vendor/ (versões fixas, sem CDN); o CSS do Tailwind é gerado localmente (tailwind.css). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://server.arcgisonline.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://www.gstatic.com https://paulus-ia.paulo-ae18.workers.dev https://router.project-osrm.org https://routing.openstreetmap.de https://nominatim.openstreetmap.org https://overpass-api.de https://overpass.kumi.systems https://overpass.private.coffee https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://server.arcgisonline.com; worker-src 'self'; frame-src https://bolsa-familia-app-13e12.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<style id="anti-clickjacking">html:not(.anona-ok){display:none !important}</style>
+<script>
+  // frame-ancestors não funciona em <meta>; este script faz o papel: se o app estiver dentro de um iframe de outro site, não mostra nada.
+  (function () {
+    try { if (window.top === window.self) { document.documentElement.classList.add('anona-ok'); return; } } catch (e) {}
+    try { window.top.location = window.self.location.href; } catch (e) {}
+  })();
+</script>
+<script src="vendor/lucide/lucide.min.js"></script>
+<!-- Bibliotecas de PDF/planilha: carregam com "defer" para não atrasar a primeira tela. -->
+<script src="vendor/jspdf/jspdf.umd.min.js" defer></script>
+<script src="vendor/pdf-lib/pdf-lib.min.js" defer></script>
+<script src="vendor/jszip/jszip.min.js" defer></script>
+<script src="vendor/xlsx-js-style/xlsx.bundle.js" defer></script>
+<script src="anona-seguranca.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://unpkg.com">
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="preconnect" href="https://www.gstatic.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,600&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="login.css">
+<link rel="stylesheet" href="tailwind.css">
 </head>
 <body>
 
@@ -1609,7 +1613,7 @@ window.AnonaImpressao = (function () {
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
     getFirestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-    doc, getDoc, setDoc, deleteField
+    doc, getDoc, setDoc, deleteField, terminate, clearIndexedDbPersistence
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   // Nota: só usamos doc/getDoc/setDoc (para as anotações, em users/{uid}).
   // As planilhas de Repercussão NÃO usam Firestore — ficam só no
@@ -1643,6 +1647,12 @@ window.AnonaImpressao = (function () {
     console.warn('Cache local do Firestore indisponível, usando padrão sem persistência em IndexedDB:', e);
     db = getFirestore(app);
   }
+
+  // Usado por "Limpar aparelho" (anona-seguranca.js): encerra o Firestore e apaga o cache local dele (IndexedDB), onde ficam cópias das notas.
+  window.__anonaLimparCacheNuvem = async () => {
+    try { await terminate(db); } catch (e) {}
+    try { await clearIndexedDbPersistence(db); } catch (e) {}
+  };
 
   let currentUser = null;
   let notes = {};
@@ -4181,9 +4191,9 @@ window.AnonaImpressao = (function () {
     if (unificarPdfJsPromise) return unificarPdfJsPromise;
     unificarPdfJsPromise = new Promise((resolve, reject) => {
       const sc = document.createElement('script');
-      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      sc.src = 'vendor/pdfjs/pdf.min.js';
       sc.onload = () => {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
         resolve(window.pdfjsLib);
       };
       sc.onerror = () => { unificarPdfJsPromise = null; reject(new Error('Não consegui carregar o leitor de PDF (sem internet?).')); };
@@ -4194,7 +4204,7 @@ window.AnonaImpressao = (function () {
 
   // Folhas escaneadas (só imagem, sem texto) precisam de OCR. Roda 100% no aparelho (tesseract.js): a imagem nunca é enviada.
   // Só baixa o leitor e o idioma português (uma vez; depois fica no cache do navegador) quando aparece uma folha escaneada.
-  const OCR_LIB = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';
+  const OCR_LIB = 'vendor/tesseract/tesseract.min.js';
   let unificarOcrLibPromise = null, unificarOcrWorkerPromise = null;
   function unificarCarregarOcr() {
     if (unificarOcrWorkerPromise) return unificarOcrWorkerPromise;
@@ -4208,7 +4218,8 @@ window.AnonaImpressao = (function () {
         });
         await unificarOcrLibPromise;
       }
-      const w = await window.Tesseract.createWorker('por');
+      const base = new URL('vendor/tesseract/', location.href).href;   // tudo local: nenhum CDN, nada sai do aparelho
+      const w = await window.Tesseract.createWorker('por', 1, { workerPath: base + 'worker.min.js', corePath: base + 'core', langPath: base + 'lang', workerBlobURL: false, gzip: true });
       await w.setParameters({ tessedit_pageseg_mode: '6' });   // bloco único de texto: o quadro "Endereço da família"
       return w;
     })();
@@ -4244,7 +4255,7 @@ window.AnonaImpressao = (function () {
   // Sem camada de texto (folha escaneada) → OCR no aparelho. Devolve { ...endereço, via: 'texto' | 'ocr' } ou null.
   async function unificarLerEndereco(file, item) {
     const pdfjs = await unificarCarregarPdfJs();
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, enableXfa: false }).promise;
     try {
       let linhas = [];
       for (let n = 1; n <= Math.min(doc.numPages, 3); n++) {
@@ -5067,14 +5078,29 @@ window.AnonaImpressao = (function () {
       const payload = JSON.parse(texto);
       const vindos = Array.isArray(payload) ? payload : (Array.isArray(payload.reports) ? payload.reports : null);
       if (!vindos) throw new Error('Formato de backup não reconhecido.');
-      const validos = vindos.filter(r => r && r.dataBase64 && r.dataBase64.length > 100);
+      // Backup é um arquivo de fora: nada dele vai direto para a tela. Cada campo é reconstruído e validado
+      // (id só com letras/números/_/-, mês e ano inteiros, tamanho numérico, base64 de verdade).
+      const novoId = () => 'restaurado_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const validos = vindos.map(r => {
+        if (!r || typeof r !== 'object' || typeof r.dataBase64 !== 'string') return null;
+        if (r.dataBase64.length <= 100 || r.dataBase64.length > 8 * 1024 * 1024 || !/^[A-Za-z0-9+\/=\s]+$/.test(r.dataBase64)) return null;
+        const mes = Number.isInteger(r.mes) && r.mes >= 0 && r.mes <= 11 ? r.mes : null;
+        const ano = Number.isInteger(r.ano) && r.ano >= 2000 && r.ano <= 2100 ? r.ano : null;
+        if (mes === null || ano === null) return null;
+        const idOk = typeof r.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(r.id);
+        return {
+          id: idOk ? r.id : novoId(),
+          filename: String(r.filename || 'planilha.xlsx').replace(/[\u0000-\u001f<>"']/g, '').slice(0, 150),
+          mes, ano,
+          sizeKB: Math.round((r.dataBase64.length * 3 / 4) / 1024),
+          uploadedAt: Number.isFinite(r.uploadedAt) ? r.uploadedAt : Date.now(),
+          dataBase64: r.dataBase64.replace(/\s+/g, '')
+        };
+      }).filter(Boolean);
       if (!validos.length) throw new Error('Nenhuma planilha válida encontrada neste arquivo.');
-      // Não duplica planilhas que já existem (mesmo id); as demais recebem
-      // um id novo para não colidir com o que já está guardado.
+      // Não duplica planilhas que já existem (mesmo id).
       const existentesIds = new Set(reports.map(r => r.id));
-      const novos = validos
-        .filter(r => !(r.id && existentesIds.has(r.id)))
-        .map(r => ({ ...r, id: (r.id && !existentesIds.has(r.id)) ? r.id : ('restaurado_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)) }));
+      const novos = validos.filter(r => !existentesIds.has(r.id));
       if (!novos.length) {
         alert('Todas as planilhas deste backup já estão guardadas neste aparelho — nada novo para restaurar.');
         return;
@@ -5296,7 +5322,7 @@ window.AnonaImpressao = (function () {
     const anos = [...new Set(reports.map(r => r.ano))].sort((a,b) => b - a);
     if (anoFilterEl) {
       const current = anoFilterEl.value;
-      anoFilterEl.innerHTML = '<option value="all">Todos os anos</option>' + anos.map(a => `<option value="${a}">${a}</option>`).join('');
+      anoFilterEl.innerHTML = '<option value="all">Todos os anos</option>' + anos.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join('');
       if ([...anoFilterEl.options].some(o => o.value === current)) anoFilterEl.value = current;
     }
     const anoFilter = anoFilterEl ? anoFilterEl.value : 'all';
@@ -5304,7 +5330,7 @@ window.AnonaImpressao = (function () {
     const fileFilterEl = document.getElementById('reportFileFilter');
     if (fileFilterEl) {
       const previous = fileFilterEl.value;
-      fileFilterEl.innerHTML = '<option value="">Escolha uma planilha</option>' + reports.map(r => `<option value="${r.id}">${escapeHtml(MESES_NOMES[r.mes] || '?')} / ${r.ano} — ${escapeHtml(r.filename || 'arquivo')}</option>`).join('');
+      fileFilterEl.innerHTML = '<option value="">Escolha uma planilha</option>' + reports.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(MESES_NOMES[r.mes] || '?')} / ${escapeHtml(r.ano)} — ${escapeHtml(r.filename || 'arquivo')}</option>`).join('');
       if (reports.some(r => r.id === previous)) fileFilterEl.value = previous;
     }
 
@@ -5327,12 +5353,12 @@ window.AnonaImpressao = (function () {
     wrap.innerHTML = filtered.map(r => `
       <div class="flex items-center justify-between gap-2 border border-slate-200 rounded-xl px-3 py-2">
         <div class="min-w-0">
-          <p class="text-xs font-bold truncate">${escapeHtml(MESES_NOMES[r.mes] || '?')} / ${r.ano}</p>
-          <p class="text-[10px] text-slate-400 truncate">${escapeHtml(r.filename || '')} · ${r.sizeKB || 0} KB</p>
+          <p class="text-xs font-bold truncate">${escapeHtml(MESES_NOMES[r.mes] || '?')} / ${escapeHtml(r.ano)}</p>
+          <p class="text-[10px] text-slate-400 truncate">${escapeHtml(r.filename || '')} · ${Number(r.sizeKB) || 0} KB</p>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <button onclick="__downloadReport('${r.id}')" title="Baixar" aria-label="Baixar planilha" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="download" class="w-4 h-4" style="color:var(--azul)"></i></button>
-          <button onclick="__deleteReport('${r.id}')" title="Apagar" aria-label="Apagar planilha" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i></button>
+          <button onclick="__downloadReport('${escapeHtml(r.id)}')" title="Baixar" aria-label="Baixar planilha" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="download" class="w-4 h-4" style="color:var(--azul)"></i></button>
+          <button onclick="__deleteReport('${escapeHtml(r.id)}')" title="Apagar" aria-label="Apagar planilha" class="p-1.5 rounded-lg hover:bg-slate-100"><i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i></button>
         </div>
       </div>`).join('');
     if (window.lucide) lucide.createIcons();
@@ -5409,6 +5435,7 @@ window.AnonaImpressao = (function () {
         <div class="flex items-center gap-2 justify-end">
           <span class="hidden sm:inline text-blue-100">${escapeHtml(user.email)}</span>
           <button onclick="doLogout()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5"><i data-lucide="log-out" class="w-3.5 h-3.5"></i> Sair da conta</button>
+          <button onclick="limparAparelho()" title="Sai da conta e apaga as notas e planilhas guardadas neste aparelho" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5"><i data-lucide="eraser" class="w-3.5 h-3.5"></i> Limpar aparelho</button>
         </div>
         <p id="cloudSyncStatus" class="text-[10px] text-blue-200 mt-1 flex items-center gap-1 justify-end"><span>●</span> sincronizando…</p>`;
       if (window.lucide) lucide.createIcons();
