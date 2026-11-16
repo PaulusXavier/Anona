@@ -45,18 +45,23 @@ L.map = L.map; // (Proxy get acima)
 const pedidos = [];
 async function fetchFalso(url) {
   pedidos.push(String(url));
-  if (/nominatim/.test(url)) { const q = new URL(url).searchParams.get('q') || ''; return { ok: true, status: 200, json: async () => [{ lat: '2.8' + (q.length % 10), lon: '-60.67', display_name: q, address: { road: q } }] }; }
+  if (/nominatim/.test(url)) { const q = new URL(url).searchParams.get('q') || ''; if (/Inexistente/.test(q)) return { ok: true, status: 200, json: async () => [] }; return { ok: true, status: 200, json: async () => [{ lat: (2.8 + ([...q].reduce((a, c) => a + c.charCodeAt(0), 0) % 25) * 0.004).toFixed(4), lon: '-60.67', display_name: q, address: { road: q } }] }; }
+  if (falharPrincipal && /routing\.openstreetmap\.de/.test(url)) { usouReserva.n++; return { ok: false, status: 503, json: async () => null }; }
+  if (/router\.project-osrm\.org/.test(url)) usouReserva.reserva = true;
   const pts = String(url).split('/route/v1/driving/')[1].split('?')[0].split(';');
   const pernas = pts.slice(1).map((_, i) => ({ distance: 1000, duration: 300, steps: [{ maneuver: { type: 'depart', location: [-60.67, 2.8] }, name: 'Rua X', distance: 1000 }, { maneuver: { type: 'arrive', location: [-60.67, 2.81] }, name: '', distance: 0 }] }));
   const coordenadas = pts.map(p => p.split(',').map(Number));
   return { ok: true, status: 200, json: async () => ({ code: 'Ok', routes: [{ distance: 1000 * pernas.length, duration: 300 * pernas.length, geometry: { type: 'LineString', coordinates: coordenadas }, legs: pernas }] }) };
 }
 
-let copiado = '', watch = null;
+let falharPrincipal = false; const usouReserva = { n: 0, reserva: false};
+let copiado = '', watch = null; const falas = [], abertos = [];
 const win = {
   document: null, L, AnonaMapaUtil: U, AnonaMapaOffline: null, lucide: null, devicePixelRatio: 1,
   matchMedia: () => ({ matches: false }), addEventListener() {}, requestIdleCallback: (f) => f(),
-  localStorage: { getItem: () => null, setItem() {} }
+  localStorage: { getItem: () => null, setItem() {} },
+  speechSynthesis: { cancel() {}, speak(u) { falas.push(u.text); } }, SpeechSynthesisUtterance: function (t) { this.text = t; },
+  open: (u) => { abertos.push(u); }, jspdf: (() => { try { return require('jspdf/dist/jspdf.node.min.js'); } catch (e) { return undefined; } })()   // opcional: npm i jspdf para testar o PDF
 };
 const secao = get('mapaRotas');
 const lista = []; secao._qa = (q) => (q === '#mapaParadas .mp-parada-info' ? lista : []);
@@ -110,5 +115,66 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'anona-mapa.js'), 'ut
   const novo = pedidos.slice(antes).filter(u => /route\/v1/.test(u)).pop();
   assert(novo, 'rota refeita');
   assert.strictEqual(novo.split('/route/v1/driving/')[1].split('?')[0].split(';').length, 3, 'agora: posição + 1 parada + destino: ' + novo);
+  assert(falas.some(f => /Acompanhando a rota/.test(f)), 'voz ao iniciar o Acompanhar: ' + falas.join('|'));
+  assert(falas.some(f => /Parada alcançada\. Seguindo para a próxima/.test(f)), 'voz ao alcançar a parada: ' + falas.join('|'));
+  assert(/Waze/.test(get('mapaWazeTxt').textContent) && /waze\.com\/ul\?ll=/.test(get('mapaWaze').href), 'link do Waze: ' + get('mapaWaze').href);
+  // 6) horário limite do expediente: avisa quando passa e mostra a folga quando cabe
+  get('mapaLimite').value = '08:30'; await get('mapaLimite').dispara('input');
+  assert(/Passa das 08:30 em 10 min/.test(get('mapaFolga').textContent) && get('mapaFolga').classList.contains('is-alerta'), 'folga negativa: ' + get('mapaFolga').textContent);
+  get('mapaLimite').value = '09:00'; await get('mapaLimite').dispara('input');
+  assert(/Termina 20 min antes das 09:00/.test(get('mapaFolga').textContent) && !get('mapaFolga').classList.contains('is-alerta'), 'folga positiva: ' + get('mapaFolga').textContent);
+  get('mapaLimite').value = ''; await get('mapaLimite').dispara('input');
+  assert(get('mapaFolga').classList.contains('hidden'), 'sem limite, sem aviso');
+  // 7) acompanhando: "faltam" aparece e o botão Cheguei está à vista
+  assert(!get('mapaCheguei').classList.contains('hidden'), 'Cheguei visível com parada pendente');
+  const origemUrl = pedidos.filter(u => /route\/v1/.test(u)).pop().split('/route/v1/driving/')[1].split('?')[0].split(';')[0].split(',').map(Number);   // lng,lat da partida
+  watch({ coords: { latitude: origemUrl[1], longitude: origemUrl[0], accuracy: 8 } });
+  assert(/Parada 1 em|Faltam/.test(get('mapaFaltam').textContent) && !get('mapaFaltam').classList.contains('hidden'), 'faltam: "' + get('mapaFaltam').textContent + '"');
+  // 8) "Cheguei na parada" manual: a parada sai da rota mesmo sem o GPS chegar lá
+  const antes2 = pedidos.length;
+  await get('mapaCheguei').dispara('click'); await new Promise(r => setTimeout(r, 40));
+  assert(/Parada concluída/.test(get('mapaStatus').textContent), 'status: ' + get('mapaStatus').textContent);
+  assert(falas.some(f => /Parada concluída/.test(f)), 'voz da parada concluída');
+  const novo2 = pedidos.slice(antes2).filter(u => /route\/v1/.test(u)).pop();
+  assert.strictEqual(novo2.split('/route/v1/driving/')[1].split('?')[0].split(';').length, 2, 'sem paradas: partida + destino');
+  assert(get('mapaCheguei').classList.contains('hidden'), 'sem paradas, sem botão Cheguei');
+  // 9) Voltar à partida: o destino vira parada e a partida vira o destino final
+  await get('mapaSeguir').dispara('click');   // desliga o Acompanhar
+  await get('mapaVoltar').dispara('click'); await new Promise(r => setTimeout(r, 40));
+  const volta = pedidos.filter(u => /route\/v1/.test(u)).pop().split('/route/v1/driving/')[1].split('?')[0].split(';');
+  assert.strictEqual(volta.length, 3, 'partida + destino antigo (parada) + partida: ' + volta);
+  assert.strictEqual(volta[0], volta[2], 'a rota termina onde começou');
+  assert(/Ponto de partida/.test(get('mapaDestinoTexto').textContent), 'destino final = partida (posição do aparelho): ' + get('mapaDestinoTexto').textContent);
+  // 10) lista de endereços colada: 3 endereços viram partida + 2 paradas + destino; o que não existe é avisado
+  await get('mapaLimpar').dispara('click');
+  get('mapaLista').value = '1) Rua Um, 1\n- Rua Dois, 22\nRua Três, 333'; get('mapaListaOrdem').checked = true;
+  await get('mapaListaMontar').dispara('click'); await new Promise(r => setTimeout(r, 40));
+  const lista3 = pedidos.filter(u => /route\/v1/.test(u)).pop().split('/route/v1/driving/')[1].split('?')[0].split(';');
+  assert.strictEqual(lista3.length, 4, 'partida + 3 endereços: ' + lista3);
+  assert(/3 endereços na rota/.test(get('mapaStatus').textContent), 'status: ' + get('mapaStatus').textContent);
+  await get('mapaLimpar').dispara('click');
+  get('mapaLista').value = 'Rua Um, 1\nInexistente 9\nRua Dois, 2'; get('mapaListaOrdem').checked = false;
+  await get('mapaListaMontar').dispara('click'); await new Promise(r => setTimeout(r, 40));
+  assert(/2 endereços na rota/.test(get('mapaStatus').textContent) && /Não achei: Inexistente 9/.test(get('mapaStatus').textContent), 'status: ' + get('mapaStatus').textContent);
+  // 11) WhatsApp abre com o roteiro pronto
+  await get('mapaWhats').dispara('click');
+  assert(abertos.length === 1 && /^https:\/\/wa\.me\/\?text=/.test(abertos[0]) && /Roteiro/.test(decodeURIComponent(abertos[0])), 'WhatsApp: ' + abertos[0]);
+  // 11b) PDF do roteiro
+  if (!win.jspdf) console.log('  (PDF não testado: rode `npm i jspdf` para incluir)');
+  else { const os = require('os'), antes = process.cwd(); process.chdir(os.tmpdir());
+    await get('mapaPdf').dispara('click');
+    const nomePdf = fs.readdirSync('.').filter(f => /^roteiro-.*\.pdf$/.test(f)).pop(); assert(nomePdf, 'PDF gerado: ' + get('mapaStatus').textContent);
+    assert(fs.readFileSync(nomePdf).slice(0, 4).toString() === '%PDF', 'arquivo é PDF'); fs.unlinkSync(nomePdf); process.chdir(antes); }
+  // 11c) servidor de rotas principal fora do ar → reserva
+  await get('mapaLimpar').dispara('click'); falharPrincipal = true;
+  await busca('Rua Delta, Centenário');
+  assert(usouReserva.reserva && /Chegada por volta/.test(get('mapaChegada').textContent), 'rota pelo servidor reserva');
+  falharPrincipal = false;
+  // 12) recentes e endereço repetido
+  assert(!get('mapaRecentes').classList.contains('hidden'), 'recentes aparecem depois de buscar');
+  await get('mapaLimpar').dispara('click'); await busca('Rua Alfa, Centenário');
+  await get('mapaAddParada').dispara('click'); await busca('Rua Alfa, Centenário');
+  await get('mapaAddParada').dispara('click');
+  assert(/já está nas paradas/.test(get('mapaStatus').textContent), 'parada repetida: ' + get('mapaStatus').textContent);
   console.log('mapa-fluxo.test.js: tudo certo');
 })().catch(e => { console.error(e); process.exit(1); });
