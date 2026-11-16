@@ -5,36 +5,29 @@
  *
  * Como funciona:
  *  - instalação: guarda o "esqueleto" do app (HTML, CSS, scripts locais, ícones) e as bibliotecas externas
- *    (jsPDF, pdf-lib, JSZip, xlsx-js-style, lucide, Firebase), para PDFs/planilhas/anotações funcionarem sem internet;
+ *    (Firebase; jsPDF, pdf-lib, JSZip, xlsx-js-style, lucide e pdf.js agora ficam em vendor/), para PDFs/planilhas/anotações funcionarem sem internet;
  *  - index.html: tenta a rede primeiro (versão mais nova); se demorar mais de 4 s ou não houver internet, usa a cópia guardada;
  *  - demais arquivos: usa a cópia guardada na hora e atualiza em segundo plano;
  *  - só guarda respostas válidas (200 OK, ou "opaca" das bibliotecas carregadas por <script>): página de erro nunca entra no cache;
  *  - Firestore/Auth NÃO passam por aqui (dados e login sempre direto na rede).
  * Para forçar todo mundo a baixar tudo de novo, aumente o número de CACHE_NAME.
  */
-const CACHE_NAME = 'anona-app-shell-v54';
+const CACHE_NAME = 'anona-app-shell-v56';
 const PREFIXOS_ANTIGOS = ['anona-app-shell-', 'pbf-app-shell-'];
 
 const ARQUIVOS_LOCAIS = [
   './', 'index.html', 'styles.css', 'login.css', 'manifest.json',
-  'anona-tabelas.js', 'anona-rota.js', 'anona-mapa.js', 'anona-mapa-util.js', 'anona-mapa-foco.js', 'anona-mapa-offline.js', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'anona-mascot.js', 'anona-presenca.js', 'anona-ia.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
+  'anona-tabelas.js', 'anona-rota.js', 'anona-mapa.js', 'anona-mapa-util.js', 'anona-mapa-foco.js', 'anona-mapa-offline.js', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'anona-mascot.js', 'anona-seguranca.js', 'tailwind.css', 'vendor/lucide/lucide.min.js', 'vendor/jspdf/jspdf.umd.min.js', 'vendor/pdf-lib/pdf-lib.min.js', 'vendor/jszip/jszip.min.js', 'vendor/xlsx-js-style/xlsx.bundle.js', 'vendor/pdfjs/pdf.min.js', 'vendor/pdfjs/pdf.worker.min.js', 'vendor/tesseract/tesseract.min.js', 'vendor/tesseract/worker.min.js', 'anona-presenca.js', 'anona-ia.js', 'paulus.v1.js', 'paulus-anona.js', 'conhecimento.json',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'
 ];
 const BIBLIOTECAS = [
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/lucide@0.469.0',
-  'https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js',
-  'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js',
-  'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js',
-  'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  // Só o que ainda vem de fora: Firebase (módulos) e o leitor de OCR (carregado sob demanda).
   'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js',
   'https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js'
 ];
 // Hosts de bibliotecas/fontes que podem ser guardados no cache durante o uso.
-const HOSTS_CACHEAVEIS = ['unpkg.com', 'cdn.jsdelivr.net', 'cdn.tailwindcss.com', 'cdnjs.cloudflare.com', 'www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+const HOSTS_CACHEAVEIS = ['www.gstatic.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
 // Blocos do mapa (OpenStreetMap) que o usuário já viu ficam guardados (até MAX_TILES), para reaparecerem sem internet.
 // Só guarda o que foi visto na tela — não baixa blocos em massa (o OpenStreetMap proíbe). O mapa OFFLINE de verdade (ruas) fica no IndexedDB.
