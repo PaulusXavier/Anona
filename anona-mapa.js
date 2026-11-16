@@ -50,7 +50,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   let paradas = [], grupoParadas = null;   // paradas no meio do caminho: [{ lat, lng, rotulo }] (o destino fica sempre por último)
   let origemOutro = null;        // partida escolhida por "Inverter": { lat, lng, rotulo }
   let ultimoZoom = 0;
-  let mPasso = null, ultimoRecalculo = 0, seguindo = false, vigia = null, travaTela = null;
+  let mPasso = null, soltoAte = 0, ultimoRecalculo = 0, seguindo = false, vigia = null, travaTela = null;
   let camadaSat = null, satelite = lerPref('anonaMapaSatelite', '0') === '1';          // imagem de satélite (Esri) em vez do mapa de ruas
   const temVoz = () => !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
   let vozNav = lerPref('anonaMapaVozNav', '1') === '1';                               // avisos falados no modo Acompanhar
@@ -103,6 +103,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       attribution: 'Imagens © Esri, Maxar, Earthstar Geographics · rotas: OSRM'
     });
     [camadaTiles, camadaSat].forEach((cam) => {
+      cam.options.updateWhenZooming = false;   // pinça mais fluida no celular: os blocos só carregam quando o zoom termina
       cam.on('tileload', (e) => { if (e.tile) e.tile.style.visibility = ''; });
       cam.on('tileerror', (e) => {
         if (e.tile) e.tile.style.visibility = 'hidden';          // bloco que falhou fica transparente: as ruas offline aparecem por baixo
@@ -113,6 +114,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     });
     aplicarModoMapa();
     mapa.on('click', (e) => escolherNoMapa(e.latlng.lat, e.latlng.lng));
+    mapa.on('dragstart', () => { if (seguindo) soltoAte = Date.now() + 12000; });
     setTimeout(() => mapa.invalidateSize(), 150);
     return mapa;
   }
@@ -646,8 +648,10 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     el.classList.remove('hidden');
   }
   // parada cumprida (sozinha, pelo GPS, ou pelo botão "Cheguei"): sai da lista e a rota é refeita daqui até a próxima
+  function vibrar(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) { /* aparelho sem vibração */ } }
   function cumprirParada(manual) {
     if (!paradas.length) return;
+    vibrar([120, 70, 120]);
     const q = paradas.shift(), prox = paradas.length ? 'Seguindo para a próxima.' : 'Seguindo para o destino final.';
     ultimoRecalculo = Date.now(); renderParadas();
     avisoDestino = (manual ? 'Parada concluída: ' : 'Parada alcançada: ') + q.rotulo + '. ' + prox;   // aparece quando a rota nova ficar pronta
@@ -660,11 +664,11 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (!trilha || !destino) return;
     if (paradas.length && Date.now() - ultimoRecalculo > 4000 && U.alcancouParada(posicao, paradas[0], posicao.precisao)) { cumprirParada(false); return; }
     if (!paradas.length && U.distM(posicao, destino) < 30) {   // com paradas pendentes, passar perto do destino não encerra a rota
-      status('Você chegou ao destino.', 'ok'); $('mapaProximo').classList.add('hidden'); falar('Você chegou ao destino.'); seguir(false); return;
+      vibrar([200, 80, 200, 80, 200]); status('Você chegou ao destino.', 'ok'); $('mapaProximo').classList.add('hidden'); falar('Você chegou ao destino.'); seguir(false); return;
     }
     const pr = U.projetar(posicao, trilha.pontos, trilha.cum);
     if (pr && pr.dist > Math.max(LIMITE_ROTA_FORA, (posicao.precisao || 0) * 1.5)) {
-      if (Date.now() - ultimoRecalculo > 20000) { ultimoRecalculo = Date.now(); status('Você saiu da rota. Recalculando…'); falar('Você saiu da rota. Recalculando.'); tracarRota(); }
+      if (Date.now() - ultimoRecalculo > 20000) { ultimoRecalculo = Date.now(); vibrar([80, 50, 80]); status('Você saiu da rota. Recalculando…'); falar('Você saiu da rota. Recalculando.'); tracarRota(); }
       return;
     }
     if (pr) {
@@ -676,7 +680,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       trilha.proxDist = prox && loc ? loc.inicio - pr.ao_longo : null;
       atualizarFaltam(pr); avisarVoz(i, prox, loc, pr);
     }
-    if (mapa) {
+    if (mapa && Date.now() > soltoAte) {   // se a pessoa arrastou o mapa para olhar à frente, ele não volta sozinho por alguns segundos
       // perto de uma curva, aproxima um pouco mais (ver a esquina); em trecho longo, volta ao zoom normal
       const alvo = trilha && trilha.proxDist != null ? (trilha.proxDist < 150 ? 18 : 17) : null, z = mapa.getZoom();
       if (alvo && Math.abs(z - alvo) >= 1 && z >= 15 && Date.now() - ultimoZoom > 6000) { ultimoZoom = Date.now(); mapa.setView([posicao.lat, posicao.lng], alvo, { animate: true }); }
@@ -1020,7 +1024,26 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   const abrirPelaBusca = () => { if (!cheia && MOBILE()) { entrarCheia(); setTimeout(() => $('mapaBusca').focus(), 0); } };
   $('mapaBusca').addEventListener('focus', abrirPelaBusca);
   $('mapaBusca').addEventListener('click', abrirPelaBusca);   // o campo pode já estar focado ao voltar da tela cheia
-  const ajuda = $('mapaAjuda'); if (ajuda && !MOBILE()) ajuda.open = true;   // no computador a ajuda já vem aberta
+  const ajuda = $('mapaAjuda'); if (ajuda && !MOBILE()) ajuda.open = true;
+  const envio = $('mapaEnvio'); if (envio && !MOBILE()) envio.open = true;   // no computador os botões de enviar já vêm à mostra
+  // alça do painel de rota: toque alterna o passo a passo; deslizar para cima abre e para baixo fecha
+  const alternarPassos = (abrir) => {
+    const r = $('mapaResumo'), fechado = r.classList.contains('is-passos-fechados'), quer = abrir === undefined ? fechado : abrir;
+    r.classList.toggle('is-passos-fechados', !quer); $('mapaPassosBtn').setAttribute('aria-expanded', quer ? 'true' : 'false');
+  };
+  const alca = $('mapaAlca'); let yAlca = null;
+  alca.addEventListener('click', () => alternarPassos());
+  alca.addEventListener('touchstart', (e) => { const t = e.touches && e.touches[0]; yAlca = t ? t.clientY : null; }, { passive: true });
+  alca.addEventListener('touchend', (e) => {
+    const t = e.changedTouches && e.changedTouches[0]; if (yAlca == null || !t) return;
+    const dy = t.clientY - yAlca; yAlca = null;
+    if (Math.abs(dy) > 28) { alternarPassos(dy < 0); if (e.cancelable) e.preventDefault(); }   // preventDefault: o toque não vira clique duplicado
+  });
+  // teclado do celular: o painel de busca usa só a parte visível da tela
+  if (window.visualViewport) {
+    const vv = window.visualViewport, ajustarVV = () => sec.style.setProperty('--mp-vvh', Math.round(vv.height) + 'px');
+    vv.addEventListener('resize', ajustarVV); ajustarVV();
+  }   // no computador a ajuda já vem aberta
   window.addEventListener('popstate', fecharCheia);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cheia) sairCheia(); });
   document.addEventListener('fullscreenchange', () => { if (cheia && viaApi && !document.fullscreenElement) sairCheia(); else ajustarMapa(); });
@@ -1082,6 +1105,11 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   $('mapaForm').addEventListener('submit', buscar);
   $('mapaMinhaPos').addEventListener('click', async () => {
     try { await garantirMapa(); await usarMinhaPosicao(true); selOrigem.value = 'pos'; ajustarOrigem(); gravarPref('anonaMapaOrigem', 'pos'); if (destino) await tracarRota(); }
+    catch (e) { mostrarErro(e); }
+  });
+  // botão redondo sobre o mapa: só centraliza na posição (não muda a partida nem refaz a rota)
+  $('mapaLocalizar').addEventListener('click', async () => {
+    try { soltoAte = 0; await garantirMapa(); await usarMinhaPosicao(true); }
     catch (e) { mostrarErro(e); }
   });
   $('mapaLimpar').addEventListener('click', limparTudo);
