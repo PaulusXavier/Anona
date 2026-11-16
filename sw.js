@@ -12,7 +12,7 @@
  *  - Firestore/Auth NÃO passam por aqui (dados e login sempre direto na rede).
  * Para forçar todo mundo a baixar tudo de novo, aumente o número de CACHE_NAME.
  */
-const CACHE_NAME = 'anona-app-shell-v50';
+const CACHE_NAME = 'anona-app-shell-v54';
 const PREFIXOS_ANTIGOS = ['anona-app-shell-', 'pbf-app-shell-'];
 
 const ARQUIVOS_LOCAIS = [
@@ -40,7 +40,8 @@ const HOSTS_CACHEAVEIS = ['unpkg.com', 'cdn.jsdelivr.net', 'cdn.tailwindcss.com'
 // Só guarda o que foi visto na tela — não baixa blocos em massa (o OpenStreetMap proíbe). O mapa OFFLINE de verdade (ruas) fica no IndexedDB.
 const CACHE_TILES = 'anona-mapa-tiles-v1';
 const MAX_TILES = 700;
-const ehTile = (h) => h === 'tile.openstreetmap.org' || /^[abc]\.tile\.openstreetmap\.org$/.test(h);
+// blocos de ruas (OpenStreetMap) e, se o usuário ligar o botão Satélite, imagens da Esri
+const ehTile = (h) => h === 'tile.openstreetmap.org' || /^[abc]\.tile\.openstreetmap\.org$/.test(h) || h === 'server.arcgisonline.com';
 
 const respostaBoa = (res) => !!res && (res.status === 200 || res.type === 'opaque');
 
@@ -109,7 +110,9 @@ async function tilePrimeiro(req) {
   const guardado = await cache.match(req.url);
   if (guardado) return guardado;
   // pedido CORS (não "opaco"): resposta opaca é contada como ~7 MB na cota do navegador, mesmo sendo um bloco de poucos KB
-  const res = await fetch(req.url, { mode: 'cors', credentials: 'omit' });
+  let res;
+  try { res = await fetch(req.url, { mode: 'cors', credentials: 'omit' }); }
+  catch (e) { return fetch(req); }     // servidor sem CORS (ex.: satélite): mostra o bloco normalmente, só não o guarda
   if (res && res.status === 200) {
     try {
       await cache.put(req.url, res.clone());
