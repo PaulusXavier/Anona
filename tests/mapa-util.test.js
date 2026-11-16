@@ -88,10 +88,27 @@ assert.strictEqual(U.alcancouParada(null, par, 5), false);
 cr = U.cronograma(pernas3, { inicio: base, visitaMin: 30 });
 const txt = U.roteiroTexto({ modo: 'carro/moto', origem: 'Rua Santo Agostinho, 193 — Centenário', paradas: [{ rotulo: 'Rua A' }, { rotulo: 'Rua B' }], destino: { rotulo: 'Rua C' }, cron: cr, inicio: base, planejado: true });
 assert(/^Roteiro \(carro\/moto\) — saída às 07:00$/m.test(txt), txt);
-assert(/^Parada 1: Rua A — chegada 07:10 \(2,0 km, 10 min\)$/m.test(txt), txt);
-assert(/^Parada 2: Rua B — chegada 07:45 \(1,0 km, 5 min\)$/m.test(txt), txt);
+assert(/^Parada 1: Rua A — chegada 07:10 \(2,0 km, 10 min\) · visita 30 min$/m.test(txt), txt);
+assert(/^Parada 2: Rua B — chegada 07:45 \(1,0 km, 5 min\) · visita 30 min$/m.test(txt), txt);
 assert(/^Destino: Rua C — chegada 08:17 \(500 m, 2 min\)$/m.test(txt), txt);
 assert(/^Deslocamento: 3,5 km · 17 min \+ 1 h de visitas$/m.test(txt), txt);
 assert(/^Fim previsto: 08:17$/m.test(txt), txt);
 
+
+// ---- voz, faltam, lista colada, horário limite, atalhos ----
+assert.strictEqual(U.distFala(380), '400 metros'); assert.strictEqual(U.distFala(1000), '1 quilômetro'); assert.strictEqual(U.distFala(2540), '2,5 quilômetros'); assert.strictEqual(U.distFala(5), '10 metros');
+assert.strictEqual(U.estagioAviso(30), 3); assert.strictEqual(U.estagioAviso(100), 2); assert.strictEqual(U.estagioAviso(300, 900), 1); assert.strictEqual(U.estagioAviso(300, 300), 0); assert.strictEqual(U.estagioAviso(900, 2000), 0); assert.strictEqual(U.estagioAviso(NaN), 0);
+assert.deepStrictEqual(U.restante(1000, 250, 600), { dist: 750, dur: 450 }); assert.deepStrictEqual(U.restante(1000, 5000, 600), { dist: 0, dur: 0 }); assert.deepStrictEqual(U.restante(0, 0, 600), { dist: 0, dur: 0 });
+assert.deepStrictEqual(U.listaDeEnderecos('1) Rua A, 10\n- Rua B, 20; Rua C 30\n\nrua a, 10\n12. Av D'), { itens: ['Rua A, 10', 'Rua B, 20', 'Rua C 30', 'Av D'], cortados: 0 });
+assert.strictEqual(U.listaDeEnderecos('13 de Setembro, Rua X\nRua 7 de Setembro, 5').itens[0], '13 de Setembro, Rua X');   // "13 de" não é numeração
+const dez = Array.from({ length: 12 }, (_, i) => 'Rua ' + (i + 1) + ', 1').join('\n'); assert.deepStrictEqual([U.listaDeEnderecos(dez, 9).itens.length, U.listaDeEnderecos(dez, 9).cortados], [9, 3]);
+const t1630 = new Date(2026, 0, 1, 16, 30).getTime(), t1740 = new Date(2026, 0, 1, 17, 40).getTime();
+assert.strictEqual(U.folga(t1630, '17:00'), 30); assert.strictEqual(U.folga(t1740, '17:00'), -40); assert.strictEqual(U.folga(t1630, ''), null); assert.strictEqual(U.folga(t1630, '25:00'), null);
+assert.strictEqual(U.linkWaze({ lat: 2.8235, lng: -60.6758 }), 'https://waze.com/ul?ll=2.823500,-60.675800&navigate=yes');
+assert.strictEqual(decodeURIComponent(U.linkWhats('Rota\nDestino: Rua A, 1')), 'https://wa.me/?text=Rota\nDestino: Rua A, 1'.replace('https://wa.me/?text=', 'https://wa.me/?text='));
+// visita individual por parada (null = padrão); o destino não tem visita
+const c3 = U.cronograma([{ distance: 1000, duration: 300 }, { distance: 1000, duration: 300 }, { distance: 1000, duration: 300 }], { inicio: 0, visitaMin: 30, visitas: [10, null] });
+assert.strictEqual(c3.parado, (10 + 30) * 60); assert.strictEqual(c3.fim, (900 + 2400) * 1000); assert.strictEqual(c3.etapas[1].chegada, (300 + 600 + 300) * 1000);
+assert(Math.abs(U.comprimento({ lat: 0, lng: 0 }, [{ lat: 0, lng: 0.01 }], { lat: 0, lng: 0.02 }) - U.distM({ lat: 0, lng: 0 }, { lat: 0, lng: 0.02 })) < 1);
+assert(/Parada 1: Rua A — chegada 07:10 \(2,0 km, 10 min\) · visita 30 min$/m.test(U.roteiroTexto({ modo: 'x', origem: 'P', paradas: [{ rotulo: 'Rua A' }], destino: { rotulo: 'Rua C' }, cron: U.cronograma(pernas3.slice(0, 2), { inicio: base, visitaMin: 30 }), inicio: base, planejado: true })));
 console.log('mapa-util.test.js: tudo certo');
