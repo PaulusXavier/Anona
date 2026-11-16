@@ -1043,3 +1043,64 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
 #mapaRotas.is-tela-cheia.is-seguindo .mp-faltam{ order:-1; font-size:.95rem; }
 #mapaRotas.is-tela-cheia.is-seguindo .mp-lista{ display:none; }
 #mapaRotas.is-tela-cheia:has(#mapaDestinoBox:not(.hidden)) .mp-topo:not(:focus-within) .mp-lista{ display:none; }
+
+/* ===== Mapa e rotas: eficiência no celular (v57) ===== */
+/* toque rápido: sem atraso de duplo-toque, sem realce cinza e sem selecionar texto ao segurar um botão */
+#mapaRotas button, #mapaRotas a.mp-btn, #mapaRotas summary, #mapaRotas .mp-focos button{ touch-action:manipulation; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+#mapaRotas .mp-btn, #mapaRotas .mp-voz, #mapaRotas .mp-mini, #mapaRotas .mp-modos button, #mapaRotas .mp-focos button, #mapaRotas .mp-alt, #mapaRotas .mp-camada, #mapaRotas .mp-localizar{ -webkit-user-select:none; user-select:none; }
+
+/* botões de enviar/salvar recolhidos: o mapa e o "Acompanhar" ficam em primeiro plano */
+#mapaRotas .mp-envio summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:.4rem; font-size:.78rem; font-weight:700; color:var(--verde); min-height:2.5rem; padding:.2rem .1rem; }
+#mapaRotas .mp-envio summary::-webkit-details-marker{ display:none; }
+#mapaRotas .mp-envio summary::after{ content:"▾"; margin-left:auto; transition:transform .15s; }
+#mapaRotas .mp-envio[open] summary::after{ transform:rotate(180deg); }
+#mapaRotas .mp-envio .mp-acoes{ margin-top:.2rem; }
+#mapaRotas .mp-envio .mp-acoes .mp-btn{ flex:1 1 9rem; }
+
+/* botão redondo "minha posição" sobre o mapa (como no Google Maps) */
+#mapaRotas .mp-localizar{ position:absolute; right:10px; bottom:8.6rem; z-index:900; width:2.75rem; height:2.75rem; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--line); background:rgba(255,255,255,.97); color:#1a73e8; box-shadow:0 2px 8px rgba(13,46,99,.3); cursor:pointer; }
+#mapaRotas .mp-localizar:active{ background:var(--verde-soft); }
+#mapaRotas .mp-localizar:focus-visible{ outline:3px solid rgba(13,46,99,.3); outline-offset:2px; }
+#mapaRotas.is-tela-cheia .mp-localizar{ bottom:calc(var(--mp-base-h, 0px) + 8.6rem); }
+@media (max-width:1023px){ #mapaRotas:not(.is-tela-cheia) .mp-localizar{ display:none; } }
+
+/* alça do painel de baixo (arrastar/tocar para abrir ou fechar o passo a passo) */
+#mapaRotas .mp-alca{ display:none; }
+@media (max-width:1023px){
+  #mapaRotas.is-tela-cheia .mp-alca{ display:flex; align-items:center; justify-content:center; width:100%; min-height:1.6rem; margin:-.3rem 0 -.15rem; background:none; border:0; padding:0; cursor:pointer; touch-action:none; }
+  #mapaRotas.is-tela-cheia .mp-alca span{ width:2.6rem; height:.3rem; border-radius:999px; background:#c3ccd8; }
+  #mapaRotas.is-tela-cheia .mp-resumo{ overflow-y:auto; }
+}
+
+/* telas de toque: o pinça já aproxima/afasta — sem botões +/− ocupando o mapa; Satélite e posição descem */
+@media (pointer:coarse){
+  #mapaRotas .leaflet-control-zoom{ display:none; }
+  #mapaRotas .mp-camada{ bottom:2.4rem; min-height:2.75rem; }
+  #mapaRotas .mp-localizar{ bottom:5.6rem; }
+  #mapaRotas.is-tela-cheia .mp-camada{ bottom:calc(var(--mp-base-h, 0px) + 2.4rem); }
+  #mapaRotas.is-tela-cheia .mp-localizar{ bottom:calc(var(--mp-base-h, 0px) + 5.6rem); }
+}
+
+@media (max-width:1023px){
+  /* alvos de toque de 44 px em todos os botões do painel */
+  #mapaRotas .mp-btn, #mapaRotas .mp-envio summary, #mapaRotas .mp-ajuda summary, #mapaRotas .mp-lista summary{ min-height:2.75rem; }
+  #mapaRotas .mp-select, #mapaRotas #mapaOrigemTexto, #mapaRotas #mapaLista{ min-height:2.75rem; font-size:16px; }
+  #mapaRotas .mp-focos button, #mapaRotas .mp-alt{ min-height:2.5rem; }
+  #mapaRotas .mp-plano .mp-select{ min-height:2.5rem; }
+  /* com o teclado aberto, o painel de busca usa só a parte visível da tela (--mp-vvh vem do visualViewport) e o de rota some atrás */
+  #mapaRotas.is-tela-cheia .mp-topo:focus-within{ max-height:calc(var(--mp-vvh, 100vh) - 1.2rem - env(safe-area-inset-top, 0px)); overflow-y:auto; }
+  #mapaRotas.is-tela-cheia .mp-topo:focus-within .mp-resultados{ max-height:calc(var(--mp-vvh, 100vh) - 9rem - env(safe-area-inset-top, 0px)); }
+  #mapaRotas.is-tela-cheia:has(.mp-topo:focus-within) .mp-base{ visibility:hidden; }
+  #mapaRotas.is-tela-cheia:has(.mp-topo:focus-within) .mp-camada, #mapaRotas.is-tela-cheia:has(.mp-topo:focus-within) .mp-localizar{ visibility:hidden; }
+  /* telas baixas / aparelho deitado: respeita o recorte lateral */
+  #mapaRotas.is-tela-cheia .mp-topo, #mapaRotas.is-tela-cheia .mp-base{ left:max(.6rem, env(safe-area-inset-left, 0px)); }
+}
+@media (max-width:1023px) and (min-width:481px){
+  #mapaRotas.is-tela-cheia .mp-topo, #mapaRotas.is-tela-cheia .mp-base{ right:max(.6rem, env(safe-area-inset-right, 0px)); }
+}
+/* mapa fora da tela cheia acompanha a altura útil real do celular (barra do navegador) */
+@supports (height:1dvh){
+  @media (max-width:1023px){ #mapaRotas:not(.is-tela-cheia) #mapaCanvas{ height:48dvh; } }
+}
+/* acompanhando: os botões de enviar somem junto com o resto */
+@media (max-width:1023px){ #mapaRotas.is-tela-cheia.is-seguindo .mp-envio{ display:none; } }
