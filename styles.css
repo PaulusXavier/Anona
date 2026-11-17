@@ -1131,3 +1131,31 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
 
 #mapaRotas .mp-btn-arq{ cursor:pointer; }
 #mapaRotas .mp-btn-arq:focus-within, #mapaFolhasArq:focus + .mp-btn-arq{ outline:2px solid var(--azul-deep); outline-offset:2px; }
+
+/* concluir / pular cada parada */
+#mapaRotas .mp-paradas-lista li{ flex-wrap:wrap; }
+#mapaRotas .mp-parada-acoes{ flex:1 0 100%; display:flex; gap:.4rem; padding-left:1.8rem; }
+#mapaRotas .mp-parada-acoes .mp-btn-peq{ margin:0; min-height:2.1rem; }
+#mapaRotas .mp-btn-ok{ background:var(--verde); color:#fff; }
+#mapaRotas .mp-paradas-resumo{ margin:0; font-size:.72rem; font-weight:700; color:var(--azul-deep); }
+#mapaRotas .mp-feitas{ max-height:8rem; }
+#mapaRotas .mp-feitas li{ flex-wrap:nowrap; opacity:.8; }
+#mapaRotas .mp-feitas .mp-parada-t{ text-decoration:line-through; text-decoration-color:rgba(71,85,105,.5); }
+#mapaRotas .mp-feitas .mp-parada-info{ text-decoration:none; display:block; }
+#mapaRotas .mp-feitas .mp-btn-peq{ margin:0; flex:0 0 auto; }
+#mapaRotas .mp-feita-m{ flex:0 0 1.4rem; height:1.4rem; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800; font-size:.8rem; background:#dcfce7; color:#166534; }
+#mapaRotas .mp-feita.is-pulada .mp-feita-m{ background:#fef3c7; color:#92400e; }
+#mapaRotas.is-tela-cheia.is-seguindo #mapaPular{ min-height:2.5rem; }
+
+/* Concluir / Pular no celular: lado a lado, grandes e com o endereço da próxima parada à vista */
+#mapaRotas .mp-par-acoes{ grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; gap:.4rem; }
+#mapaRotas .mp-par-acoes:not(:has(button:not(.hidden))){ display:none; }
+#mapaRotas .mp-prox-parada{ grid-column:1 / -1; margin:0; font-size:.78rem; font-weight:700; color:var(--azul-deep); overflow-wrap:anywhere; }
+#mapaRotas .mp-desfazer{ grid-column:1 / -1; }
+@media (max-width:1023px){
+  #mapaRotas .mp-par-acoes .mp-btn{ min-height:3rem; font-size:.85rem; margin:0; }
+  #mapaRotas .mp-parada-acoes .mp-btn-peq{ min-height:2.75rem; font-size:.78rem; flex:1 1 0; }
+  #mapaRotas .mp-feitas .mp-btn-peq{ min-height:2.5rem; }
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-prox-parada{ font-size:.9rem; }
+  #mapaRotas.is-tela-cheia.is-seguindo .mp-resumo .mp-acoes .mp-par-acoes{ order:1; }
+}
