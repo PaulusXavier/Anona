@@ -968,7 +968,7 @@
         <li><strong>Buscar:</strong> digite ou fale o endereço, toque no mapa, ou cole coordenadas / um link do Google Maps. Arraste o pino para acertar o ponto e escolha entre as rotas alternativas.</li>
         <li><strong>Várias visitas:</strong> toque em <strong>+</strong> para guardar o endereço como parada e buscar o próximo — ou cole uma <strong>lista de endereços</strong> (um por linha) e o app monta a rota. Também dá para <strong>importar as folhas resumo (PDF)</strong>: o app lê só o endereço de cada folha e monta a rota (acima de 9 endereços, divide em grupos). <strong>Melhor ordem</strong> reorganiza as paradas e <strong>Voltar à partida</strong> fecha o circuito.</li>
         <li><strong>Horários:</strong> informe a hora de saída, o tempo de visita (o mesmo para todas as paradas ou um por parada) e o horário limite do expediente: o app mostra a chegada em cada parada e avisa se a rota passar do horário.</li>
-        <li><strong>Na rua:</strong> <strong>Acompanhar</strong> destaca cada passo, fala as curvas (voz do aparelho), mostra quanto falta e recalcula se você sair da rota. <strong>Cheguei na parada</strong> avança quando o GPS não pega. No celular, <strong>Tela cheia</strong> deixa o mapa maior.</li>
+        <li><strong>Na rua:</strong> <strong>Acompanhar</strong> destaca cada passo, fala as curvas (voz do aparelho), mostra quanto falta e recalcula se você sair da rota. <strong>Concluir parada</strong> (visita feita) e <strong>Pular parada</strong> (fica para depois) avançam para o próximo endereço sem esperar o GPS; cada parada da lista também tem ✓ Concluir e Pular, e as já resolvidas ficam abaixo com Desfazer/Retomar. No celular, <strong>Tela cheia</strong> deixa o mapa maior.</li>
         <li><strong>Rotas salvas:</strong> em <em>Rotas salvas</em>, dê um nome (ex.: “Terça — Araceli”) e toque em <strong>Salvar rota</strong>. A rota — partida, paradas, destino, horários e tempo de visita — fica na sua conta e aparece em todos os seus aparelhos; toque no nome para abri-la de novo. Salvar com o mesmo nome atualiza a rota.</li>
         <li><strong>Enviar:</strong> Google Maps, Waze, WhatsApp ou <strong>Copiar roteiro</strong> ou baixar o <strong>Roteiro em PDF</strong> (A4, com horários). O botão <strong>Satélite</strong> mostra a imagem aérea onde o mapa de ruas não tem a casa.</li>
         <li><strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas funcionam sem conexão.</li>
@@ -1066,6 +1066,8 @@
           <div id="mapaParadasBox" class="mp-paradas hidden">
             <div class="mp-paradas-cab"><b>Paradas no caminho</b> <button type="button" id="mapaOtimizar" class="mp-btn mp-btn-sec mp-btn-peq hidden">Melhor ordem</button></div>
             <ol id="mapaParadas" class="mp-paradas-lista"></ol>
+            <p id="mapaParadasResumo" class="mp-paradas-resumo hidden" role="status"></p>
+            <ol id="mapaFeitas" class="mp-paradas-lista mp-feitas hidden"></ol>
           </div>
         </div>
 
@@ -1091,7 +1093,12 @@
             <p id="mapaFaltam" class="mp-faltam hidden" role="status"></p>
             <div class="mp-acoes mp-acoes-prim">
               <button type="button" id="mapaSeguir" class="mp-btn hidden" aria-pressed="false"><i data-lucide="navigation" class="w-3.5 h-3.5"></i> <span>Acompanhar</span></button>
-              <button type="button" id="mapaCheguei" class="mp-btn hidden"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> <span>Cheguei na parada 1</span></button>
+              <div class="mp-par-acoes">
+                <p id="mapaProximaParada" class="mp-prox-parada hidden"></p>
+                <button type="button" id="mapaCheguei" class="mp-btn hidden"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> <span>Concluir parada 1</span></button>
+                <button type="button" id="mapaPular" class="mp-btn mp-btn-sec hidden"><i data-lucide="skip-forward" class="w-3.5 h-3.5"></i> <span>Pular parada 1</span></button>
+                <button type="button" id="mapaDesfazer" class="mp-btn mp-btn-sec mp-desfazer hidden"><i data-lucide="undo-2" class="w-3.5 h-3.5"></i> <span>Desfazer</span></button>
+              </div>
               <button type="button" id="mapaVozNav" class="mp-btn mp-btn-sec hidden" aria-pressed="true" title="Avisos falados das curvas no modo Acompanhar"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i> <span>Voz ligada</span></button>
               <button type="button" id="mapaPassosBtn" class="mp-btn mp-btn-sec mp-so-cheia" aria-expanded="false"><i data-lucide="list" class="w-3.5 h-3.5"></i> <span>Passo a passo</span></button>
             </div>
