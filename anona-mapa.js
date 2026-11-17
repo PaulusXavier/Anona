@@ -48,6 +48,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   let parciaisN = 0;             // pedaços de um download interrompido que ainda dá para retomar
   let avisoDestino = '';         // ex.: "o número 193 não está no mapa offline"
   let rotas = [], rotaSel = 0, origemAtual = null, trilha = null;   // rotas: alternativas; trilha: pontos/acumulado/passos da escolhida
+  let feitas = [];             // paradas já resolvidas nesta rota: [{ q, estado: 'concluida' | 'pulada', idx }] (só na tela; não vai para a rota salva)
   let paradas = [], grupoParadas = null;   // paradas no meio do caminho: [{ lat, lng, rotulo }] (o destino fica sempre por último)
   let origemOutro = null;        // partida escolhida por "Inverter": { lat, lng, rotulo }
   let ultimoZoom = 0;
@@ -492,6 +493,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   function limparRota() {
     if (mapa) apagarCamadas();
     rotas = []; trilha = null; origemAtual = null;
+    atualizarBotaoCheguei();
     $('mapaResumo').classList.add('hidden'); $('mapaPassos').textContent = ''; $('mapaAlternativas').textContent = ''; $('mapaProximo').classList.add('hidden');
   }
 
@@ -602,7 +604,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
 
   function mostrarRotas(o, lista) {
     origemAtual = o; rotas = lista; rotaSel = 0;
-    pintarRotas(); preencherResumo();
+    pintarRotas(); preencherResumo(); atualizarBotaoCheguei();
     if (cheia && MOBILE()) recolherMais(true);
     if (!seguindo) mapa.fitBounds(L.latLngBounds(trilha.pontos), margens());
   }
@@ -660,14 +662,40 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   // parada cumprida (sozinha, pelo GPS, ou pelo botão "Cheguei"): sai da lista e a rota é refeita daqui até a próxima
   function vibrar(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) { /* aparelho sem vibração */ } }
-  function cumprirParada(manual) {
-    if (!paradas.length) return;
-    vibrar([120, 70, 120]);
-    const q = paradas.shift(), prox = paradas.length ? 'Seguindo para a próxima.' : 'Seguindo para o destino final.';
+  // Encerra a parada i da fila: "concluida" (visita feita) ou "pulada" (fica para depois). Ela sai da rota e vai para a lista de resolvidas.
+  let ultimaEncerrada = 0, ultimaFeita = null, tDesfazer = null;
+  function mostrarDesfazer(f) {   // 10 s para desfazer um toque sem querer (no celular, com a luva ou o dedo suado, acontece)
+    const b = $('mapaDesfazer'); if (!b) return;
+    clearTimeout(tDesfazer); ultimaFeita = f;
+    if (!f) { b.classList.add('hidden'); return; }
+    b.querySelector('span').textContent = 'Desfazer ' + (f.estado === 'pulada' ? 'pular' : 'concluir') + ' parada';
+    b.classList.remove('hidden');
+    tDesfazer = setTimeout(() => mostrarDesfazer(null), 10000);
+  }
+  function encerrarParada(i, estado, auto) {
+    if (!(i >= 0 && i < paradas.length)) return;
+    if (!auto && Date.now() - ultimaEncerrada < 500) return;   // duplo toque sem querer não pula duas paradas de uma vez
+    if (!auto) ultimaEncerrada = Date.now();
+    const q = paradas.splice(i, 1)[0];
+    const f = { q, estado, idx: i }; feitas.push(f); mostrarDesfazer(f);
+    vibrar(estado === 'pulada' ? [80, 50, 80] : [120, 70, 120]);
+    const prox = paradas.length ? 'Seguindo para a próxima.' : 'Seguindo para o destino final.';
+    const verbo = estado === 'pulada' ? 'Parada pulada' : auto ? 'Parada alcançada' : 'Parada concluída';
     ultimoRecalculo = Date.now(); renderParadas();
-    avisoDestino = (manual ? 'Parada concluída: ' : 'Parada alcançada: ') + q.rotulo + '. ' + prox;   // aparece quando a rota nova ficar pronta
-    falar((manual ? 'Parada concluída. ' : 'Parada alcançada. ') + prox);
-    tracarRota();
+    avisoDestino = verbo + ': ' + q.rotulo + '. ' + prox;   // aparece quando a rota nova ficar pronta
+    status(avisoDestino, 'ok');
+    falar(verbo + '. ' + prox);
+    if (destino) tracarRota();
+  }
+  function cumprirParada(manual) { encerrarParada(0, 'concluida', !manual); }
+  // desfazer: a concluída volta ao lugar de onde saiu; a pulada é retomada no fim da fila (antes do destino)
+  function retomarParada(f, noLugar) {
+    const k = feitas.indexOf(f); if (k < 0) return;
+    if (paradas.length >= 8) { status('Limite de 8 paradas (mais o destino final).', 'erro'); return; }
+    feitas.splice(k, 1);
+    paradas.splice(f.estado === 'pulada' && !noLugar ? paradas.length : Math.min(f.idx, paradas.length), 0, f.q);
+    if (ultimaFeita === f) mostrarDesfazer(null);
+    aposMudarParadas();
   }
   function aoMoverPosicao(p) {
     posicao = { lat: p.coords.latitude, lng: p.coords.longitude, precisao: p.coords.accuracy || 0, quando: Date.now() };
@@ -727,8 +755,14 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   // "Cheguei na parada 1": para quando o GPS não pega (prédio, sinal fraco) ou a visita foi cancelada ("Pular")
   function atualizarBotaoCheguei() {
     const b = $('mapaCheguei'); if (!b) return;
-    b.classList.toggle('hidden', !(seguindo && paradas.length));
-    const t = b.querySelector('span'); if (t && paradas.length) t.textContent = 'Cheguei na parada 1';
+    const ver = !!paradas.length && (seguindo || rotas.length > 0);
+    b.classList.toggle('hidden', !ver);
+    const p = $('mapaPular'); if (p) p.classList.toggle('hidden', !ver);
+    const t = b.querySelector('span'); if (t && paradas.length) t.textContent = 'Concluir parada 1';
+    const tp = p && p.querySelector('span'); if (tp && paradas.length) tp.textContent = 'Pular parada 1';
+    // na tela cheia a lista some enquanto acompanha: mostra aqui qual é a próxima parada
+    const np = $('mapaProximaParada');
+    if (np) { np.textContent = paradas.length ? 'Parada 1 de ' + (paradas.length + feitas.length) + ': ' + paradas[0].rotulo : ''; np.classList.toggle('hidden', !(ver && seguindo)); }
   }
 
   // ---------- paradas (rota com vários endereços) ----------
@@ -751,7 +785,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   function renderParadas() {
     const box = $('mapaParadasBox'), ol = $('mapaParadas'); ol.textContent = '';
-    box.classList.toggle('hidden', !paradas.length);
+    box.classList.toggle('hidden', !paradas.length && !feitas.length);
     paradas.forEach((q, i) => {
       const li = document.createElement('li');
       const n = document.createElement('span'); n.className = 'mp-parada-n'; n.textContent = String(i + 1);
@@ -770,12 +804,35 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       mk('↑', 'Subir a parada ' + (i + 1), () => moverParada(i, -1), i === 0);
       mk('↓', 'Descer a parada ' + (i + 1), () => moverParada(i, 1), i === paradas.length - 1);
       mk('✕', 'Remover a parada ' + (i + 1), () => removerParada(i));
+      const ac = document.createElement('div'); ac.className = 'mp-parada-acoes';
+      const bt = (txt, rot, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'mp-btn mp-btn-peq ' + cls; b.textContent = txt; b.setAttribute('aria-label', rot); b.addEventListener('click', fn); ac.appendChild(b); };
+      bt('✓ Concluir', 'Concluir a parada ' + (i + 1) + ' (visita feita)', 'mp-btn-ok', () => encerrarParada(i, 'concluida', false));
+      bt('Pular ›', 'Pular a parada ' + (i + 1) + ' e ir para a próxima', 'mp-btn-sec', () => encerrarParada(i, 'pulada', false));
+      li.appendChild(ac);
       ol.appendChild(li);
     });
+    renderFeitas();
     $('mapaOtimizar').classList.toggle('hidden', paradas.length < 2);
     atualizarBotaoCheguei();
     $('mapaVisitaBox').classList.toggle('hidden', !paradas.length); $('mapaCopiar').classList.toggle('hidden', !paradas.length);
     desenharParadas();
+  }
+  // resumo "Concluídas 2 · Puladas 1 · Faltam 3" e a lista do que já foi resolvido (com Desfazer / Retomar)
+  function renderFeitas() {
+    const res = $('mapaParadasResumo'), ol = $('mapaFeitas'); if (!res || !ol) return;
+    ol.textContent = '';
+    const c = feitas.filter((f) => f.estado === 'concluida').length, p = feitas.length - c;
+    res.textContent = feitas.length ? ['Concluídas ' + c, p ? 'Puladas ' + p : '', 'Faltam ' + paradas.length].filter(Boolean).join(' · ') : '';
+    res.classList.toggle('hidden', !feitas.length); ol.classList.toggle('hidden', !feitas.length);
+    feitas.forEach((f) => {
+      const li = document.createElement('li'); li.className = 'mp-feita is-' + f.estado;
+      const m = document.createElement('span'); m.className = 'mp-feita-m'; m.textContent = f.estado === 'pulada' ? '↷' : '✓'; m.setAttribute('aria-hidden', 'true');
+      const t = document.createElement('span'); t.className = 'mp-parada-t'; t.textContent = f.q.rotulo;
+      const e = document.createElement('small'); e.className = 'mp-parada-info'; e.textContent = f.estado === 'pulada' ? 'Pulada' : 'Concluída'; t.appendChild(e);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'mp-btn mp-btn-sec mp-btn-peq'; b.textContent = f.estado === 'pulada' ? 'Retomar no fim' : 'Desfazer';
+      b.addEventListener('click', () => retomarParada(f));
+      li.append(m, t, b); ol.appendChild(li);
+    });
   }
   function aposMudarParadas() { renderParadas(); if (destino) tracarRota(); }
   // pino da parada arrastado: usa o novo ponto e tenta achar o endereço dele
@@ -853,7 +910,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       if ($('mapaListaOrdem').checked) seq = (await ordenarPontos(o, achados, null)).lista;
       if (minha !== senha) return;
       seguir(false); limparRota(); fecharResultados();
-      paradas = seq.slice(0, -1); renderParadas();
+      paradas = seq.slice(0, -1); feitas = []; renderParadas();
       avisoDestino = [achados.length + ' endereços na rota' + ($('mapaListaOrdem').checked ? ', na melhor ordem' : '') + ' (o último é o destino).',
         faltou.length ? 'Não achei: ' + faltou.join('; ') + '.' : '', aprox.length ? 'Sem o número exato (só a rua): ' + aprox.join('; ') + ' — arraste o pino para ajustar.' : '',
         repetidos.length ? 'Endereço repetido, contei uma vez: ' + repetidos.join('; ') + '.' : '',
@@ -1031,7 +1088,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   function limparTudo() {
     senha++;
     seguir(false);
-    destino = null; origemOutro = null; paradas = [];
+    destino = null; origemOutro = null; paradas = []; feitas = []; mostrarDesfazer(null);
     if (mapa) { if (mDestino) { mapa.removeLayer(mDestino); mDestino = null; } limparRota(); }
     $('mapaBusca').value = ''; $('mapaResultados').classList.add('hidden'); $('mapaDestinoBox').classList.add('hidden');
     renderParadas(); status(''); ocupado(false);
@@ -1067,7 +1124,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     const agora = Date.now(), saida = $('mapaSaida').value, limite = $('mapaLimite').value, visita = $('mapaVisita').value;
     return {
       nome, modo, origem,
-      paradas: paradas.map((q) => Object.assign(ponto(q), { visita: q.visita != null && isFinite(q.visita) ? +q.visita : null })),
+      // as puladas voltam ao fim da fila (ainda faltam); as concluídas não entram
+      paradas: paradas.concat(feitas.filter((f) => f.estado === 'pulada').map((f) => f.q)).map((q) => Object.assign(ponto(q), { visita: q.visita != null && isFinite(q.visita) ? +q.visita : null })),
       destino: ponto(destino),
       saida: /^\d{1,2}:\d{2}$/.test(saida) ? saida : '', limite: /^\d{1,2}:\d{2}$/.test(limite) ? limite : '', visita: /^\d{1,3}$/.test(visita) ? visita : '0',
       criadoEm: (anterior && anterior.criadoEm) || agora, atualizadoEm: agora
@@ -1110,7 +1168,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     $('mapaSaida').value = /^\d{1,2}:\d{2}$/.test(r.saida) ? r.saida : '';
     if (/^\d{1,2}:\d{2}$/.test(r.limite)) { $('mapaLimite').value = r.limite; gravarPref('anonaMapaLimite', r.limite); } else $('mapaLimite').value = '';
     if (r.visita != null && Array.from($('mapaVisita').options).some((x) => x.value === String(r.visita))) { $('mapaVisita').value = String(r.visita); gravarPref('anonaMapaVisita', String(r.visita)); }
-    paradas = ps; renderParadas();
+    paradas = ps; feitas = []; renderParadas();
     $('mapaBusca').value = ''; fecharResultados(); $('mapaSalvaNome').value = r.nome || ''; salvaAbertaId = r.id || '';
     avisoDestino = 'Rota “' + (r.nome || 'salva') + '” aberta.';
     try {
@@ -1320,6 +1378,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   $('mapaPdf').addEventListener('click', baixarPdf);
   $('mapaVoltar').addEventListener('click', voltarAPartida);
   $('mapaCheguei').addEventListener('click', () => cumprirParada(true));
+  $('mapaPular').addEventListener('click', () => encerrarParada(0, 'pulada', false));
+  $('mapaDesfazer').addEventListener('click', () => { if (ultimaFeita) retomarParada(ultimaFeita, true); });
   $('mapaListaMontar').addEventListener('click', montarDaLista);
   if ($('mapaFolhasArq')) { $('mapaFolhasArq').addEventListener('change', importarFolhas); }
   if ($('mapaFolhasProx')) { $('mapaFolhasProx').addEventListener('click', montarProximas); }
