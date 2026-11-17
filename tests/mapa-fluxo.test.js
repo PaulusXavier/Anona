@@ -152,6 +152,23 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'anona-mapa.js'), 'ut
   const lista3 = pedidos.filter(u => /route\/v1/.test(u)).pop().split('/route/v1/driving/')[1].split('?')[0].split(';');
   assert.strictEqual(lista3.length, 4, 'partida + 3 endereços: ' + lista3);
   assert(/3 endereços na rota/.test(get('mapaStatus').textContent), 'status: ' + get('mapaStatus').textContent);
+  // 10b) Concluir / Pular por parada: saem da rota, ficam na lista de resolvidas e dá para retomar
+  const pontos = () => pedidos.filter(u => /route\/v1/.test(u)).pop().split('/route/v1/driving/')[1].split('?')[0].split(';').length;
+  assert(!get('mapaPular').classList.contains('hidden') && !get('mapaCheguei').classList.contains('hidden'), 'Concluir e Pular à vista com paradas e rota');
+  await get('mapaPular').dispara('click'); await new Promise(r => setTimeout(r, 40));
+  assert(/Parada pulada/.test(get('mapaStatus').textContent), 'status do pular: ' + get('mapaStatus').textContent);
+  assert.strictEqual(pontos(), 3, 'pulou 1 de 3 paradas: partida + 2 pontos');
+  assert(/Puladas 1/.test(get('mapaParadasResumo').textContent) && get('mapaFeitas').children.length === 1, 'pulada listada: ' + get('mapaParadasResumo').textContent);
+  await get('mapaCheguei').dispara('click'); await new Promise(r => setTimeout(r, 40));   // logo após o pular: duplo toque, ignorado
+  assert.strictEqual(pontos(), 3, 'duplo toque não conclui a parada seguinte');
+  await new Promise(r => setTimeout(r, 500));
+  await get('mapaCheguei').dispara('click'); await new Promise(r => setTimeout(r, 40));
+  assert(!get('mapaDesfazer').classList.contains('hidden'), 'Desfazer à vista após concluir');
+  assert(/Parada concluída/.test(get('mapaStatus').textContent) && pontos() === 2, 'concluiu a próxima: partida + destino');
+  assert(/Concluídas 1 · Puladas 1 · Faltam 0/.test(get('mapaParadasResumo').textContent), 'resumo: ' + get('mapaParadasResumo').textContent);
+  const retomar = get('mapaFeitas').children[0].children.filter(c => c.className && /mp-btn/.test(c.className))[0];
+  await retomar.dispara('click'); await new Promise(r => setTimeout(r, 40));
+  assert.strictEqual(pontos(), 3, 'a pulada volta para o fim da fila');
   await get('mapaLimpar').dispara('click');
   get('mapaLista').value = 'Rua Um, 1\nInexistente 9\nRua Dois, 2'; get('mapaListaOrdem').checked = false;
   await get('mapaListaMontar').dispara('click'); await new Promise(r => setTimeout(r, 40));
