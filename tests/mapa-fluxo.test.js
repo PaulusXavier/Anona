@@ -79,6 +79,9 @@ win.document.createElement = (t) => { const e = criar2(t); e.classList.add = ((f
 secao._qa = (q) => (q === '#mapaParadas .mp-parada-info' ? infos.slice(-paradasAtuais()) : []);
 let paradasAtuais = () => 0;
 
+// ponte de mentira com a nuvem (rotas salvas / enviadas aos aparelhos)
+let ouvinteNuvem = null; const gravados = [];
+win.__anonaRotas = { logado: () => true, lista: () => [], observar(f) { ouvinteNuvem = f; try { f([], null); } catch (e) {} return () => {}; }, salvar(d, id) { gravados.push({ id, d }); return { id, pronto: Promise.resolve() }; }, apagar: async () => {} };
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'anona-mapa.js'), 'utf8'), contexto, { filename: 'anona-mapa.js' });
 
 (async () => {
@@ -193,5 +196,20 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'anona-mapa.js'), 'ut
   await get('mapaAddParada').dispara('click'); await busca('Rua Alfa, Centenário');
   await get('mapaAddParada').dispara('click');
   assert(/já está nas paradas/.test(get('mapaStatus').textContent), 'parada repetida: ' + get('mapaStatus').textContent);
+  // 13) Enviar aos meus aparelhos: grava a rota atual como "enviada"; outro aparelho recebe a faixa e este não
+  await get('mapaLimpar').dispara('click'); await busca('Rua Alfa, Centenário');
+  await get('mapaAddParada').dispara('click'); await busca('Rua Beta, Centenário');
+  assert(!get('mapaNuvem').disabled, 'botão de enviar liberado com destino');
+  await get('mapaNuvem').dispara('click');
+  const env = gravados.filter((g) => g.id === 'enviada').pop();
+  assert(env, 'gravou em users/{uid}/rotas/enviada'); assert.strictEqual(env.d.paradas.length, 1); assert(env.d.destino && isFinite(env.d.destino.lat));
+  assert(get('mapaRecebida').classList.contains('hidden'), 'quem enviou não recebe a própria faixa');
+  ouvinteNuvem([Object.assign({ id: 'enviada', pendente: false }, env.d)], null);
+  assert(get('mapaRecebida').classList.contains('hidden'), 'mesma versão enviada por este aparelho: sem faixa');
+  ouvinteNuvem([Object.assign({ id: 'enviada', pendente: false }, env.d, { atualizadoEm: env.d.atualizadoEm + 1000, nome: 'Rota do outro celular' })], null);
+  assert(!get('mapaRecebida').classList.contains('hidden') && /Rota do outro celular/.test(get('mapaRecebidaTxt').textContent), 'versão mais nova de outro aparelho mostra a faixa: ' + get('mapaRecebidaTxt').textContent);
+  await get('mapaRecebidaAbrir').dispara('click'); await new Promise(r => setTimeout(r, 40));
+  assert(get('mapaRecebida').classList.contains('hidden'), 'abrir esconde a faixa');
+  assert.strictEqual(get('mapaSalvaNome').value, '', 'a rota enviada não vira nome de rota salva');
   console.log('mapa-fluxo.test.js: tudo certo');
 })().catch(e => { console.error(e); process.exit(1); });
