@@ -211,3 +211,25 @@ body:has(#lockScreen:not([style*="display: none"])) :is(#anonaMascotWrap, #offli
   .lg-pay-grid li, #lockCard.shake{ animation:none; }
   .lg-spin{ animation-duration:1.6s; }
 }
+
+
+/* ───────────── melhorias da tela de entrada ───────────── */
+/* rodapé: o cadeado ficava sozinho numa linha acima do texto; agora fica ao lado, alinhado */
+.lg-foot p:first-child{ display:flex; align-items:flex-start; gap:.45rem; }
+.lg-foot p:first-child .lg-ic{ margin:.2rem 0 0; vertical-align:baseline; flex:none; }
+
+/* o que o app oferece (só no painel azul de telas largas) */
+.lg-chips{ display:none; }
+@media (min-width:960px){
+  .lg-chips{ display:flex; flex-wrap:wrap; gap:.4rem; margin:1.1rem 0 0; padding:0; list-style:none; max-width:34rem; }
+  .lg-chips li{ padding:.28rem .7rem; border-radius:999px; font-size:.78rem; font-weight:600; color:#DCE6F7; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); }
+}
+@media (min-width:960px) and (max-height:780px){ .lg-chips{ display:none; } }
+
+/* celular baixo (ou teclado aberto): o botão Entrar precisa aparecer sem rolar tanto */
+@media (max-width:959px) and (max-height:720px){
+  .lg-panel{ padding-top:1rem; }
+  .lg-title{ font-size:1.6rem; margin-bottom:.8rem; }
+  .lg-sub{ margin:.6rem 0 .85rem; font-size:.88rem; line-height:1.4; }
+  .lg-form{ gap:.8rem; }
+}
