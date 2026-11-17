@@ -1159,3 +1159,8 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
   #mapaRotas.is-tela-cheia.is-seguindo .mp-prox-parada{ font-size:.9rem; }
   #mapaRotas.is-tela-cheia.is-seguindo .mp-resumo .mp-acoes .mp-par-acoes{ order:1; }
 }
+
+#mapaRotas .mp-recebida{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin:.4rem 0; padding:.5rem .65rem; border:1px solid var(--line); border-left:4px solid var(--azul-deep); border-radius:.5rem; background:#eff6ff; font-size:.78rem; color:var(--azul-deep); }
+#mapaRotas .mp-recebida.hidden{ display:none; }
+#mapaRotas .mp-recebida span{ flex:1 1 12rem; min-width:0; }
+#mapaRotas.is-tela-cheia .mp-recebida{ display:flex; }
