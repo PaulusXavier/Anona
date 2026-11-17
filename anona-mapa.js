@@ -1100,6 +1100,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   // Vai só o que a pessoa mandou salvar: nome da rota, partida (se for endereço fixo — "Minha posição" nunca é guardada),
   // paradas, destino, tempo de visita e horários. Nada de nome de pessoa, NIS ou CPF.
   const MAX_SALVAS = 50;
+  const ID_ENVIADA = 'enviada';      // 1 rota "em trânsito": a última enviada com o botão "Enviar aos meus aparelhos"
+  let enviadaVista = +lerPref('anonaMapaEnviadaVista', '0') || 0, recebida = null, avisouToast = 0;
   let salvas = [], salvasErro = null, salvaAbertaId = '', ligouNuvem = false;
   const nuvem = () => window.__anonaRotas || null;
   const r6 = (n) => Math.round(+n * 1e6) / 1e6;
@@ -1109,7 +1111,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   function msgSalvas(txt, tipo) { const el = $('mapaSalvasMsg'); if (!el) return; el.textContent = txt || ''; el.classList.toggle('is-erro', tipo === 'erro'); el.classList.toggle('is-ok', tipo === 'ok'); }
   function atualizarSalvar() {
     const b = $('mapaSalvar'); if (!b) return;
-    b.disabled = !destino;
+    b.disabled = !destino; if ($('mapaNuvem')) $('mapaNuvem').disabled = !destino;
     b.title = destino ? '' : 'Escolha o destino (e as paradas, se houver) para poder salvar';
   }
   // o que vai para a nuvem: lista simples, sem nada do aparelho
@@ -1137,7 +1139,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (!destino) { msgSalvas('Monte a rota primeiro: escolha ao menos o destino.', 'erro'); return; }
     const campo = $('mapaSalvaNome'), nome = limpaNome(campo.value);
     if (!nome) { msgSalvas('Dê um nome à rota (ex.: “Terça — Araceli”).', 'erro'); campo.focus(); return; }
-    const igual = salvas.find((x) => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+    const igual = salvas.find((x) => x.id !== ID_ENVIADA && String(x.nome || '').toLowerCase() === nome.toLowerCase());
     if (!igual && salvas.length >= MAX_SALVAS) { msgSalvas('Limite de ' + MAX_SALVAS + ' rotas salvas. Apague alguma para salvar outra.', 'erro'); return; }
     let h, aviso = false;
     try { h = ponte.salvar(dadosDaRota(nome, igual), igual && igual.id); }
@@ -1169,7 +1171,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (/^\d{1,2}:\d{2}$/.test(r.limite)) { $('mapaLimite').value = r.limite; gravarPref('anonaMapaLimite', r.limite); } else $('mapaLimite').value = '';
     if (r.visita != null && Array.from($('mapaVisita').options).some((x) => x.value === String(r.visita))) { $('mapaVisita').value = String(r.visita); gravarPref('anonaMapaVisita', String(r.visita)); }
     paradas = ps; feitas = []; renderParadas();
-    $('mapaBusca').value = ''; fecharResultados(); $('mapaSalvaNome').value = r.nome || ''; salvaAbertaId = r.id || '';
+    $('mapaBusca').value = ''; fecharResultados(); $('mapaSalvaNome').value = r.id === ID_ENVIADA ? '' : (r.nome || ''); salvaAbertaId = r.id || '';
     avisoDestino = 'Rota “' + (r.nome || 'salva') + '” aberta.';
     try {
       await marcarDestino({ lat: +r.destino.lat, lng: +r.destino.lng, rotulo: String(r.destino.rotulo || r.destino.lat + ', ' + r.destino.lng) });
@@ -1208,9 +1210,44 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       li.append(ab, ap); ul.appendChild(li);
     });
   }
+  async function enviarAosAparelhos() {
+    const ponte = nuvem();
+    if (!ponte || !ponte.logado()) { msgSalvas('Entre na sua conta para enviar a rota aos seus aparelhos.', 'erro'); return; }
+    if (!destino) { msgSalvas('Monte a rota primeiro: escolha ao menos o destino.', 'erro'); return; }
+    const dados = dadosDaRota(limpaNome($('mapaSalvaNome').value) || 'Rota enviada', salvas.find((x) => x.id === ID_ENVIADA));
+    if (dados.paradas.length > 8) { msgSalvas('A nuvem aceita até 8 paradas (mais o destino). Conclua ou tire ' + (dados.paradas.length - 8) + ' parada(s) e envie de novo.', 'erro'); return; }
+    let h; try { h = ponte.salvar(dados, ID_ENVIADA); } catch (e) { msgSalvas((e && e.message) || 'Não consegui enviar a rota.', 'erro'); return; }
+    enviadaVista = dados.atualizadoEm; gravarPref('anonaMapaEnviadaVista', String(enviadaVista)); esconderRecebida();   // este aparelho não avisa a si mesmo
+    const pronto = Promise.resolve(h.pronto).then(() => 'ok'); let aviso = false;
+    pronto.catch((e) => { if (aviso) msgSalvas(erroNuvem(e), 'erro'); });
+    try {
+      const r = await Promise.race([pronto, esperar(3500).then(() => 'pendente')]);
+      if (r === 'pendente') { aviso = true; msgSalvas('Rota guardada neste aparelho; segue para os outros quando a internet voltar.', 'ok'); }
+      else msgSalvas('Rota enviada. Nos outros aparelhos com o app aberto na sua conta aparece “Rota recebida — Abrir”.', 'ok');
+    } catch (e) { msgSalvas(erroNuvem(e), 'erro'); }
+  }
+  function esconderRecebida() { recebida = null; const f = $('mapaRecebida'); if (f) f.classList.add('hidden'); }
+  function avisarRecebida(lista) {
+    const f = $('mapaRecebida'); if (!f) return;
+    const r = (lista || []).find((x) => x.id === ID_ENVIADA);
+    if (!r || r.pendente || !(r.atualizadoEm > enviadaVista) || !pontoValido(r.destino)) { if (!r || r.atualizadoEm <= enviadaVista) esconderRecebida(); return; }
+    recebida = r;
+    const n = Array.isArray(r.paradas) ? r.paradas.length : 0;
+    const min = Math.max(0, Math.round((Date.now() - r.atualizadoEm) / 60000));
+    const quando = min < 1 ? 'agora há pouco' : min < 60 ? 'há ' + min + ' min' : min < 1440 ? 'há ' + Math.round(min / 60) + ' h' : 'há ' + Math.round(min / 1440) + ' d';
+    $('mapaRecebidaTxt').textContent = 'Rota recebida de outro aparelho (' + quando + '): ' + (r.nome || 'Rota enviada') + ' — ' + (n ? n + (n === 1 ? ' parada + destino' : ' paradas + destino') : 'só o destino') + '.';
+    const ja = avisouToast === r.atualizadoEm; avisouToast = r.atualizadoEm;
+    f.classList.remove('hidden');
+    // se o mapa está fora da tela, um aviso no rodapé para a rota não passar despercebida
+    try {
+      const b = sec.getBoundingClientRect();
+      if (!ja && window.toast && (b.bottom < 0 || b.top > (window.innerHeight || 800))) window.toast('Rota recebida de outro aparelho. Veja em “Mapa e rotas”.', 'info');
+    } catch (e) { /* sem layout: tudo bem */ }
+  }
+  function marcarRecebidaVista() { if (recebida) { enviadaVista = recebida.atualizadoEm; gravarPref('anonaMapaEnviadaVista', String(enviadaVista)); } }
   function ligarNuvem() {
     if (ligouNuvem || !nuvem() || !nuvem().observar) return;
-    ligouNuvem = true; nuvem().observar(renderSalvas);
+    ligouNuvem = true; nuvem().observar((l, e) => { renderSalvas(l, e); avisarRecebida(l); });
   }
 
   // ---------- ligações ----------
@@ -1386,6 +1423,9 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   // rotas salvas na conta (Firebase): salvar, abrir e apagar; a lista acompanha entrada/saída de conta e os outros aparelhos
   if ($('mapaSalvar')) {
     $('mapaSalvar').addEventListener('click', salvarRota);
+    if ($('mapaNuvem')) $('mapaNuvem').addEventListener('click', enviarAosAparelhos);
+    if ($('mapaRecebidaAbrir')) $('mapaRecebidaAbrir').addEventListener('click', () => { const r = recebida; marcarRecebidaVista(); esconderRecebida(); if (r) { try { sec.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) {} abrirSalva(r); } });
+    if ($('mapaRecebidaFechar')) $('mapaRecebidaFechar').addEventListener('click', () => { marcarRecebidaVista(); esconderRecebida(); });
     $('mapaSalvaNome').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); salvarRota(); } });
     atualizarSalvar(); renderSalvas([], null); ligarNuvem();
     window.addEventListener('anona:auth', ligarNuvem);
