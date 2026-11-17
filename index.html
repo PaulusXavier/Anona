@@ -969,7 +969,7 @@
         <li><strong>Várias visitas:</strong> toque em <strong>+</strong> para guardar o endereço como parada e buscar o próximo — ou cole uma <strong>lista de endereços</strong> (um por linha) e o app monta a rota. Também dá para <strong>importar as folhas resumo (PDF)</strong>: o app lê só o endereço de cada folha e monta a rota (acima de 9 endereços, divide em grupos). <strong>Melhor ordem</strong> reorganiza as paradas e <strong>Voltar à partida</strong> fecha o circuito.</li>
         <li><strong>Horários:</strong> informe a hora de saída, o tempo de visita (o mesmo para todas as paradas ou um por parada) e o horário limite do expediente: o app mostra a chegada em cada parada e avisa se a rota passar do horário.</li>
         <li><strong>Na rua:</strong> <strong>Acompanhar</strong> destaca cada passo, fala as curvas (voz do aparelho), mostra quanto falta e recalcula se você sair da rota. <strong>Concluir parada</strong> (visita feita) e <strong>Pular parada</strong> (fica para depois) avançam para o próximo endereço sem esperar o GPS; cada parada da lista também tem ✓ Concluir e Pular, e as já resolvidas ficam abaixo com Desfazer/Retomar. No celular, <strong>Tela cheia</strong> deixa o mapa maior.</li>
-        <li><strong>Rotas salvas:</strong> em <em>Rotas salvas</em>, dê um nome (ex.: “Terça — Araceli”) e toque em <strong>Salvar rota</strong>. A rota — partida, paradas, destino, horários e tempo de visita — fica na sua conta e aparece em todos os seus aparelhos; toque no nome para abri-la de novo. Salvar com o mesmo nome atualiza a rota.</li>
+        <li><strong>Enviar aos meus aparelhos:</strong> com a rota montada, abra <em>Enviar ou salvar a rota</em> e toque em <strong>Enviar aos meus aparelhos</strong>: nos outros aparelhos em que você entrou na sua conta aparece “Rota recebida — Abrir”. <strong>Rotas salvas:</strong> em <em>Rotas salvas</em>, dê um nome (ex.: “Terça — Araceli”) e toque em <strong>Salvar rota</strong>. A rota — partida, paradas, destino, horários e tempo de visita — fica na sua conta e aparece em todos os seus aparelhos; toque no nome para abri-la de novo. Salvar com o mesmo nome atualiza a rota.</li>
         <li><strong>Enviar:</strong> Google Maps, Waze, WhatsApp ou <strong>Copiar roteiro</strong> ou baixar o <strong>Roteiro em PDF</strong> (A4, com horários). O botão <strong>Satélite</strong> mostra a imagem aérea onde o mapa de ruas não tem a casa.</li>
         <li><strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas funcionam sem conexão.</li>
       </ul>
@@ -1004,6 +1004,12 @@
             </div>
             <small class="mp-lista-dica">Só o endereço — nada de nome de pessoa, NIS ou CPF. No PDF, o app lê só o quadro “Endereço da família”.</small>
           </details>
+
+          <div id="mapaRecebida" class="mp-recebida hidden" role="status" aria-live="polite">
+            <span id="mapaRecebidaTxt"></span>
+            <button type="button" id="mapaRecebidaAbrir" class="mp-btn">Abrir</button>
+            <button type="button" id="mapaRecebidaFechar" class="mp-mini mp-mini-peq" aria-label="Dispensar">✕</button>
+          </div>
 
           <details class="mp-lista mp-salvas" id="mapaSalvasBox">
             <summary><i data-lucide="bookmark" class="w-3.5 h-3.5"></i> Rotas salvas <span id="mapaSalvasN" class="mp-salvas-n"></span></summary>
@@ -1107,6 +1113,7 @@
               <div class="mp-acoes mp-acoes-env">
                 <a id="mapaGoogle" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> <span>Google Maps</span></a>
                 <a id="mapaWaze" class="mp-btn mp-btn-sec" href="#" target="_blank" rel="noopener"><i data-lucide="navigation-2" class="w-3.5 h-3.5"></i> <span id="mapaWazeTxt">Waze</span></a>
+                <button type="button" id="mapaNuvem" class="mp-btn" title="Manda esta rota para a sua conta: abre nos outros aparelhos em que você entrou"><i data-lucide="smartphone" class="w-3.5 h-3.5"></i> <span>Enviar aos meus aparelhos</span></button>
                 <button type="button" id="mapaCompartilhar" class="mp-btn mp-btn-sec"><i data-lucide="share-2" class="w-3.5 h-3.5"></i> Compartilhar</button>
                 <button type="button" id="mapaWhats" class="mp-btn mp-btn-sec"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp</button>
                 <button type="button" id="mapaPdf" class="mp-btn mp-btn-sec"><i data-lucide="file-down" class="w-3.5 h-3.5"></i> Roteiro em PDF</button>
@@ -1121,7 +1128,7 @@
             <ul class="tv-hint mp-guia">
               <li><strong>O que sai do aparelho:</strong> o texto do endereço (vai ao OpenStreetMap/Nominatim para achar o ponto) e as coordenadas da partida, das paradas e do destino (vão ao serviço de rotas, routing.openstreetmap.de; se ele estiver fora do ar, o carro/moto tenta o servidor reserva router.project-osrm.org, que recebe as mesmas coordenadas). Os blocos do mapa vêm do OpenStreetMap; se você ligar o <em>Satélite</em>, vêm da Esri — nessa hora o serviço recebe a região que você está vendo e o seu IP.</li>
               <li><strong>Sua posição</strong> só é lida quando você pede (ou enquanto <em>Acompanhar</em> estiver ligado) e não é guardada; ao recalcular uma rota, só as coordenadas vão ao serviço de rotas.</li>
-              <li><strong>Rotas salvas:</strong> só quando você toca em <em>Salvar rota</em>, o app guarda na sua conta (Firebase/Google, só você lê) o nome da rota, os endereços e coordenadas da partida (se for um endereço fixo — “Minha posição” nunca é guardada), das paradas e do destino, o tempo de visita e os horários. Apague quando quiser. Não use nome de pessoa, NIS ou CPF no nome da rota nem no endereço. “Limpar aparelho” apaga a cópia deste aparelho; a da nuvem só some se você apagar a rota.</li>
+              <li><strong>Rotas salvas e envio aos seus aparelhos:</strong> só quando você toca em <em>Salvar rota</em> ou <em>Enviar aos meus aparelhos</em>, o app guarda na sua conta (Firebase/Google, só você lê) o nome da rota, os endereços e coordenadas da partida (se for um endereço fixo — “Minha posição” nunca é guardada), das paradas e do destino, o tempo de visita e os horários. Apague quando quiser. Não use nome de pessoa, NIS ou CPF no nome da rota nem no endereço. “Limpar aparelho” apaga a cópia deste aparelho; a da nuvem só some se você apagar a rota.</li>
               <li><strong>Endereços buscados</strong>, destinos recentes, paradas e a lista colada (enquanto você não salvar a rota) ficam só na memória da página, nunca no aparelho. O que fica guardado são suas preferências (meio de transporte, partida, voz, satélite, tempo de visita, horário limite) e as coordenadas da partida padrão.</li>
               <li><strong>Compartilhar, WhatsApp e Copiar roteiro</strong> só enviam ou copiam o que você escolher; o roteiro traz os endereços que você digitou: não coloque nome de pessoa nele. Hora de saída, tempo de visita e horário limite são só contas feitas no aparelho.</li>
               <li><strong>Voz:</strong> se usar o microfone, o <strong>áudio é enviado ao serviço de voz do próprio navegador</strong> (no Chrome, o do Google) para virar texto. Os avisos falados do <em>Acompanhar</em> usam a voz do próprio aparelho.</li>
