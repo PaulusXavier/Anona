@@ -1,11 +1,12 @@
 /* Anona — "Mapa e rotas": procura de endereços (como no Google Maps) e rota a partir da posição do aparelho.
  * Mapa: Leaflet (vendor/leaflet, carregado só quando a seção aparece) + OpenStreetMap.
  * Busca de endereço: Nominatim. Rota: routing.openstreetmap.de (OSRM). Não precisa de chave.
- * Com internet, só o texto do endereço digitado e as coordenadas (posição/destino) saem do aparelho; nada é guardado.
+ * Com internet, só o texto do endereço digitado e as coordenadas (posição/destino) saem do aparelho; nada é guardado — a não ser a rota que a pessoa manda "Salvar" (vai para a conta dela).
  * OFFLINE: depois de "Baixar mapa offline" (anona-mapa-offline.js: ruas de Boa Vista guardadas no aparelho), a busca, o
  * toque no mapa, a rota com passo a passo e o desenho das ruas funcionam sem internet — automaticamente quando a rede
  * falha, ou sempre, se o usuário marcar "Usar sempre o mapa offline".
  * Funções puras (coordenadas coladas, distância ao traçado, posição dos passos…) ficam em anona-mapa-util.js (testes: tests/mapa-util.test.js).
+ * Rotas salvas: "Salvar rota" guarda nome, partida fixa, paradas, destino e horários na conta (Firestore: users/{uid}/rotas/{id}, via window.__anonaRotas do index.html) e a lista aparece em todos os aparelhos.
  * Também: voz de navegação (speechSynthesis do aparelho), "faltam…" ao acompanhar, "Cheguei" na parada, lista de endereços colada,
  * "Voltar à partida", horário limite do expediente, atalhos Waze/WhatsApp e camada de satélite (Esri). */
 (function () {
@@ -292,6 +293,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     mDestino.on('dragend', () => { const ll = mDestino.getLatLng(); escolherNoMapa(ll.lat, ll.lng); });
     $('mapaDestinoTexto').textContent = d.rotulo;
     $('mapaDestinoBox').classList.remove('hidden');
+    atualizarSalvar();
   }
 
   // últimos destinos desta sessão (só na memória, nunca no aparelho): um toque repete a busca
@@ -309,12 +311,21 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     });
     box.classList.remove('hidden');
   }
+  // Android/celular: o teclado e o foco no painel de cima escondem o resumo da rota (tempo, Acompanhar…). Depois que a rota
+  // é traçada, tira o foco do campo/botão tocado para fechar o teclado e mostrar o resumo.
+  function fecharTecladoNoCelular() {
+    try {
+      const a = document.activeElement;
+      if (MOBILE() && a && a.blur && a !== document.body && sec.contains(a) && /^(INPUT|TEXTAREA|BUTTON|SELECT)$/.test(a.tagName)) a.blur();
+    } catch (e) { /* sem foco para tirar */ }
+  }
   async function escolherDestino(d) {
     lembrarRecente(d);
     const km = U.distM({ lat: CENTRO[0], lng: CENTRO[1] }, d);
     if (km > LIMITE_LONGE) avisoDestino = (avisoDestino ? avisoDestino + ' ' : '') + 'Atenção: esse ponto fica a ' + fmtDist(km) + ' do centro de Boa Vista. Se não era esse lugar, confira o endereço ou toque no mapa.';
     await marcarDestino(d);
     mapa.setView([d.lat, d.lng], Math.max(mapa.getZoom(), 16));
+    fecharTecladoNoCelular();
     await tracarRota();
   }
 
@@ -788,7 +799,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     senha++; destino = null;
     if (mDestino) { mapa.removeLayer(mDestino); mDestino = null; }
     limparRota();
-    $('mapaBusca').value = ''; fecharResultados(); $('mapaDestinoBox').classList.add('hidden');
+    $('mapaBusca').value = ''; fecharResultados(); $('mapaDestinoBox').classList.add('hidden'); atualizarSalvar();
     renderParadas();
     status('Parada ' + paradas.length + ' adicionada. Busque o próximo endereço (ou toque no mapa): ele será o próximo ponto da rota.', 'ok');
     $('mapaBusca').focus();
@@ -850,6 +861,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       $('mapaBusca').value = '';
       await marcarDestino(seq[seq.length - 1]); mapa.setView([seq[seq.length - 1].lat, seq[seq.length - 1].lng], 14);
       const det = $('mapaListaBox'); if (det && det.removeAttribute) det.removeAttribute('open');
+      fecharTecladoNoCelular();
       await tracarRota();
     } catch (e) { mostrarErro(e); }
     finally { if (minha === senha) ocupado(false); }
@@ -956,6 +968,124 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (mapa) { if (mDestino) { mapa.removeLayer(mDestino); mDestino = null; } limparRota(); }
     $('mapaBusca').value = ''; $('mapaResultados').classList.add('hidden'); $('mapaDestinoBox').classList.add('hidden');
     renderParadas(); status(''); ocupado(false);
+    salvaAbertaId = ''; atualizarSalvar(); if ($('mapaSalvaNome')) $('mapaSalvaNome').value = '';
+  }
+
+  // ---------- rotas salvas (Firebase) ----------
+  // Guardadas na conta do usuário (users/{uid}/rotas/{id}, ponte window.__anonaRotas no index.html) e iguais em todos os aparelhos.
+  // Vai só o que a pessoa mandou salvar: nome da rota, partida (se for endereço fixo — "Minha posição" nunca é guardada),
+  // paradas, destino, tempo de visita e horários. Nada de nome de pessoa, NIS ou CPF.
+  const MAX_SALVAS = 50;
+  let salvas = [], salvasErro = null, salvaAbertaId = '', ligouNuvem = false;
+  const nuvem = () => window.__anonaRotas || null;
+  const r6 = (n) => Math.round(+n * 1e6) / 1e6;
+  const limpaNome = (t) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const ponto = (q) => ({ lat: r6(q.lat), lng: r6(q.lng), rotulo: String(q.rotulo || '').slice(0, 200) });
+  const pontoValido = (q) => !!q && isFinite(q.lat) && isFinite(q.lng) && Math.abs(q.lat) <= 90 && Math.abs(q.lng) <= 180;
+  function msgSalvas(txt, tipo) { const el = $('mapaSalvasMsg'); if (!el) return; el.textContent = txt || ''; el.classList.toggle('is-erro', tipo === 'erro'); el.classList.toggle('is-ok', tipo === 'ok'); }
+  function atualizarSalvar() {
+    const b = $('mapaSalvar'); if (!b) return;
+    b.disabled = !destino;
+    b.title = destino ? '' : 'Escolha o destino (e as paradas, se houver) para poder salvar';
+  }
+  // o que vai para a nuvem: lista simples, sem nada do aparelho
+  function dadosDaRota(nome, anterior) {
+    const tipo = $('mapaOrigem').value;
+    let origem = { tipo: 'pos' };
+    if (tipo === 'partida') origem = { tipo: 'partida' };
+    else if (tipo === 'outro') {
+      const o = origemAtual && origemAtual.rotulo !== 'Minha posição' ? origemAtual : origemOutro;
+      origem = pontoValido(o) ? Object.assign({ tipo: 'outro' }, ponto(o)) : { tipo: 'outro', rotulo: String($('mapaOrigemTexto').value || '').slice(0, 200) };
+    }
+    const agora = Date.now(), saida = $('mapaSaida').value, limite = $('mapaLimite').value, visita = $('mapaVisita').value;
+    return {
+      nome, modo, origem,
+      paradas: paradas.map((q) => Object.assign(ponto(q), { visita: q.visita != null && isFinite(q.visita) ? +q.visita : null })),
+      destino: ponto(destino),
+      saida: /^\d{1,2}:\d{2}$/.test(saida) ? saida : '', limite: /^\d{1,2}:\d{2}$/.test(limite) ? limite : '', visita: /^\d{1,3}$/.test(visita) ? visita : '0',
+      criadoEm: (anterior && anterior.criadoEm) || agora, atualizadoEm: agora
+    };
+  }
+  async function salvarRota() {
+    const ponte = nuvem();
+    if (!ponte || !ponte.logado()) { msgSalvas('Entre na sua conta para salvar rotas.', 'erro'); return; }
+    if (!destino) { msgSalvas('Monte a rota primeiro: escolha ao menos o destino.', 'erro'); return; }
+    const campo = $('mapaSalvaNome'), nome = limpaNome(campo.value);
+    if (!nome) { msgSalvas('Dê um nome à rota (ex.: “Terça — Araceli”).', 'erro'); campo.focus(); return; }
+    const igual = salvas.find((x) => String(x.nome || '').toLowerCase() === nome.toLowerCase());
+    if (!igual && salvas.length >= MAX_SALVAS) { msgSalvas('Limite de ' + MAX_SALVAS + ' rotas salvas. Apague alguma para salvar outra.', 'erro'); return; }
+    let h, aviso = false;
+    try { h = ponte.salvar(dadosDaRota(nome, igual), igual && igual.id); }
+    catch (e) { msgSalvas((e && e.message) || 'Não consegui salvar a rota.', 'erro'); return; }
+    salvaAbertaId = h.id; campo.value = nome; fecharTecladoNoCelular();
+    const pronto = Promise.resolve(h.pronto).then(() => 'ok');
+    pronto.catch((e) => { if (aviso) msgSalvas(erroNuvem(e), 'erro'); });
+    try {
+      const r = await Promise.race([pronto, esperar(3500).then(() => 'pendente')]);
+      if (r === 'pendente') { aviso = true; msgSalvas('“' + nome + '” guardada neste aparelho; sobe para a sua conta quando a internet voltar.', 'ok'); }
+      else msgSalvas((igual ? 'Rota “' + nome + '” atualizada' : 'Rota “' + nome + '” salva') + ' na sua conta. Já aparece nos seus outros aparelhos.', 'ok');
+    } catch (e) { msgSalvas(erroNuvem(e), 'erro'); }
+  }
+  function erroNuvem(e) {
+    if (e && e.code === 'permission-denied') return 'A nuvem recusou a rota. Publique as regras novas (firestore.rules) no Console do Firebase e tente de novo.';
+    return (e && e.message) || 'Não consegui falar com a sua conta agora. Tente de novo.';
+  }
+  async function abrirSalva(r) {
+    if (!r || !pontoValido(r.destino)) { msgSalvas('Essa rota salva está incompleta.', 'erro'); return; }
+    const ps = (Array.isArray(r.paradas) ? r.paradas : []).filter(pontoValido).slice(0, 8).map((q) => ({ lat: +q.lat, lng: +q.lng, rotulo: String(q.rotulo || q.lat + ', ' + q.lng), visita: q.visita != null && isFinite(q.visita) ? +q.visita : null }));
+    seguir(false); const minha = ++senha; limparRota();
+    if (PERFIS[r.modo]) definirModo(r.modo);
+    const o = r.origem || {}; origemOutro = null;
+    if (o.tipo === 'outro' && pontoValido(o) && o.rotulo) { selOrigem.value = 'outro'; origemOutro = { lat: +o.lat, lng: +o.lng, rotulo: String(o.rotulo) }; $('mapaOrigemTexto').value = origemOutro.rotulo; }
+    else if (o.tipo === 'outro' && o.rotulo) { selOrigem.value = 'outro'; $('mapaOrigemTexto').value = String(o.rotulo); }
+    else selOrigem.value = o.tipo === 'partida' ? 'partida' : 'pos';
+    gravarPref('anonaMapaOrigem', selOrigem.value); ajustarOrigem();
+    $('mapaSaida').value = /^\d{1,2}:\d{2}$/.test(r.saida) ? r.saida : '';
+    if (/^\d{1,2}:\d{2}$/.test(r.limite)) { $('mapaLimite').value = r.limite; gravarPref('anonaMapaLimite', r.limite); } else $('mapaLimite').value = '';
+    if (r.visita != null && Array.from($('mapaVisita').options).some((x) => x.value === String(r.visita))) { $('mapaVisita').value = String(r.visita); gravarPref('anonaMapaVisita', String(r.visita)); }
+    paradas = ps; renderParadas();
+    $('mapaBusca').value = ''; fecharResultados(); $('mapaSalvaNome').value = r.nome || ''; salvaAbertaId = r.id || '';
+    avisoDestino = 'Rota “' + (r.nome || 'salva') + '” aberta.';
+    try {
+      await marcarDestino({ lat: +r.destino.lat, lng: +r.destino.lng, rotulo: String(r.destino.rotulo || r.destino.lat + ', ' + r.destino.lng) });
+      if (minha !== senha) return;
+      mapa.setView([destino.lat, destino.lng], 14);
+      fecharTecladoNoCelular();
+      await tracarRota();
+    } catch (e) { mostrarErro(e); }
+  }
+  async function apagarSalva(r) {
+    const ponte = nuvem(); if (!ponte || !r) return;
+    const ok = window.anonaConfirm ? await window.anonaConfirm('Apagar a rota “' + (r.nome || '') + '” da sua conta? Ela some de todos os seus aparelhos.', { confirmLabel: 'Apagar' }) : true;
+    if (!ok) return;
+    try { await Promise.race([Promise.resolve(ponte.apagar(r.id)), esperar(3500)]); if (salvaAbertaId === r.id) salvaAbertaId = ''; msgSalvas('Rota “' + (r.nome || '') + '” apagada.', 'ok'); }
+    catch (e) { msgSalvas(erroNuvem(e), 'erro'); }
+  }
+  function resumoSalva(r) {
+    const nomes = { carro: 'carro/moto', pe: 'a pé', bike: 'bicicleta' }, n = Array.isArray(r.paradas) ? r.paradas.length : 0;
+    return (n ? n + (n === 1 ? ' parada + destino' : ' paradas + destino') : 'só o destino') + ' · ' + (nomes[r.modo] || 'carro/moto') + (r.saida ? ' · sai às ' + r.saida : '') + (r.pendente ? ' · aguardando sincronizar' : '');
+  }
+  function renderSalvas(lista, erro) {
+    salvas = Array.isArray(lista) ? lista : []; salvasErro = erro || null;
+    const ul = $('mapaSalvasLista'), cont = $('mapaSalvasN'); if (!ul) return;
+    ul.textContent = ''; if (cont) cont.textContent = salvas.length ? '(' + salvas.length + ')' : '';
+    if (salvasErro) msgSalvas(salvasErro.code === 'permission-denied' ? erroNuvem(salvasErro) : 'Não consegui ler as rotas salvas agora (sem internet?). Elas voltam quando a conexão voltar.', 'erro');
+    else if ($('mapaSalvasMsg') && /^(Não consegui ler|A nuvem recusou)/.test($('mapaSalvasMsg').textContent)) msgSalvas('');
+    if (!salvas.length && !salvasErro) { const li = document.createElement('li'); li.className = 'mp-salvas-vazia'; li.textContent = 'Nenhuma rota salva ainda.'; ul.appendChild(li); }
+    salvas.forEach((r) => {
+      const li = document.createElement('li'); li.className = 'mp-salva' + (r.id === salvaAbertaId ? ' is-aberta' : '');
+      const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'mp-salva-abrir'; ab.title = 'Abrir esta rota';
+      const t = document.createElement('b'); t.textContent = r.nome || 'Rota sem nome';
+      const d = document.createElement('small'); d.textContent = resumoSalva(r) + (r.destino && r.destino.rotulo ? ' — ' + r.destino.rotulo : '');
+      ab.append(t, d); ab.addEventListener('click', () => { abrirSalva(r); });
+      const ap = document.createElement('button'); ap.type = 'button'; ap.className = 'mp-mini mp-mini-peq'; ap.textContent = '✕'; ap.setAttribute('aria-label', 'Apagar a rota ' + (r.nome || '')); ap.title = 'Apagar esta rota';
+      ap.addEventListener('click', () => { apagarSalva(r); });
+      li.append(ab, ap); ul.appendChild(li);
+    });
+  }
+  function ligarNuvem() {
+    if (ligouNuvem || !nuvem() || !nuvem().observar) return;
+    ligouNuvem = true; nuvem().observar(renderSalvas);
   }
 
   // ---------- ligações ----------
@@ -1124,6 +1254,14 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   $('mapaVoltar').addEventListener('click', voltarAPartida);
   $('mapaCheguei').addEventListener('click', () => cumprirParada(true));
   $('mapaListaMontar').addEventListener('click', montarDaLista);
+  // rotas salvas na conta (Firebase): salvar, abrir e apagar; a lista acompanha entrada/saída de conta e os outros aparelhos
+  if ($('mapaSalvar')) {
+    $('mapaSalvar').addEventListener('click', salvarRota);
+    $('mapaSalvaNome').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); salvarRota(); } });
+    atualizarSalvar(); renderSalvas([], null); ligarNuvem();
+    window.addEventListener('anona:auth', ligarNuvem);
+    window.addEventListener('load', ligarNuvem);
+  }
   // horário limite do expediente (lembrado entre usos: costuma ser sempre o mesmo)
   const limiteSalvo = lerPref('anonaMapaLimite', ''); if (/^\d{1,2}:\d{2}$/.test(limiteSalvo)) $('mapaLimite').value = limiteSalvo;
   $('mapaLimite').addEventListener('input', () => { gravarPref('anonaMapaLimite', $('mapaLimite').value); atualizarCronograma(); });
