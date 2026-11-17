@@ -237,6 +237,9 @@
         <div>
           <h2 class="lg-headline">Cada prazo do Bolsa Família no dia certo.</h2>
           <p class="lg-lede">Calendário de condicionalidades, calculadora de frequência escolar e anotações que acompanham você entre os aparelhos, inclusive sem internet.</p>
+          <ul class="lg-chips" aria-label="O que o Anona oferece">
+            <li>Calendário e prazos</li><li>Calculadora de faltas</li><li>Mapa e rotas salvas</li><li>Relatórios e planilhas</li>
+          </ul>
         </div>
         <div class="lg-pay" id="lgPay">
           <div class="lg-pay-head"><p class="lg-pay-title" id="lgPayTitle"></p><p class="lg-pay-hint">dia de pagamento por final do NIS</p></div>
@@ -966,6 +969,7 @@
         <li><strong>Várias visitas:</strong> toque em <strong>+</strong> para guardar o endereço como parada e buscar o próximo — ou cole uma <strong>lista de endereços</strong> (um por linha) e o app monta a rota. <strong>Melhor ordem</strong> reorganiza as paradas e <strong>Voltar à partida</strong> fecha o circuito.</li>
         <li><strong>Horários:</strong> informe a hora de saída, o tempo de visita (o mesmo para todas as paradas ou um por parada) e o horário limite do expediente: o app mostra a chegada em cada parada e avisa se a rota passar do horário.</li>
         <li><strong>Na rua:</strong> <strong>Acompanhar</strong> destaca cada passo, fala as curvas (voz do aparelho), mostra quanto falta e recalcula se você sair da rota. <strong>Cheguei na parada</strong> avança quando o GPS não pega. No celular, <strong>Tela cheia</strong> deixa o mapa maior.</li>
+        <li><strong>Rotas salvas:</strong> em <em>Rotas salvas</em>, dê um nome (ex.: “Terça — Araceli”) e toque em <strong>Salvar rota</strong>. A rota — partida, paradas, destino, horários e tempo de visita — fica na sua conta e aparece em todos os seus aparelhos; toque no nome para abri-la de novo. Salvar com o mesmo nome atualiza a rota.</li>
         <li><strong>Enviar:</strong> Google Maps, Waze, WhatsApp ou <strong>Copiar roteiro</strong> ou baixar o <strong>Roteiro em PDF</strong> (A4, com horários). O botão <strong>Satélite</strong> mostra a imagem aérea onde o mapa de ruas não tem a casa.</li>
         <li><strong>Sem internet?</strong> Baixe o mapa offline uma vez (em <em>Partida, posição e mapa offline</em>) e a busca, o mapa e as rotas funcionam sem conexão.</li>
       </ul>
@@ -994,6 +998,18 @@
             <label class="mp-off-sempre"><input type="checkbox" id="mapaListaOrdem" checked> Escolher a melhor ordem (o último vira o destino)</label>
             <div class="mp-acoes"><button type="button" id="mapaListaMontar" class="mp-btn"><i data-lucide="route" class="w-3.5 h-3.5"></i> Montar rota com a lista</button></div>
             <small class="mp-lista-dica">Só o endereço — nada de nome de pessoa, NIS ou CPF.</small>
+          </details>
+
+          <details class="mp-lista mp-salvas" id="mapaSalvasBox">
+            <summary><i data-lucide="bookmark" class="w-3.5 h-3.5"></i> Rotas salvas <span id="mapaSalvasN" class="mp-salvas-n"></span></summary>
+            <div class="mp-busca">
+              <label for="mapaSalvaNome" class="sr-only">Nome da rota</label>
+              <input id="mapaSalvaNome" type="text" class="access-input" maxlength="60" placeholder="Nome da rota (ex.: Terça — Araceli)" autocomplete="off" spellcheck="false">
+              <button type="button" id="mapaSalvar" class="mp-btn" disabled><i data-lucide="save" class="w-3.5 h-3.5"></i> <span>Salvar rota</span></button>
+            </div>
+            <p id="mapaSalvasMsg" class="mp-lista-dica" role="status" aria-live="polite"></p>
+            <ul id="mapaSalvasLista" class="mp-salvas-lista"></ul>
+            <small class="mp-lista-dica">Fica na sua conta e aparece em todos os seus aparelhos. Só endereço e nome da rota — nada de nome de pessoa, NIS ou CPF.</small>
           </details>
 
           <div class="mp-modos" role="group" aria-label="Meio de transporte">
@@ -1093,7 +1109,8 @@
             <ul class="tv-hint mp-guia">
               <li><strong>O que sai do aparelho:</strong> o texto do endereço (vai ao OpenStreetMap/Nominatim para achar o ponto) e as coordenadas da partida, das paradas e do destino (vão ao serviço de rotas, routing.openstreetmap.de; se ele estiver fora do ar, o carro/moto tenta o servidor reserva router.project-osrm.org, que recebe as mesmas coordenadas). Os blocos do mapa vêm do OpenStreetMap; se você ligar o <em>Satélite</em>, vêm da Esri — nessa hora o serviço recebe a região que você está vendo e o seu IP.</li>
               <li><strong>Sua posição</strong> só é lida quando você pede (ou enquanto <em>Acompanhar</em> estiver ligado) e não é guardada; ao recalcular uma rota, só as coordenadas vão ao serviço de rotas.</li>
-              <li><strong>Endereços buscados</strong>, destinos recentes, paradas e a lista colada ficam só na memória da página, nunca no aparelho. O que fica guardado são suas preferências (meio de transporte, partida, voz, satélite, tempo de visita, horário limite) e as coordenadas da partida padrão.</li>
+              <li><strong>Rotas salvas:</strong> só quando você toca em <em>Salvar rota</em>, o app guarda na sua conta (Firebase/Google, só você lê) o nome da rota, os endereços e coordenadas da partida (se for um endereço fixo — “Minha posição” nunca é guardada), das paradas e do destino, o tempo de visita e os horários. Apague quando quiser. Não use nome de pessoa, NIS ou CPF no nome da rota nem no endereço. “Limpar aparelho” apaga a cópia deste aparelho; a da nuvem só some se você apagar a rota.</li>
+              <li><strong>Endereços buscados</strong>, destinos recentes, paradas e a lista colada (enquanto você não salvar a rota) ficam só na memória da página, nunca no aparelho. O que fica guardado são suas preferências (meio de transporte, partida, voz, satélite, tempo de visita, horário limite) e as coordenadas da partida padrão.</li>
               <li><strong>Compartilhar, WhatsApp e Copiar roteiro</strong> só enviam ou copiam o que você escolher; o roteiro traz os endereços que você digitou: não coloque nome de pessoa nele. Hora de saída, tempo de visita e horário limite são só contas feitas no aparelho.</li>
               <li><strong>Voz:</strong> se usar o microfone, o <strong>áudio é enviado ao serviço de voz do próprio navegador</strong> (no Chrome, o do Google) para virar texto. Os avisos falados do <em>Acompanhar</em> usam a voz do próprio aparelho.</li>
               <li><strong>Não diga nem digite nome, NIS ou CPF</strong> — só o endereço. O Paulus e as planilhas das famílias não participam desta busca.</li>
@@ -1619,14 +1636,12 @@ window.AnonaImpressao = (function () {
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
     getFirestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager,
-    doc, getDoc, setDoc, deleteField, terminate, clearIndexedDbPersistence
+    doc, getDoc, setDoc, deleteField, terminate, clearIndexedDbPersistence,
+    collection, onSnapshot, deleteDoc
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
-  // Nota: só usamos doc/getDoc/setDoc (para as anotações, em users/{uid}).
-  // As planilhas de Repercussão NÃO usam Firestore — ficam só no
-  // localStorage do navegador (ver loadReports()/__handleReportUpload).
-  // Os imports collection/addDoc/getDocs/deleteDoc/query/orderBy foram
-  // removidos por não terem uso nenhum no código (a subcoleção
-  // "repercussao" do firestore.rules está reservada para o futuro).
+  // Nota: o Firestore guarda (1) as anotações do calendário, em users/{uid}, e (2) as ROTAS SALVAS do "Mapa e rotas",
+  // em users/{uid}/rotas/{id} (ponte window.__anonaRotas, mais abaixo). As planilhas de Repercussão NÃO usam Firestore —
+  // ficam só no localStorage do navegador (ver loadReports()/__handleReportUpload).
 
   const firebaseConfig = {
     apiKey: "AIzaSyBASuIGCLTmykRmyv8ux6Es2BCJuQztTsw",
@@ -1662,6 +1677,45 @@ window.AnonaImpressao = (function () {
 
   let currentUser = null;
   let notes = {};
+
+  // ---------- rotas salvas do "Mapa e rotas" (users/{uid}/rotas/{id}) ----------
+  // Ponte para anona-mapa.js (que não é módulo e não enxerga o Firestore). Só guarda endereços/coordenadas das paradas,
+  // nome da rota e horários — nunca a posição do aparelho, nem nome de pessoa, NIS ou CPF. onSnapshot mantém a lista
+  // igual em todos os aparelhos e, com o cache local do Firestore, também mostra/aceita rotas sem internet (sobe depois).
+  const rotasOuvintes = new Set();
+  let rotasUnsub = null, rotasLista = [], rotasErro = null, rotasUid = '';
+  function rotasEmitir() { rotasOuvintes.forEach((f) => { try { f(rotasLista.slice(), rotasErro); } catch (e) { console.warn('Ouvinte de rotas falhou:', e); } }); }
+  function rotasReiniciar() {
+    const uid = currentUser ? currentUser.uid : '';
+    if (uid && uid === rotasUid && rotasUnsub) return;          // mesma conta: o ouvinte já está ligado
+    if (rotasUnsub) { try { rotasUnsub(); } catch (e) {} rotasUnsub = null; }
+    rotasUid = uid; rotasLista = []; rotasErro = null;
+    if (uid) {
+      try {
+        rotasUnsub = onSnapshot(collection(db, 'users', uid, 'rotas'), (snap) => {
+          rotasLista = snap.docs.map((d) => Object.assign({ id: d.id, pendente: d.metadata.hasPendingWrites }, d.data()))
+            .sort((a, b) => (b.atualizadoEm || 0) - (a.atualizadoEm || 0));
+          rotasErro = null; rotasEmitir();
+        }, (err) => { console.warn('Rotas salvas: não consegui ler da nuvem:', err); rotasErro = err; rotasEmitir(); });
+      } catch (e) { rotasErro = e; }
+    }
+    rotasEmitir();
+  }
+  window.__anonaRotas = {
+    logado: () => !!currentUser,
+    lista: () => rotasLista.slice(),
+    observar(fn) { rotasOuvintes.add(fn); try { fn(rotasLista.slice(), rotasErro); } catch (e) {} return () => rotasOuvintes.delete(fn); },
+    // devolve { id, pronto }: "pronto" só resolve quando a nuvem confirma (offline fica pendente e sobe sozinho depois)
+    salvar(dados, id) {
+      if (!currentUser) throw new Error('Entre na sua conta para salvar rotas.');
+      const rid = id || ('r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7));
+      return { id: rid, pronto: setDoc(doc(db, 'users', currentUser.uid, 'rotas', rid), dados) };
+    },
+    apagar(id) {
+      if (!currentUser) throw new Error('Entre na sua conta para apagar rotas.');
+      return deleteDoc(doc(db, 'users', currentUser.uid, 'rotas', id));
+    }
+  };
   let reports = []; // arquivos de Repercussão de Condicionalidades guardados
 
   // ---------- acesso seguro ao localStorage ----------
@@ -5429,6 +5483,7 @@ window.AnonaImpressao = (function () {
 
   async function runAuthUI(user) {
     currentUser = user;
+    try { rotasReiniciar(); } catch (e) { console.warn('Rotas salvas:', e); }
     // Avisa o assistente (paulus-anona.js): ao sair da conta, ele apaga a conversa e fecha o painel.
     try { window.dispatchEvent(new CustomEvent('anona:auth', { detail: { logado: !!user, uid: user ? user.uid : '' } })); } catch (e) {}
     if (user) {
