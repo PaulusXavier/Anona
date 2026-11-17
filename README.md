@@ -6,6 +6,7 @@ App simples (site estático) com:
 - Calendário oficial de pagamentos do Bolsa Família 2026 por final do NIS;
 - Prazos de saúde, educação, SICON e interrupção temporária;
 - **Calculadora de Faltas e Frequência Escolar**: calcula a frequência mês a mês, como no Sistema Presença (MEC), nos 5 períodos de acompanhamento (ligados aos meses de repercussão: março, maio, julho, setembro e novembro, com a data limite de recurso do Cronograma de Repercussão), ou por bimestre/ano letivo, conforme o calendário da rede municipal (Boa Vista) ou estadual (Roraima), com mínimo de 75% (6 a 18 anos) ou 60% (4 a 5 anos). Os calendários ficam em `CALENDARIOS_ESCOLARES_POR_ANO` no `index.html` — todo ano, **adicione** (não substitua) o ano novo;
+- **Rotas salvas** no Mapa e rotas: dê um nome à rota (partida fixa, paradas, destino, tempo de visita e horários) e ela fica na sua conta, em todos os aparelhos (Firestore `users/{uid}/rotas/{id}`);
 - Bloco de anotações por dia, **sincronizado entre todos os seus dispositivos** via Firebase (Google), de graça.
 - **Impressão**: botões *Imprimir mês* (calendário + prazos + anotações, em A4 paisagem), *Imprimir anotações* e *Imprimir* na calculadora (resultado + panorama do ano). O app monta uma folha própria, com cabeçalho, títulos de tabela repetidos em cada página e aviso de dados pessoais (LGPD) no rodapé. Ctrl+P direto na página também sai limpo (sem banners, botões, login e mascote). As planilhas (.xlsx) geradas já saem prontas para imprimir: A4, ajustadas à largura, linha de títulos repetida em toda página e rodapé "Página X de Y". Os PDFs trocam emoji/símbolos que a fonte do PDF não tem por texto equivalente (ou os descartam), em vez de sair com caracteres quebrados.
 
@@ -69,7 +70,7 @@ Suba todos esses arquivos para a raiz do seu repositório no GitHub.
 3. Escolha **modo de produção** e a região mais próxima (ex: `southamerica-east1` — São Paulo).
 4. Depois de criado, vá na aba **Regras** e cole o conteúdo do arquivo `firestore.rules` deste projeto. Clique em **Publicar**.
 
-> **Se você já tinha o app publicado antes desta versão:** as regras mudaram (foi adicionada a subcoleção `repercussao`). Volte na aba **Regras** do Firestore e cole o `firestore.rules` atualizado de novo, senão o envio das planilhas de Repercussão vai dar erro de permissão.
+> **Se você já tinha o app publicado antes desta versão:** as regras mudaram (agora há a subcoleção `users/{uid}/rotas`, das **rotas salvas** do Mapa e rotas). Volte na aba **Regras** do Firestore e cole o `firestore.rules` atualizado de novo e clique em **Publicar**, senão "Salvar rota" vai dar erro de permissão.
 
 Pronto — o Firebase está configurado. Isso é 100% grátis para uso pessoal (o plano gratuito do Firebase é bem generoso para um app individual).
 
