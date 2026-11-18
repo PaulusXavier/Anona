@@ -750,7 +750,7 @@
           </div>
           <details class="tv-more">
             <summary>Como a ordem é sugerida</summary>
-            <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Folhas <strong>escaneadas</strong> (PDF que é só uma imagem) são lidas por OCR, também no aparelho e só no quadro “Endereço da família”; na primeira vez o app baixa o leitor de imagem (precisa de internet). Confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” pede ao Paulus a ordem de visita: começa pela rua de partida e, em cada rua, sobe pelos números ímpares e volta pelos pares. Quanto às ruas, se o app tem as coordenadas (arquivo <code>geografia.json</code>) o Paulus escolhe a ordem de <strong>menor deslocamento</strong> e mostra a estimativa em km; sem elas, segue rua por rua dentro do bairro pelo texto do endereço, que é só uma aproximação. Tudo é calculado no aparelho, sem IA externa e sem internet. Se você conhece um caminho melhor, use as setinhas: ao gerar o PDF o app <strong>aprende quais ruas você põe em sequência</strong> e usa isso nas próximas rotas. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
+            <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Folhas <strong>escaneadas</strong> (PDF que é só uma imagem) são lidas por OCR, também no aparelho e só no quadro “Endereço da família”; na primeira vez o app baixa o leitor de imagem (precisa de internet). Assim que termina de ler as folhas de um bloco, o Paulus já deixa a rota organizada; confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” pede ao Paulus a ordem de visita: começa pela rua de partida e, em cada rua, sobe pelos números ímpares e volta pelos pares. Quanto às ruas, se o app tem as coordenadas (arquivo <code>geografia.json</code>) o Paulus escolhe a ordem de <strong>menor deslocamento</strong> e mostra a estimativa em km; sem elas, segue rua por rua dentro do bairro pelo texto do endereço, que é só uma aproximação. Tudo é calculado no aparelho, sem IA externa e sem internet. Se você conhece um caminho melhor, use as setinhas: ao gerar o PDF o app <strong>aprende quais ruas você põe em sequência</strong> e usa isso nas próximas rotas. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
             <p class="tv-hint mt-1"><span id="rotaVizinhancaTexto">O app ainda não aprendeu nenhum ajuste seu.</span> <button type="button" id="rotaVizinhancaApagar" onclick="rotaVizinhancaApagar()" class="underline font-semibold hidden" style="color:var(--verde)">Apagar o que foi aprendido</button></p>
           </details>
           <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait mt-3" style="background:var(--azul)">
@@ -4248,7 +4248,7 @@ window.AnonaImpressao = (function () {
       ocr: 'Folha escaneada (imagem): lendo o endereço por OCR no seu aparelho… pode levar alguns segundos.',
       ok: item.via === 'ocr' ? 'Endereço lido da imagem da folha (OCR) — confira com atenção.' : 'Endereço lido do PDF — confira.',
       nao: 'Não achei o endereço neste PDF — digite rua e número.',
-      erro: 'Não consegui ler este PDF — digite rua e número.',
+      erro: 'Não consegui ler este PDF (o leitor do app não carregou ou o arquivo está protegido) — digite rua e número.',
       manual: ''
     })[item.status] || '';
   }
@@ -4342,7 +4342,14 @@ window.AnonaImpressao = (function () {
         const page = await doc.getPage(n);
         const conteudo = await page.getTextContent();
         linhas = linhas.concat(window.AnonaRota.linhasDeItens(conteudo.items));
-        const achou = window.AnonaRota.extrairEndereco(linhas);
+        // Só o quadro "II - Endereço da família": o que vem depois (componentes, nomes, CPF) nem entra na leitura.
+        const ini = linhas.findIndex(l => /ENDERE[ÇC]O\s+DA\s+FAM[ÍI]LIA/i.test(l));
+        let quadro = linhas;
+        if (ini >= 0) {
+          const fim = linhas.findIndex((l, i) => i > ini && /COMPONENTES\s+DA\s+FAM[ÍI]LIA|Nome\s+Completo|\bCPF\b/i.test(l));
+          quadro = linhas.slice(ini, fim < 0 ? linhas.length : fim);
+        }
+        const achou = window.AnonaRota.extrairEndereco(quadro);
         if (achou) return Object.assign(achou, { via: 'texto' });
       }
       if (item) { item.status = 'ocr'; unificarAtualizarItemDOM(item); }
@@ -4401,7 +4408,18 @@ window.AnonaImpressao = (function () {
     });
     renderUnificarLista(bloco);
     // lê um de cada vez, para não pesar em celulares mais fracos
-    (async () => { for (const n of novos) await unificarIniciarLeitura(n); await unificarEncerrarOcr(); })();
+    (async () => {
+      for (const n of novos) await unificarIniciarLeitura(n);
+      await unificarEncerrarOcr();
+      // O Paulus já organiza a rota sozinho assim que termina de ler as folhas (a pessoa só ajusta, se quiser).
+      try {
+        const lista = unificarListas[bloco] || [];
+        if (lista.filter(i => String(i.endereco || '').trim()).length >= 2 && !unificarAjustadoAMao[bloco]) {
+          const aviso = unificarOrdenarBloco(bloco);
+          if (aviso) console.warn(aviso);
+        }
+      } catch (e) { console.warn('Organização automática da rota falhou:', e); }
+    })();
     if (rejeitados.length) alert(`Estes arquivos não foram adicionados:\n${rejeitados.join('\n')}`);
   };
 
