@@ -112,3 +112,26 @@ assert.strictEqual(c3.parado, (10 + 30) * 60); assert.strictEqual(c3.fim, (900 +
 assert(Math.abs(U.comprimento({ lat: 0, lng: 0 }, [{ lat: 0, lng: 0.01 }], { lat: 0, lng: 0.02 }) - U.distM({ lat: 0, lng: 0 }, { lat: 0, lng: 0.02 })) < 1);
 assert(/Parada 1: Rua A — chegada 07:10 \(2,0 km, 10 min\) · visita 30 min$/m.test(U.roteiroTexto({ modo: 'x', origem: 'P', paradas: [{ rotulo: 'Rua A' }], destino: { rotulo: 'Rua C' }, cron: U.cronograma(pernas3.slice(0, 2), { inicio: base, visitaMin: 30 }), inicio: base, planejado: true })));
 console.log('mapa-util.test.js: tudo certo');
+
+// ---- até 30 paradas: lista colada e links do Google Maps em trechos (o Google aceita só 9 paradas por link) ----
+{
+  const trinta1 = Array.from({ length: 35 }, (_, i) => 'Rua ' + (i + 1) + ', 1').join('\n');
+  const r31 = U.listaDeEnderecos(trinta1, 31); assert.deepStrictEqual([r31.itens.length, r31.cortados], [31, 4]);
+  const pts = (n) => Array.from({ length: n }, (_, i) => ({ lat: 2 + i / 100, lng: -60 - i / 100 }));
+  const o = { lat: 2.8, lng: -60.7, rotulo: 'Rua X' }, d = { lat: 2.9, lng: -60.6 };
+  const um = U.linksGoogle({ origem: o, paradas: pts(8), destino: d, modo: 'driving' });
+  assert.strictEqual(um.length, 1); assert.ok(um[0].href.includes('&origin=2.8,-60.7') && um[0].href.includes('&waypoints='));
+  const sem = U.linksGoogle({ origem: { lat: 2.8, lng: -60.7, rotulo: 'Minha posição' }, paradas: [], destino: d, modo: 'driving' });
+  assert.ok(!sem[0].href.includes('origin=') && !sem[0].href.includes('waypoints='));
+  const ps = pts(30), trechos = U.linksGoogle({ origem: o, paradas: ps, destino: d, modo: 'driving' });
+  assert.strictEqual(trechos.length, 4);
+  trechos.forEach((t) => { const w = /waypoints=([^&]*)/.exec(t.href); assert.ok(!w || w[1].split('%7C').length <= 9, 'no máximo 9 paradas por link'); });
+  // encadeado: a origem de cada trecho é o destino do anterior, e todas as 30 paradas aparecem uma vez
+  for (let i = 1; i < trechos.length; i++) { const dest = /destination=([^&]*)/.exec(trechos[i - 1].href)[1], org = /origin=([^&]*)/.exec(trechos[i].href)[1]; assert.strictEqual(org, dest); }
+  const vistas = trechos.reduce((a, t) => { const w = /waypoints=([^&]*)/.exec(t.href); const dest = /destination=([^&]*)/.exec(t.href)[1]; return a.concat(w ? w[1].split('%7C') : [], [dest]); }, []);
+  assert.strictEqual(vistas.length, 31); assert.strictEqual(vistas[vistas.length - 1], '2.9,-60.6');
+  // otimização em linha reta com 30 paradas roda rápido e devolve todas, sem repetir
+  const t0 = Date.now(), ord = U.ordenarParadas(o, ps.slice().reverse(), d);
+  assert.strictEqual(ord.length, 30); assert.strictEqual(new Set(ord.map((q) => q.lat)).size, 30); assert.ok(Date.now() - t0 < 3000);
+}
+console.log('mapa-util.test.js: 30 paradas ok');
