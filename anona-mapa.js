@@ -30,6 +30,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   };
   const NOMINATIM = 'https://nominatim.openstreetmap.org';
   const ROTAS = 'https://routing.openstreetmap.de';
+  const MAX_PARADAS = 30;                                          // paradas por rota (mais o destino final)
   const ROTAS_RESERVA = 'https://router.project-osrm.org';     // só carro/moto; usado se o principal falhar
   const LIMITE_LONGE = 40000;                                  // metros: destino mais longe que isso de Boa Vista ganha um aviso
 
@@ -525,10 +526,26 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (origemAtual && origemAtual.rotulo !== 'Minha posição') mOrigem = L.marker([origemAtual.lat, origemAtual.lng], { icon: icone('mp-pino-orig', 16), title: origemAtual.rotulo, keyboard: false }).addTo(mapa);
   }
 
-  function linkGoogle(o) {
-    const base = 'https://www.google.com/maps/dir/?api=1&destination=' + destino.lat + ',' + destino.lng + '&travelmode=' + PERFIS[modo].google;
-    const via = paradas.length ? '&waypoints=' + paradas.map(q => q.lat + ',' + q.lng).join('%7C') : '';
-    return (o.rotulo === 'Minha posição' ? base : base + '&origin=' + o.lat + ',' + o.lng) + via;   // sem origem, o Google usa a posição em tempo real
+  function linksGoogle(o) { return U.linksGoogle({ origem: o, paradas, destino, modo: PERFIS[modo].google }); }
+  // todos os trechos do Google Maps em texto (o Google aceita só 9 paradas por link: acima disso, vários links)
+  function textoLinksGoogle() {
+    const ls = origemAtual ? linksGoogle(origemAtual) : [];
+    if (ls.length < 2) return ls.length ? ls[0].href : '';
+    return ls.map((l, i) => 'Google Maps, trecho ' + (i + 1) + ' de ' + ls.length + ' (paradas ' + (l.de + 1) + ' a ' + Math.min(l.ate, paradas.length) + (l.ate > paradas.length ? ' e destino' : '') + '): ' + l.href).join('\n');
+  }
+  function mostrarLinksGoogle(o) {
+    const ls = linksGoogle(o), a = $('mapaGoogle'), txt = a.querySelector('span');
+    a.href = ls[0].href;
+    if (txt) txt.textContent = ls.length > 1 ? 'Google Maps (trecho 1 de ' + ls.length + ')' : 'Google Maps';
+    const pai = a.parentNode;
+    if (pai && pai.querySelectorAll) Array.from(pai.querySelectorAll('.mp-google-extra')).forEach((x) => x.remove());
+    let ref = a;
+    ls.slice(1).forEach((l, i) => {      // trechos 2, 3… ficam logo depois do botão principal
+      const b = document.createElement('a'); b.className = 'mp-btn mp-btn-sec mp-google-extra'; b.href = l.href; b.target = '_blank'; b.rel = 'noopener';
+      b.textContent = 'Google Maps (trecho ' + (i + 2) + ' de ' + ls.length + ')';
+      if (ref.after) ref.after(b);
+      ref = b;
+    });
   }
 
   // ---------- horários: saída (agora ou planejada) + tempo de visita em cada parada ----------
@@ -575,7 +592,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     $('mapaDist').textContent = fmtDist(r.distance);
     $('mapaTempo').textContent = fmtTempo(r.duration);
     $('mapaDeAte').textContent = o.rotulo + (paradas.length ? ' → ' + paradas.length + (paradas.length === 1 ? ' parada' : ' paradas') : '') + ' → ' + destino.rotulo;
-    $('mapaGoogle').href = linkGoogle(o);
+    mostrarLinksGoogle(o);
     const alvoWaze = paradas[0] || destino; $('mapaWaze').href = U.linkWaze(alvoWaze);   // o Waze só aceita um destino: com paradas, vai à 1ª
     $('mapaWazeTxt').textContent = paradas.length ? 'Waze (1ª parada)' : 'Waze';
     $('mapaSeguir').classList.toggle('hidden', o.rotulo !== 'Minha posição' || !navigator.geolocation);
@@ -691,7 +708,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   // desfazer: a concluída volta ao lugar de onde saiu; a pulada é retomada no fim da fila (antes do destino)
   function retomarParada(f, noLugar) {
     const k = feitas.indexOf(f); if (k < 0) return;
-    if (paradas.length >= 8) { status('Limite de 8 paradas (mais o destino final).', 'erro'); return; }
+    if (paradas.length >= MAX_PARADAS) { status('Limite de ' + MAX_PARADAS + ' paradas (mais o destino final).', 'erro'); return; }
     feitas.splice(k, 1);
     paradas.splice(f.estado === 'pulada' && !noLugar ? paradas.length : Math.min(f.idx, paradas.length), 0, f.q);
     if (ultimaFeita === f) mostrarDesfazer(null);
@@ -786,6 +803,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   function renderParadas() {
     const box = $('mapaParadasBox'), ol = $('mapaParadas'); ol.textContent = '';
     box.classList.toggle('hidden', !paradas.length && !feitas.length);
+    const cab = box.querySelector && box.querySelector('.mp-paradas-cab b'); if (cab) cab.textContent = 'Paradas no caminho' + (paradas.length ? ' (' + paradas.length + ' de ' + MAX_PARADAS + ')' : '');
     paradas.forEach((q, i) => {
       const li = document.createElement('li');
       const n = document.createElement('span'); n.className = 'mp-parada-n'; n.textContent = String(i + 1);
@@ -849,7 +867,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   function removerParada(i) { paradas.splice(i, 1); aposMudarParadas(); }
   async function adicionarParada() {
     if (!destino) { status('Escolha primeiro um destino; ele vira a parada e você busca o próximo.', 'erro'); return; }
-    if (paradas.length >= 8) { status('Limite de 8 paradas (mais o destino final).', 'erro'); return; }
+    if (paradas.length >= MAX_PARADAS) { status('Limite de ' + MAX_PARADAS + ' paradas (mais o destino final).', 'erro'); return; }
     if (paradas.some((q) => U.distM(q, destino) < 30)) { status('Esse endereço já está nas paradas. Busque outro ou arraste o pino.', 'erro'); return; }
     seguir(false);
     paradas.push({ lat: destino.lat, lng: destino.lng, rotulo: destino.rotulo });
@@ -884,14 +902,14 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
 
   // ---------- lista de endereços colada → rota com várias paradas ----------
   async function montarDaLista() {
-    const { itens, cortados } = U.listaDeEnderecos($('mapaLista').value, 9);
+    const { itens, cortados } = U.listaDeEnderecos($('mapaLista').value, MAX_PARADAS + 1);
     if (itens.length < 2) { status('Cole pelo menos 2 endereços, um por linha.', 'erro'); return; }
     const minha = ++senha; seguir(false); ocupado(true);
     const achados = [], faltou = [], aprox = [], repetidos = [];
     try {
       await garantirMapa();
       for (let k = 0; k < itens.length; k++) {
-        status('Procurando o endereço ' + (k + 1) + ' de ' + itens.length + '…');
+        status('Procurando o endereço ' + (k + 1) + ' de ' + itens.length + '…' + (itens.length > 10 && k === 0 ? ' (cerca de 1 segundo por endereço; pode deixar a tela aberta)' : ''));
         const q = itens[k], c = U.lerCoordenadas(q);
         let pt = null;
         if (c) pt = { lat: c.lat, lng: c.lng, rotulo: q };
@@ -914,7 +932,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       avisoDestino = [achados.length + ' endereços na rota' + ($('mapaListaOrdem').checked ? ', na melhor ordem' : '') + ' (o último é o destino).',
         faltou.length ? 'Não achei: ' + faltou.join('; ') + '.' : '', aprox.length ? 'Sem o número exato (só a rua): ' + aprox.join('; ') + ' — arraste o pino para ajustar.' : '',
         repetidos.length ? 'Endereço repetido, contei uma vez: ' + repetidos.join('; ') + '.' : '',
-        cortados ? 'Passou de 9 endereços: ' + cortados + ' ficou de fora.' : ''].filter(Boolean).join(' ');
+        cortados ? 'Passou de ' + (MAX_PARADAS + 1) + ' endereços: ' + cortados + ' ficou de fora.' : ''].filter(Boolean).join(' ');
       $('mapaBusca').value = '';
       await marcarDestino(seq[seq.length - 1]); mapa.setView([seq[seq.length - 1].lat, seq[seq.length - 1].lng], 14);
       const det = $('mapaListaBox'); if (det && det.removeAttribute) det.removeAttribute('open');
@@ -927,7 +945,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   // ---------- folhas resumo (PDF) → lista de endereços → rota ----------
   // O PDF é lido aqui no aparelho (pdf.js do próprio app). Só o quadro "Endereço da família" de cada folha vira texto (AnonaRota.enderecosDeFolhas):
   // nome, CPF e código da família não entram na lista, não são mostrados e não vão a serviço nenhum.
-  const POR_VEZ = 9;          // máximo de endereços por rota (limite das paradas do app)
+  const POR_VEZ = MAX_PARADAS + 1;          // máximo de endereços por rota (limite das paradas do app)
   let filaFolhas = [], tamGrupo = POR_VEZ, promessaPdfJs = null;
   function carregarPdfJs() {
     if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
@@ -994,7 +1012,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   // "Voltar à partida": o destino atual vira a última parada e a partida vira o destino final
   async function voltarAPartida() {
     if (!destino) return;
-    if (paradas.length >= 8) { status('Limite de 8 paradas (mais o destino final).', 'erro'); return; }
+    if (paradas.length >= MAX_PARADAS) { status('Limite de ' + MAX_PARADAS + ' paradas (mais o destino final).', 'erro'); return; }
     let o = origemAtual;
     if (!o) { try { o = await obterOrigem(); } catch (e) { mostrarErro(e); return; } }
     if (U.distM(o, destino) < 50) { status('O destino já é o ponto de partida.', 'erro'); return; }
@@ -1025,10 +1043,11 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   async function compartilhar() {
     if (!destino) return;
-    const url = $('mapaGoogle').href, texto = paradas.length && origemAtual && rotas.length ? textoRoteiro() : 'Destino: ' + destino.rotulo;
-    try { if (navigator.share) { await navigator.share({ title: 'Rota até o destino', text: texto, url }); return; } }
+    const varios = !!origemAtual && linksGoogle(origemAtual).length > 1;      // mais de 9 paradas: vários links, todos no texto
+    const url = $('mapaGoogle').href, texto = (paradas.length && origemAtual && rotas.length ? textoRoteiro() : 'Destino: ' + destino.rotulo) + (varios ? '\n' + textoLinksGoogle() : '');
+    try { if (navigator.share) { await navigator.share(varios ? { title: 'Rota até o destino', text: texto } : { title: 'Rota até o destino', text: texto, url }); return; } }
     catch (e) { if (e && e.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(texto + '\n' + url); status('Link da rota copiado.', 'ok'); }
+    try { await navigator.clipboard.writeText(varios ? texto : texto + '\n' + url); status('Link da rota copiado.', 'ok'); }
     catch (e) { status('Não consegui copiar. Use "Abrir no Google Maps" e compartilhe de lá.', 'erro'); }
   }
   // Roteiro em PDF (A4): partida, cada parada com horário, visita e trecho, totais e aviso de dados pessoais
@@ -1073,7 +1092,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   function enviarWhats() {     // abre o WhatsApp com o roteiro pronto; a pessoa escolhe para quem enviar
     if (!destino || !rotas.length || !origemAtual) return;
-    try { window.open(U.linkWhats(textoRoteiro() + '\n' + $('mapaGoogle').href), '_blank', 'noopener'); }
+    try { window.open(U.linkWhats(textoRoteiro() + '\n' + textoLinksGoogle()), '_blank', 'noopener'); }
     catch (e) { status('Não consegui abrir o WhatsApp. Use "Copiar roteiro".', 'erro'); }
   }
 
@@ -1143,7 +1162,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (!igual && salvas.length >= MAX_SALVAS) { msgSalvas('Limite de ' + MAX_SALVAS + ' rotas salvas. Apague alguma para salvar outra.', 'erro'); return; }
     let h, aviso = false;
     const dadosSalvar = dadosDaRota(nome, igual);
-    if (dadosSalvar.paradas.length > 8) { msgSalvas('A nuvem aceita até 8 paradas (mais o destino). Conclua ou tire ' + (dadosSalvar.paradas.length - 8) + ' parada(s) e salve de novo.', 'erro'); return; }
+    if (dadosSalvar.paradas.length > MAX_PARADAS) { msgSalvas('A nuvem aceita até ' + MAX_PARADAS + ' paradas (mais o destino). Conclua ou tire ' + (dadosSalvar.paradas.length - MAX_PARADAS) + ' parada(s) e salve de novo.', 'erro'); return; }
     try { h = ponte.salvar(dadosSalvar, igual && igual.id); }
     catch (e) { msgSalvas((e && e.message) || 'Não consegui salvar a rota.', 'erro'); return; }
     salvaAbertaId = h.id; campo.value = nome; fecharTecladoNoCelular();
@@ -1161,7 +1180,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   async function abrirSalva(r) {
     if (!r || !pontoValido(r.destino)) { msgSalvas('Essa rota salva está incompleta.', 'erro'); return; }
-    const ps = (Array.isArray(r.paradas) ? r.paradas : []).filter(pontoValido).slice(0, 8).map((q) => ({ lat: +q.lat, lng: +q.lng, rotulo: String(q.rotulo || q.lat + ', ' + q.lng), visita: q.visita != null && isFinite(q.visita) ? +q.visita : null }));
+    const ps = (Array.isArray(r.paradas) ? r.paradas : []).filter(pontoValido).slice(0, MAX_PARADAS).map((q) => ({ lat: +q.lat, lng: +q.lng, rotulo: String(q.rotulo || q.lat + ', ' + q.lng), visita: q.visita != null && isFinite(q.visita) ? +q.visita : null }));
     seguir(false); const minha = ++senha; limparRota();
     if (PERFIS[r.modo]) definirModo(r.modo);
     const o = r.origem || {}; origemOutro = null;
@@ -1217,7 +1236,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (!ponte || !ponte.logado()) { msgSalvas('Entre na sua conta para enviar a rota aos seus aparelhos.', 'erro'); return; }
     if (!destino) { msgSalvas('Monte a rota primeiro: escolha ao menos o destino.', 'erro'); return; }
     const dados = dadosDaRota(limpaNome($('mapaSalvaNome').value) || 'Rota enviada', salvas.find((x) => x.id === ID_ENVIADA));
-    if (dados.paradas.length > 8) { msgSalvas('A nuvem aceita até 8 paradas (mais o destino). Conclua ou tire ' + (dados.paradas.length - 8) + ' parada(s) e envie de novo.', 'erro'); return; }
+    if (dados.paradas.length > MAX_PARADAS) { msgSalvas('A nuvem aceita até ' + MAX_PARADAS + ' paradas (mais o destino). Conclua ou tire ' + (dados.paradas.length - MAX_PARADAS) + ' parada(s) e envie de novo.', 'erro'); return; }
     let h; try { h = ponte.salvar(dados, ID_ENVIADA); } catch (e) { msgSalvas((e && e.message) || 'Não consegui enviar a rota.', 'erro'); return; }
     enviadaVista = dados.atualizadoEm; gravarPref('anonaMapaEnviadaVista', String(enviadaVista)); esconderRecebida();   // este aparelho não avisa a si mesmo
     const pronto = Promise.resolve(h.pronto).then(() => 'ok'); let aviso = false;
