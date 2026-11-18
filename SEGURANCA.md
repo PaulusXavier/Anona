@@ -14,7 +14,7 @@ Revisão de 16/11/2026. O app guarda notas e planilhas de **famílias atendidas*
 | 6 | Sem proteção contra clickjacking (app dentro de iframe de outro site). | Script no `<head>` que oculta a página e sai do iframe. (`frame-ancestors` não funciona em `<meta>`; o GitHub Pages não deixa configurar cabeçalhos.) |
 | 7 | Sessão nunca expirava. | Sai da conta após **30 min sem uso** (`anona-seguranca.js`), com aviso na tela de entrada. Testado: logado aos 29 min, desconectado aos 31. |
 | 8 | Dados das famílias ficavam no aparelho depois de sair. | Botão **Limpar aparelho**: sai da conta e apaga notas, planilhas, e-mail lembrado e o cache local do Firestore. |
-| 9 | Regras do Firestore permissivas demais. | Dono único; `users/{uid}` só aceita o campo `notes` (até 3000 entradas); `users/{uid}/rotas/{id}` (rotas salvas do mapa) só com campos conhecidos, nome ≤ 60, ≤ 8 paradas; **todo o resto negado**. |
+| 9 | Regras do Firestore permissivas demais. | Dono único; `users/{uid}` só aceita o campo `notes` (até 3000 entradas); `users/{uid}/rotas/{id}` (rotas salvas do mapa) só com campos conhecidos, nome ≤ 60, ≤ 30 paradas; **todo o resto negado**. |
 | 10 | OCR (tesseract.js) e idioma português vinham de CDN. | Agora em `vendor/tesseract/` (tesseract.js 5.1.1, core e `por.traineddata.gz`), sem blob nem CDN. Testado de verdade no Chromium com o CSP ativo: leu o texto de uma imagem. O CSP deixou de permitir cdnjs/jsDelivr/tessdata. |
 | 11 | `icon-512.png.png` (nome duplicado) quebrava o ícone do PWA. | Renomeado para `icon-512.png`, como o `manifest.json` e o `sw.js` já esperavam. |
 
