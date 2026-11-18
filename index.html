@@ -4231,7 +4231,7 @@ window.AnonaImpressao = (function () {
           <button type="button" onclick="unificarRemover(${bloco},${i})" aria-label="Remover arquivo" title="Remover arquivo" class="p-1 rounded hover:bg-red-100 flex-shrink-0"><i data-lucide="x" class="w-3.5 h-3.5" style="color:#DC2626"></i></button>
         </div>
         <input type="text" data-uid="${item.id}" value="${escapeHtml(item.endereco || '')}" oninput="unificarSetEndereco(${bloco},${i},this.value)" placeholder="Rua e número (lido do PDF; edite se precisar)" class="w-full mt-1.5 text-[11px] border rounded-lg px-2 py-1" style="border-color:var(--line)">
-        <p data-ustatus="${item.id}" class="text-[10px] mt-0.5 ${item.status === 'nao' || item.status === 'erro' ? 'text-amber-600' : 'text-slate-400'}">${unificarTextoStatus(item)}</p>
+        <p data-ustatus="${item.id}" class="text-[10px] mt-0.5 ${item.status === 'nao' || item.status === 'erro' ? 'text-amber-600' : 'text-slate-400'}">${unificarTextoStatus(item)}${item.status === 'nao' || item.status === 'erro' ? ` <button type="button" onclick="unificarRelerItem(${item.id})" class="underline font-semibold">Tentar de novo</button>` : ''}</p>
       </li>
     `).join('');
     if (window.lucide) lucide.createIcons();
@@ -4260,6 +4260,12 @@ window.AnonaImpressao = (function () {
     const st = document.querySelector(`[data-ustatus="${item.id}"]`);
     if (st) {
       st.textContent = unificarTextoStatus(item);
+      if (item.status === 'nao' || item.status === 'erro') {
+        const bt = document.createElement('button');
+        bt.type = 'button'; bt.className = 'underline font-semibold ml-1'; bt.textContent = 'Tentar de novo';
+        bt.onclick = () => window.unificarRelerItem(item.id);
+        st.appendChild(bt);
+      }
       st.className = 'text-[10px] mt-0.5 ' + (item.status === 'nao' || item.status === 'erro' ? 'text-amber-600' : 'text-slate-400');
     }
   }
@@ -4380,6 +4386,21 @@ window.AnonaImpressao = (function () {
     return item.leitura;
   }
 
+  // Lê de novo uma folha cuja leitura falhou (ex.: abriu sem internet e o OCR não carregou) e reorganiza o bloco.
+  window.unificarRelerItem = async (id) => {
+    for (let b = 0; b < unificarListas.length; b++) {
+      const item = unificarListas[b].find(i => i.id === id);
+      if (!item) continue;
+      item.status = 'lendo'; unificarAtualizarItemDOM(item);
+      await unificarIniciarLeitura(item);
+      await unificarEncerrarOcr();
+      try {
+        if (!unificarAjustadoAMao[b] && unificarListas[b].filter(i => String(i.endereco || '').trim()).length >= 2) unificarOrdenarBloco(b);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+  };
+
   window.__handleUnificarUpload = (input, bloco) => {
     const files = Array.from(input.files || []);
     input.value = '';
@@ -4390,6 +4411,10 @@ window.AnonaImpressao = (function () {
     files.forEach(file => {
       if (file.type && file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
         rejeitados.push(`${file.name} (não é PDF)`);
+        return;
+      }
+      if (unificarListas.some(l => l.some(i => i.file.name === file.name && i.file.size === file.size)) || novos.some(n => n.file.name === file.name && n.file.size === file.size)) {
+        rejeitados.push(`${file.name} (já foi adicionado)`);
         return;
       }
       if (totalArquivos + 1 > UNIFICAR_MAX_ARQUIVOS) {
