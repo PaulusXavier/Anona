@@ -931,8 +931,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       paradas = seq.slice(0, -1); feitas = []; renderParadas();
       avisoDestino = [achados.length + ' endereços na rota' + ($('mapaListaOrdem').checked ? ', na melhor ordem' : '') + ' (o último é o destino).',
         faltou.length ? 'Não achei: ' + faltou.join('; ') + '.' : '', aprox.length ? 'Sem o número exato (só a rua): ' + aprox.join('; ') + ' — arraste o pino para ajustar.' : '',
-        repetidos.length ? 'Endereço repetido, contei uma vez: ' + repetidos.join('; ') + '.' : '',
-        cortados ? 'Passou de ' + (MAX_PARADAS + 1) + ' endereços: ' + cortados + ' ficou de fora.' : ''].filter(Boolean).join(' ');
+        repetidos.length ? (repetidos.length === 1 ? 'Endereço repetido, contei uma vez: ' : repetidos.length + ' endereços repetidos, contei uma vez cada. Ex.: ') + repetidos.slice(0, 3).join('; ') + (repetidos.length > 3 ? '; e mais ' + (repetidos.length - 3) : '') + '.' : '',
+        cortados ? 'Passou de ' + (MAX_PARADAS + 1) + ' endereços: ' + cortados + (cortados === 1 ? ' ficou de fora.' : ' ficaram de fora.') : ''].filter(Boolean).join(' ');
       $('mapaBusca').value = '';
       await marcarDestino(seq[seq.length - 1]); mapa.setView([seq[seq.length - 1].lat, seq[seq.length - 1].lng], 14);
       const det = $('mapaListaBox'); if (det && det.removeAttribute) det.removeAttribute('open');
