@@ -921,7 +921,7 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
 #mapaRotas .mp-paradas{ border:1px solid var(--line); border-radius:.6rem; background:#fff; padding:.5rem .6rem; display:flex; flex-direction:column; gap:.4rem; }
 #mapaRotas .mp-paradas-cab{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; font-size:.74rem; color:var(--azul-deep); }
 #mapaRotas .mp-paradas-cab .mp-btn-peq{ margin:0; }
-#mapaRotas .mp-paradas-lista{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.3rem; max-height:11rem; overflow:auto; }
+#mapaRotas .mp-paradas-lista{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.3rem; max-height:15rem; overflow:auto; }
 #mapaRotas .mp-paradas-lista li{ display:flex; align-items:center; gap:.4rem; font-size:.75rem; }
 #mapaRotas .mp-parada-n{ flex:0 0 1.4rem; height:1.4rem; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:#F9A825; color:#1b1b1b; font-weight:800; font-size:.72rem; }
 #mapaRotas .mp-parada-t{ flex:1; min-width:0; overflow-wrap:anywhere; }
