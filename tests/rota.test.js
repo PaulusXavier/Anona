@@ -78,5 +78,6 @@ console.log('rota.test.js: tudo certo');
   eq(R.enderecosDeFolhas([capa]).via, null);
   eq(R.enderecosUnicos(['Rua A, 1', 'rua a, 1', 'Rua B, 2']).length, 2);
   eq(R.tamanhoDoGrupo(9, 9), 9); eq(R.tamanhoDoGrupo(10, 9), 5); eq(R.tamanhoDoGrupo(19, 9), 7);
+  eq(R.tamanhoDoGrupo(31, 31), 31); eq(R.tamanhoDoGrupo(32, 31), 16); eq(R.tamanhoDoGrupo(62, 31), 31); eq(R.tamanhoDoGrupo(40), 20);
   console.log('rota.test.js: PDF unificado ok');
 }
