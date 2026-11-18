@@ -1142,7 +1142,9 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     const igual = salvas.find((x) => x.id !== ID_ENVIADA && String(x.nome || '').toLowerCase() === nome.toLowerCase());
     if (!igual && salvas.length >= MAX_SALVAS) { msgSalvas('Limite de ' + MAX_SALVAS + ' rotas salvas. Apague alguma para salvar outra.', 'erro'); return; }
     let h, aviso = false;
-    try { h = ponte.salvar(dadosDaRota(nome, igual), igual && igual.id); }
+    const dadosSalvar = dadosDaRota(nome, igual);
+    if (dadosSalvar.paradas.length > 8) { msgSalvas('A nuvem aceita até 8 paradas (mais o destino). Conclua ou tire ' + (dadosSalvar.paradas.length - 8) + ' parada(s) e salve de novo.', 'erro'); return; }
+    try { h = ponte.salvar(dadosSalvar, igual && igual.id); }
     catch (e) { msgSalvas((e && e.message) || 'Não consegui salvar a rota.', 'erro'); return; }
     salvaAbertaId = h.id; campo.value = nome; fecharTecladoNoCelular();
     const pronto = Promise.resolve(h.pronto).then(() => 'ok');
