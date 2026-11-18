@@ -246,13 +246,28 @@
     return Math.round((d.getTime() - fimMs) / 60000);
   }
   const linkWaze = (p) => 'https://waze.com/ul?ll=' + (+p.lat).toFixed(6) + ',' + (+p.lng).toFixed(6) + '&navigate=yes';
+  // Links do Google Maps. O Google aceita no máximo 9 paradas intermediárias por link; acima disso a rota é
+  // dividida em trechos encadeados (o destino de um trecho é a origem do seguinte). `o.rotulo === 'Minha posição'`
+  // deixa a origem do 1º trecho em aberto (o Google usa a posição em tempo real).
+  function linksGoogle(d) {
+    const MAX_VIA = 9, pts = [d.origem].concat(d.paradas || [], [d.destino]), links = [];
+    const fmt = (q) => q.lat + ',' + q.lng;
+    for (let ini = 0; ini < pts.length - 1; ini += MAX_VIA + 1) {
+      const fim = Math.min(ini + MAX_VIA + 1, pts.length - 1), via = pts.slice(ini + 1, fim);
+      let u = 'https://www.google.com/maps/dir/?api=1&destination=' + fmt(pts[fim]) + '&travelmode=' + d.modo;
+      if (!(ini === 0 && d.origem.rotulo === 'Minha posição')) u += '&origin=' + fmt(pts[ini]);
+      if (via.length) u += '&waypoints=' + via.map(fmt).join('%7C');
+      links.push({ href: u, de: ini, ate: fim });   // de/ate: posições em [partida, paradas…, destino]
+    }
+    return links;
+  }
   const linkWhats = (texto) => 'https://wa.me/?text=' + encodeURIComponent(String(texto || ''));
 
   // comprimento em linha reta (metros) de origem → pts… → fim (opcional): serve para comparar duas ordens de visita
   function comprimento(origem, pts, fim) {
     let t = 0, a = origem; (pts || []).forEach((q) => { t += distM(a, q); a = q; }); if (fim) t += distM(a, fim); return t;
   }
-  const api = { comprimento, distFala, estagioAviso, restante, listaDeEnderecos, folga, linkWaze, linkWhats, fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
+  const api = { comprimento, distFala, estagioAviso, restante, listaDeEnderecos, folga, linkWaze, linksGoogle, linkWhats, fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AnonaMapaUtil = api;
 })(typeof window !== 'undefined' ? window : this);
