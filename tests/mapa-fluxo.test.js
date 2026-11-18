@@ -211,5 +211,15 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'anona-mapa.js'), 'ut
   await get('mapaRecebidaAbrir').dispara('click'); await new Promise(r => setTimeout(r, 40));
   assert(get('mapaRecebida').classList.contains('hidden'), 'abrir esconde a faixa');
   assert.strictEqual(get('mapaSalvaNome').value, '', 'a rota enviada não vira nome de rota salva');
+  // 14) até 30 paradas: lista com 32 linhas → 31 entram (30 paradas + destino), 1 fica de fora; o 31º "+" é recusado
+  await get('mapaLimpar').dispara('click');
+  get('mapaLista').value = Array.from({ length: 32 }, (_, i) => (2.70 + i * 0.01).toFixed(4) + ', -60.6700').join('\n'); get('mapaListaOrdem').checked = false;
+  await get('mapaListaMontar').dispara('click'); await new Promise(r => setTimeout(r, 120));
+  const rota31 = pedidos.filter(u => /route\/v1/.test(u)).pop().split('/route/v1/driving/')[1].split('?')[0].split(';');
+  assert.strictEqual(rota31.length, 32, 'partida + 30 paradas + destino: ' + rota31.length);
+  assert(/31 endereços na rota/.test(get('mapaStatus').textContent) && /1 ficou de fora/.test(get('mapaStatus').textContent), 'status: ' + get('mapaStatus').textContent);
+  assert(/waypoints=/.test(get('mapaGoogle').href) && (get('mapaGoogle').href.match(/%7C/g) || []).length === 8, 'trecho 1 do Google com 9 paradas: ' + get('mapaGoogle').href);
+  await busca('2.5000, -60.6000'); await get('mapaAddParada').dispara('click');
+  assert(/Limite de 30 paradas/.test(get('mapaStatus').textContent), 'recusa a 31ª parada: ' + get('mapaStatus').textContent);
   console.log('mapa-fluxo.test.js: tudo certo');
 })().catch(e => { console.error(e); process.exit(1); });
