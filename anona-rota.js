@@ -159,7 +159,7 @@
   }
 
   // Mais de `max` endereços: divide em grupos do mesmo tamanho (10 → 5 + 5), sem sobrar um endereço sozinho.
-  function tamanhoDoGrupo(n, max) { max = max || 9; return n <= max ? n : Math.ceil(n / Math.ceil(n / max)); }
+  function tamanhoDoGrupo(n, max) { max = max || 31; return n <= max ? n : Math.ceil(n / Math.ceil(n / max)); }
 
 
   /* ───────────── Ordem de visita ───────────── */
