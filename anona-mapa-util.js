@@ -205,6 +205,30 @@
     return seq;
   }
 
+
+  // Rotas longas em grupos por proximidade. O Google Maps aceita 9 paradas intermediárias por link e o link termina em
+  // uma chegada: cada trecho cobre até `tam` (10) pontos. Aqui a ordem já sai pensada nesses trechos: o 1º grupo é a
+  // vizinhança mais próxima da partida, o 2º é a vizinhança mais próxima de onde o 1º terminou, e assim por diante.
+  // `fim` (opcional) é o destino fixo e entra no último grupo. `ordenar(origem, grupo, fim)` ordena dentro de cada grupo
+  // (padrão: ordenarParadas). Devolve { lista, grupos } com o tamanho de cada grupo (o destino fixo não entra em `lista`).
+  function agruparPorProximidade(origem, pts, fim, tam, ordenar) {
+    tam = tam || 10; ordenar = ordenar || ordenarParadas;
+    const resto = pts.slice(), lista = [], grupos = []; let cursor = origem;
+    while (resto.length + (fim ? 1 : 0) > tam) {
+      let si = 0, sd = Infinity;
+      resto.forEach((q, i) => { const d = distM(cursor, q); if (d < sd) { sd = d; si = i; } });
+      const semente = resto[si];
+      const membros = resto.map((q, i) => ({ q, i, d: i === si ? -1 : distM(semente, q) })).sort((a, b) => a.d - b.d).slice(0, tam);
+      const idx = new Set(membros.map((m) => m.i)), grupo = membros.map((m) => m.q);
+      for (let i = resto.length - 1; i >= 0; i--) if (idx.has(i)) resto.splice(i, 1);
+      const seq = ordenar(cursor, grupo, null);
+      lista.push(...seq); grupos.push(seq.length); cursor = seq[seq.length - 1];
+    }
+    const ult = resto.length > 1 || fim ? ordenar(cursor, resto, fim || null) : resto.slice();
+    lista.push(...ult); grupos.push(ult.length + (fim ? 1 : 0));
+    return { lista, grupos };
+  }
+
   // ---------- navegação por voz, "faltam", lista colada, horário limite e atalhos de compartilhamento ----------
   // distância para falar em voz alta: "400 metros", "1 quilômetro", "2,5 quilômetros" (o leitor de voz lê "400 m" mal)
   function distFala(m) {
@@ -267,7 +291,7 @@
   function comprimento(origem, pts, fim) {
     let t = 0, a = origem; (pts || []).forEach((q) => { t += distM(a, q); a = q; }); if (fim) t += distM(a, fim); return t;
   }
-  const api = { comprimento, distFala, estagioAviso, restante, listaDeEnderecos, folga, linkWaze, linksGoogle, linkWhats, fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
+  const api = { comprimento, distFala, estagioAviso, restante, listaDeEnderecos, folga, linkWaze, linksGoogle, linkWhats, fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, agruparPorProximidade, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AnonaMapaUtil = api;
 })(typeof window !== 'undefined' ? window : this);
