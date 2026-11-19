@@ -291,7 +291,44 @@
   function comprimento(origem, pts, fim) {
     let t = 0, a = origem; (pts || []).forEach((q) => { t += distM(a, q); a = q; }); if (fim) t += distM(a, fim); return t;
   }
-  const api = { comprimento, distFala, estagioAviso, restante, listaDeEnderecos, folga, linkWaze, linksGoogle, linkWhats, fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, agruparPorProximidade, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
+  // ---------- rota em link (de um aparelho para outro, sem conta) ----------
+  // A rota inteira (nome, meio de transporte, partida, paradas, destino e horários) vai em texto no endereço do app, depois do "#"
+  // (o "#" nunca é enviado a servidor nenhum). Quem abre o link vê "Rota recebida — Abrir"; nada é aberto sem a pessoa tocar.
+  const PREFIXO_ROTA = 'anona-rota=', MAX_PARADAS_LINK = 30, MAX_LINK = 20000;
+  const r6 = (n) => Math.round(+n * 1e6) / 1e6;
+  const okPonto = (a) => Array.isArray(a) && isFinite(a[0]) && isFinite(a[1]) && Math.abs(a[0]) <= 90 && Math.abs(a[1]) <= 180;
+  const b64 = (str) => { const by = new TextEncoder().encode(str); let bin = ''; for (let i = 0; i < by.length; i++) bin += String.fromCharCode(by[i]); return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const deB64 = (t) => { const bin = atob(String(t).replace(/-/g, '+').replace(/_/g, '/')), by = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) by[i] = bin.charCodeAt(i); return new TextDecoder('utf-8', { fatal: true }).decode(by); };
+  // dados: { nome, modo, origem, paradas: [{lat,lng,rotulo,visita}], destino, saida, limite, visita } → texto curto (base64 url-safe)
+  function codificarRota(d) {
+    const pt = (q) => [r6(q.lat), r6(q.lng), String(q.rotulo || '').slice(0, 120), q.visita != null && isFinite(q.visita) ? +q.visita : null];
+    const o = { v: 1, n: String(d.nome || '').slice(0, 60), m: d.modo, o: d.origem || { tipo: 'pos' }, p: (d.paradas || []).slice(0, MAX_PARADAS_LINK).map(pt), d: pt(d.destino),
+      s: d.saida || '', l: d.limite || '', i: d.visita || '0' };
+    return b64(JSON.stringify(o));
+  }
+  // link inteiro (https://…/index.html#anona-rota=…) → endereço do app + a rota
+  const linkDoApp = (base, d) => String(base || '').replace(/#.*$/, '') + '#' + PREFIXO_ROTA + codificarRota(d);
+  // "#anona-rota=…" (ou só o texto) → dados da rota, validados e limpos; qualquer coisa estranha → null
+  function decodificarRota(txt) {
+    try {
+      let t = String(txt || '').trim().replace(/^.*#/, '').replace(/^#/, '');
+      if (!t.startsWith(PREFIXO_ROTA)) return null;
+      t = t.slice(PREFIXO_ROTA.length); if (!t || t.length > MAX_LINK) return null;
+      const o = JSON.parse(deB64(t));
+      if (!o || o.v !== 1 || !['carro', 'pe', 'bike'].includes(o.m) || !okPonto(o.d) || !Array.isArray(o.p) || o.p.length > MAX_PARADAS_LINK || !o.p.every(okPonto)) return null;
+      const lim = (v, n) => String(v == null ? '' : v).slice(0, n), hhmm = (v) => /^\d{1,2}:\d{2}$/.test(v) ? v : '';
+      const ponto = (a) => ({ lat: r6(a[0]), lng: r6(a[1]), rotulo: lim(a[2], 200) || a[0] + ', ' + a[1] });
+      const og = o.o && typeof o.o === 'object' ? o.o : {};
+      let origem = { tipo: 'pos' };
+      if (og.tipo === 'partida') origem = { tipo: 'partida' };
+      else if (og.tipo === 'outro') origem = okPonto([og.lat, og.lng]) ? { tipo: 'outro', lat: r6(og.lat), lng: r6(og.lng), rotulo: lim(og.rotulo, 200) } : { tipo: 'outro', rotulo: lim(og.rotulo, 200) };
+      return { nome: lim(o.n, 60) || 'Rota recebida', modo: o.m, origem,
+        paradas: o.p.map((a) => Object.assign(ponto(a), { visita: a[3] != null && isFinite(a[3]) && a[3] >= 0 && a[3] <= 999 ? +a[3] : null })), destino: ponto(o.d),
+        saida: hhmm(lim(o.s, 40)), limite: hhmm(lim(o.l, 40)), visita: /^\d{1,3}$/.test(lim(o.i, 40)) ? lim(o.i, 40) : '0' };
+    } catch (e) { return null; }
+  }
+
+  const api = { codificarRota, decodificarRota, linkDoApp, PREFIXO_ROTA, comprimento, distFala, estagioAviso, restante, listaDeEnderecos, folga, linkWaze, linksGoogle, linkWhats, fmtHora, inicioDe, cronograma, alcancouParada, roteiroTexto, ordenarParadas, agruparPorProximidade, distM, lerCoordenadas, semNumero, acumulado, projetar, pontoNoTraco, localizarPassos, passoAtual, fmtDist, fmtTempo, horaChegada, seta };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AnonaMapaUtil = api;
 })(typeof window !== 'undefined' ? window : this);
