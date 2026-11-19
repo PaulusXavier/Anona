@@ -533,16 +533,21 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
     if (ls.length < 2) return ls.length ? ls[0].href : '';
     return ls.map((l, i) => 'Google Maps, trecho ' + (i + 1) + ' de ' + ls.length + ' (paradas ' + (l.de + 1) + ' a ' + Math.min(l.ate, paradas.length) + (l.ate > paradas.length ? ' e destino' : '') + '): ' + l.href).join('\n');
   }
+  // "paradas 11–20" / "paradas 21–25 e destino": quais pontos da lista cada trecho do Google cobre
+  function faixaTrecho(l) {
+    const a = l.de + 1, b = Math.min(l.ate, paradas.length);
+    return (b > a ? 'paradas ' + a + '–' + b : b === a ? 'parada ' + a : 'destino') + (l.ate > paradas.length && b >= a ? ' e destino' : '');
+  }
   function mostrarLinksGoogle(o) {
     const ls = linksGoogle(o), a = $('mapaGoogle'), txt = a.querySelector('span');
     a.href = ls[0].href;
-    if (txt) txt.textContent = ls.length > 1 ? 'Google Maps (trecho 1 de ' + ls.length + ')' : 'Google Maps';
+    if (txt) txt.textContent = ls.length > 1 ? 'Google Maps (trecho 1 de ' + ls.length + ' · ' + faixaTrecho(ls[0]) + ')' : 'Google Maps';
     const pai = a.parentNode;
     if (pai && pai.querySelectorAll) Array.from(pai.querySelectorAll('.mp-google-extra')).forEach((x) => x.remove());
     let ref = a;
     ls.slice(1).forEach((l, i) => {      // trechos 2, 3… ficam logo depois do botão principal
       const b = document.createElement('a'); b.className = 'mp-btn mp-btn-sec mp-google-extra'; b.href = l.href; b.target = '_blank'; b.rel = 'noopener';
-      b.textContent = 'Google Maps (trecho ' + (i + 2) + ' de ' + ls.length + ')';
+      b.textContent = 'Google Maps (trecho ' + (i + 2) + ' de ' + ls.length + ' · ' + faixaTrecho(l) + ')';
       if (ref.after) ref.after(b);
       ref = b;
     });
@@ -881,7 +886,21 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   // Com o mapa offline: ordem pelo TEMPO real de viagem (mão única e curvas). Sem ele (ou fora da área): linha reta.
   async function ordenarPontos(o, pts, fim) {
-    if (motor && motor.ordenar && pts.length <= 9 && [o].concat(pts, fim ? [fim] : []).every(q => motor.dentro(q.lat, q.lng))) {
+    const dentro = (lst) => lst.every(q => motor && motor.dentro(q.lat, q.lng));
+    const porTempo = (org, lst, f) => {          // ordem pelo tempo real (mapa offline), se couber; senão, linha reta
+      if (motor && motor.ordenar && lst.length >= 2 && lst.length <= 9 && dentro([org].concat(lst, f ? [f] : []))) {
+        const res = motor.ordenar(modo, org, lst, f || null);
+        if (!res.erro) return res.ordem.map(i => lst[i]);
+      }
+      return U.ordenarParadas(org, lst, f || null);
+    };
+    // mais de 10 pontos: o Google Maps divide em trechos de 9 paradas; ordena por vizinhança, trecho a trecho
+    if (pts.length + (fim ? 1 : 0) > 10) {
+      status('Agrupando as paradas por proximidade (de 9 em 9)…'); await new Promise((r) => setTimeout(r, 30));
+      const g = U.agruparPorProximidade(o, pts, fim || null, 10, porTempo);
+      return { lista: g.lista, grupos: g.grupos, offline: false };
+    }
+    if (motor && motor.ordenar && pts.length <= 9 && dentro([o].concat(pts, fim ? [fim] : []))) {
       status('Calculando a melhor ordem pelo tempo de viagem…'); await new Promise((r) => setTimeout(r, 30));
       const res = motor.ordenar(modo, o, pts, fim || null);
       if (!res.erro) return { lista: res.ordem.map(i => pts[i]), offline: true };
@@ -895,7 +914,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       const r = await ordenarPontos(o, paradas, destino || null);
       const antes = U.comprimento(o, paradas, destino), depois = U.comprimento(o, r.lista, destino), ganho = antes - depois;
       paradas = r.lista;
-      status((r.offline ? 'Paradas reordenadas pelo menor tempo de viagem (mapa offline, respeitando mão única).' : 'Paradas reordenadas pela menor distância em linha reta.') + (ganho > 100 ? ' Economiza cerca de ' + fmtDist(ganho) + ' em linha reta.' : ' A ordem que você tinha já era boa.') + ' Confira e ajuste se precisar.', 'ok');
+      status((r.grupos ? 'Paradas reordenadas por proximidade em ' + r.grupos.length + ' trechos do Google Maps (1º = mais perto da partida, depois o mais perto de onde o anterior termina).' : r.offline ? 'Paradas reordenadas pelo menor tempo de viagem (mapa offline, respeitando mão única).' : 'Paradas reordenadas pela menor distância em linha reta.') + (ganho > 100 ? ' Economiza cerca de ' + fmtDist(ganho) + ' em linha reta.' : ' A ordem que você tinha já era boa.') + ' Confira e ajuste se precisar.', 'ok');
       aposMudarParadas();
     } catch (e) { mostrarErro(e); }
   }
@@ -925,11 +944,12 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       if (achados.length < 2) { status('Só consegui achar ' + achados.length + ' endereço(s). Não achei: ' + faltou.join('; ') + '. Confira a grafia (rua, número, bairro).', 'erro'); return; }
       const o = await obterOrigem();
       let seq = achados;
-      if ($('mapaListaOrdem').checked) seq = (await ordenarPontos(o, achados, null)).lista;
+      let ordem = null;
+      if ($('mapaListaOrdem').checked) { ordem = await ordenarPontos(o, achados, null); seq = ordem.lista; }
       if (minha !== senha) return;
       seguir(false); limparRota(); fecharResultados();
       paradas = seq.slice(0, -1); feitas = []; renderParadas();
-      avisoDestino = [achados.length + ' endereços na rota' + ($('mapaListaOrdem').checked ? ', na melhor ordem' : '') + ' (o último é o destino).',
+      avisoDestino = [achados.length + ' endereços na rota' + ($('mapaListaOrdem').checked ? (ordem && ordem.grupos ? ', agrupados por proximidade em ' + ordem.grupos.length + ' trechos de até 9 paradas' : ', na melhor ordem') : '') + ' (o último é o destino).',
         faltou.length ? 'Não achei: ' + faltou.join('; ') + '.' : '', aprox.length ? 'Sem o número exato (só a rua): ' + aprox.join('; ') + ' — arraste o pino para ajustar.' : '',
         repetidos.length ? (repetidos.length === 1 ? 'Endereço repetido, contei uma vez: ' : repetidos.length + ' endereços repetidos, contei uma vez cada. Ex.: ') + repetidos.slice(0, 3).join('; ') + (repetidos.length > 3 ? '; e mais ' + (repetidos.length - 3) : '') + '.' : '',
         cortados ? 'Passou de ' + (MAX_PARADAS + 1) + ' endereços: ' + cortados + (cortados === 1 ? ' ficou de fora.' : ' ficaram de fora.') : ''].filter(Boolean).join(' ');
