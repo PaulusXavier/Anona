@@ -971,7 +971,19 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
       return paginas;
     } finally { try { doc.destroy(); } catch (e) { /* ok */ } }
   }
+  // "Limpar lista": esvazia a caixa de endereços e as próximas paradas que ainda faltam montar (a rota já traçada não muda).
+  function atualizarLimparLista() {
+    const l = $('mapaFolhasLimpar'), t = $('mapaLista');
+    if (l) l.disabled = !(filaFolhas.length || (t && String(t.value || '').trim()));
+  }
+  function limparLista() {
+    filaFolhas = [];
+    const t = $('mapaLista'); if (t) t.value = '';
+    mostrarProximas();
+    status('Lista de endereços limpa.', 'ok');
+  }
   function mostrarProximas() {
+    atualizarLimparLista();
     const b = $('mapaFolhasProx'); if (!b) return;
     b.classList.toggle('hidden', !filaFolhas.length);
     b.textContent = filaFolhas.length ? 'Montar as próximas paradas (faltam ' + filaFolhas.length + ')' : '';
@@ -1441,6 +1453,8 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   $('mapaListaMontar').addEventListener('click', montarDaLista);
   if ($('mapaFolhasArq')) { $('mapaFolhasArq').addEventListener('change', importarFolhas); }
   if ($('mapaFolhasProx')) { $('mapaFolhasProx').addEventListener('click', montarProximas); }
+  if ($('mapaFolhasLimpar')) { $('mapaFolhasLimpar').addEventListener('click', limparLista); }
+  if ($('mapaLista')) { $('mapaLista').addEventListener('input', atualizarLimparLista); }
   // rotas salvas na conta (Firebase): salvar, abrir e apagar; a lista acompanha entrada/saída de conta e os outros aparelhos
   if ($('mapaSalvar')) {
     $('mapaSalvar').addEventListener('click', salvarRota);
