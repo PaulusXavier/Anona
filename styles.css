@@ -1231,3 +1231,23 @@ html.mp-sem-rolagem, html.mp-sem-rolagem body{ overflow:hidden !important; overs
     *{ transition-duration:.01ms !important; animation-duration:.01ms !important; }
   }
 }
+
+/* Botão "Limpar arquivos" no fim de cada seção do Território Volante */
+#territorioVolante .tv-limpar{ display:flex; align-items:center; justify-content:center; gap:.4rem; width:100%; margin-top:.9rem; border:1px solid #DC2626; color:#B91C1C; background:#fff; border-radius:.6rem; padding:.45rem .6rem; font-size:.74rem; font-weight:700; cursor:pointer; transition:background .15s; }
+#territorioVolante .tv-limpar:hover{ background:#FEF2F2; }
+#territorioVolante .tv-limpar:focus-visible{ outline:3px solid rgba(220,38,38,.3); outline-offset:2px; }
+@media print{ #territorioVolante .tv-limpar{ display:none !important; } }
+
+#territorioVolante .tv-limpar:disabled, #territorioVolante .tv-limpar-mini:disabled{ opacity:.45; cursor:not-allowed; }
+#territorioVolante .tv-limpar:disabled:hover{ background:#fff; }
+#territorioVolante .tv-limpar-tudo{ margin:.6rem 0 1rem; }
+#territorioVolante .tv-rowend{ display:inline-flex; align-items:center; gap:.4rem; }
+#territorioVolante .tv-limpar-mini{ display:inline-flex; align-items:center; gap:.25rem; border:0; background:transparent; color:#B91C1C; font-size:.68rem; font-weight:700; padding:.2rem .35rem; border-radius:.4rem; cursor:pointer; margin-top:.4rem; }
+#territorioVolante .tv-rowend .tv-limpar-mini{ margin-top:0; }
+#territorioVolante .tv-limpar-mini:hover:not(:disabled){ background:#FEF2F2; }
+#territorioVolante .tv-limpar-mini:focus-visible{ outline:3px solid rgba(220,38,38,.3); outline-offset:2px; }
+.tv-toast{ position:fixed; left:50%; bottom:1.25rem; transform:translate(-50%,1rem); z-index:9999; display:flex; align-items:center; gap:.85rem; max-width:calc(100vw - 2rem); background:#0f172a; color:#fff; font-size:.8rem; padding:.65rem .9rem; border-radius:.75rem; box-shadow:0 8px 24px rgba(0,0,0,.25); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; }
+.tv-toast.show{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+.tv-toast button{ background:transparent; border:0; color:#FCD34D; font-weight:800; font-size:.8rem; cursor:pointer; text-decoration:underline; padding:.1rem .2rem; }
+@media print{ .tv-toast, #territorioVolante .tv-limpar-mini{ display:none !important; } }
+#mapaRotas .mp-btn:disabled{ opacity:.45; cursor:not-allowed; filter:none; }
