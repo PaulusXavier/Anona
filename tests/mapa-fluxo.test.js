@@ -221,5 +221,11 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'anona-mapa.js'), 'ut
   assert(/waypoints=/.test(get('mapaGoogle').href) && (get('mapaGoogle').href.match(/%7C/g) || []).length === 8, 'trecho 1 do Google com 9 paradas: ' + get('mapaGoogle').href);
   await busca('2.5000, -60.6000'); await get('mapaAddParada').dispara('click');
   assert(/Limite de 30 paradas/.test(get('mapaStatus').textContent), 'recusa a 31ª parada: ' + get('mapaStatus').textContent);
+  // 15) "Limpar lista": esvazia a caixa de endereços (e fica apagado quando não há nada)
+  get('mapaLista').value = 'Rua Um, 1'; await get('mapaLista').dispara('input');
+  assert(!get('mapaFolhasLimpar').disabled, 'Limpar lista liberado com texto na caixa');
+  await get('mapaFolhasLimpar').dispara('click');
+  assert.strictEqual(get('mapaLista').value, '', 'caixa de endereços esvaziada');
+  assert(get('mapaFolhasLimpar').disabled, 'Limpar lista apagado sem endereços');
   console.log('mapa-fluxo.test.js: tudo certo');
 })().catch(e => { console.error(e); process.exit(1); });
