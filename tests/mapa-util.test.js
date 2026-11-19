@@ -135,3 +135,25 @@ console.log('mapa-util.test.js: tudo certo');
   assert.strictEqual(ord.length, 30); assert.strictEqual(new Set(ord.map((q) => q.lat)).size, 30); assert.ok(Date.now() - t0 < 3000);
 }
 console.log('mapa-util.test.js: 30 paradas ok');
+
+// ---- rotas longas: grupos de 9 paradas por proximidade (1º grupo = vizinhança mais perto da partida) ----
+{
+  const o = { lat: 2.80, lng: -60.70 };
+  // três "bairros" a 0, 4 e 8 km a leste da partida, 7 casas em cada, embaralhados
+  const bairro = (k) => Array.from({ length: 7 }, (_, i) => ({ lat: 2.80 + (i % 3) * 0.0004, lng: -60.70 + k * 0.036 + Math.floor(i / 3) * 0.0004, k }));
+  const todos = [].concat(bairro(2), bairro(0), bairro(1)).sort((a, b) => ((a.lat * 1e6 + a.lng * 1e3) % 7) - ((b.lat * 1e6 + b.lng * 1e3) % 7));
+  const g = U.agruparPorProximidade(o, todos, null, 10);
+  assert.strictEqual(g.lista.length, 21);
+  assert.strictEqual(new Set(g.lista).size, 21, 'ninguém some nem repete');
+  assert.strictEqual(g.grupos.reduce((a, b) => a + b, 0), 21);
+  assert.ok(g.grupos.slice(0, -1).every((n) => n === 10), 'cada trecho cheio tem 10 pontos (9 paradas + chegada)');
+  assert.ok(g.lista.slice(0, 7).every((q) => q.k === 0), 'o 1º bairro (o mais perto da partida) vem primeiro');
+  // com destino fixo: ele fica fora da lista e conta no último grupo
+  const fim = { lat: 2.80, lng: -60.60 };
+  const h = U.agruparPorProximidade(o, todos, fim, 10);
+  assert.strictEqual(h.lista.length, 21); assert.strictEqual(h.grupos.reduce((a, b) => a + b, 0), 22);
+  // até 10 pontos: um grupo só, igual à ordem normal
+  const poucos = todos.slice(0, 6), u = U.agruparPorProximidade(o, poucos, null, 10);
+  assert.deepStrictEqual(u.lista, U.ordenarParadas(o, poucos, null)); assert.deepStrictEqual(u.grupos, [6]);
+  console.log('ok: agruparPorProximidade');
+}
