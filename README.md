@@ -421,4 +421,15 @@ Seção "Mapa e rotas" (atalho "Mapa" no cabeçalho): digite um endereço, e o a
     - Dados guardados corrompidos ou de formato antigo são ignorados em vez de travar o app.
     - Corrigido: o ícone `icon-512.png` estava com o nome `icon-512.png.png`, então o manifesto e o cache do service worker não o encontravam (cache subiu para `v50`).
   - Código: `anona-mapa-offline.js` (download, índice, busca, rota A*, passo a passo — sem DOM) e, em `anona-mapa.js`, a camada de desenho e o painel. Testes: `node tests/mapa-offline.test.js`.
+  - **Melhorias do mapa offline (v3 — dados de Boa Vista):**
+    - *Bairros de verdade:* além dos pontos `place` do OpenStreetMap, o download agora pega os **limites administrativos de bairro** (`admin_level=10`) e o bairro escrito nos próprios endereços (`addr:suburb`). Bairros que só aparecem nos endereços (3 casas ou mais) são criados no centro delas. O bairro mostrado para um ponto vem das casas vizinhas (até 200 m); sem elas, do centro de bairro mais próximo. Antes só `place` entrava, e o bairro de muita rua saía errado.
+    - *Corrigido:* o download descartava as marcações `addr:*`, `boundary`, `short_name`/`alt_name` antes de guardar; agora são mantidas (por isso, **atualize o mapa offline uma vez** para ganhar os bairros novos; pacotes antigos continuam funcionando).
+    - *Corrigido:* "Rua Pricumã, 12" (rua com o mesmo nome do bairro) voltava sem resultado, porque o nome do bairro consumia o da rua e sobrava só o número.
+    - *Busca:* números por extenso de 1 a 39 ("Treze de Setembro" = "13 de Setembro", "Vinte e Cinco de Agosto" = "25 de Agosto", "Trinta e Um de Março"); mais abreviações (Cap., Mal., Brig., Jd., Conj., Res., Lot., Vl., Cmte., Des., Min.…).
+    - *Siglas de locais:* HGR, HMI, UFRR, IFRR, UERR, UBS, UPA, CRAS, CREAS, CAPS, EMEF, EMEI, CMEI, INSS, TJRR, MPRR, Detran, SEMSA, SEMADS, Sesc/Senac/Senai e "rodoviária". "cras cristiana" e "centro de referência de assistência social cristiana" acham o mesmo lugar. O nome curto/alternativo do OSM (`short_name`, `alt_name`) também é pesquisado.
+    - *Mais locais baixados:* correio, creche, casa de repouso, teatro, cinema e centro cultural, além dos já existentes.
+    - *Chão de terra:* vias com `surface=dirt/sand/gravel…` (comum nas bordas de Boa Vista e na zona rural) têm velocidade limitada a 5 m/s (7 m/s se compactado), e o tempo estimado e a escolha de caminho passam a considerar isso.
+    - *Busca online + offline:* se o Nominatim não achar o endereço e o mapa offline estiver baixado, o app tenta o mapa offline (que entende fonética e abreviações) antes de dizer "não encontrei".
+    - *Partida padrão:* se a busca só achar a rua sem o nº 193, o ponto é usado naquela rota mas **não é mais guardado para sempre** como se fosse o endereço exato.
+    - Testes: `node tests/mapa-offline-bv.test.js`. `sw.js` na v74.
 - Blocos do mapa online que você já viu ficam no cache (até 700), mas **não** há download em massa de blocos (o OpenStreetMap proíbe); por isso o mapa offline é desenhado a partir das ruas baixadas.
