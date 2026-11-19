@@ -511,8 +511,9 @@
       </div>
     </div>
     <p class="text-xs text-slate-500 mb-3">O fluxo mensal, do recebimento da planilha do MDS ao relatório final — na ordem em que você normalmente usa.</p>
-    <p class="tv-privacidade"><i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0" style="color:var(--verde)"></i> <span>Tudo é processado no seu aparelho e os arquivos originais nunca são alterados. A única exceção é a seção "Mapa e rotas", que consulta o OpenStreetMap com o endereço que você digita (nunca nome, NIS ou CPF).</span></p>
+    <p class="tv-privacidade"><i data-lucide="shield-check" class="w-4 h-4 flex-shrink-0" style="color:var(--verde)"></i> <span>Tudo é processado no seu aparelho e os arquivos originais nunca são alterados. Ao sair da conta (ou por inatividade), os arquivos das seções 2 a 6 são limpos da memória sozinhos. A única exceção é a seção "Mapa e rotas", que consulta o OpenStreetMap com o endereço que você digita (nunca nome, NIS ou CPF).</span></p>
     <nav class="tv-nav" aria-label="Etapas do fluxo mensal"><a href="#tvPasso1" data-tv-nav="1"><b>1</b> Planilha do MDS</a><a href="#tvPasso2" data-tv-nav="2"><b>2</b> Divisão da equipe</a><a href="#tvPasso3" data-tv-nav="3"><b>3</b> Recorrentes</a><a href="#tvPasso4" data-tv-nav="4"><b>4</b> Relatório individual</a><a href="#tvPasso5" data-tv-nav="5"><b>5</b> Rota de visita</a><a href="#tvPasso6" data-tv-nav="6"><b>6</b> Abrigos</a></nav>
+    <button type="button" id="tvLimparTudo" onclick="anonaLimparTemporarios()" class="tv-limpar tv-limpar-tudo" disabled><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Nada para limpar nas seções 2 a 6</span></button>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 lg:gap-x-10">
       <div class="tv-col">
@@ -584,6 +585,7 @@
             </div>
             <p class="tv-hint mt-2">Baixe o backup de vez em quando e guarde num lugar seguro (pen drive, e-mail para você mesmo, nuvem pessoal). Restaurar não apaga o que já está guardado, só adiciona o que faltar.</p>
           </details>
+          <button type="button" id="tvLimpar1" onclick="anonaLimparPasso(1)" class="tv-limpar" disabled><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Nenhuma planilha guardada</span></button>
         </div>
       </details>
 
@@ -623,6 +625,7 @@
             </button>
             <p id="gerarRelatoriosVolanteAviso" class="tv-hint mt-2">Envie a tabela acima primeiro; depois de dividida, este botão fica liberado para gerar um PDF de Relatório de Repercussão Individual para cada um dos três, sem precisar enviar a tabela de novo.</p>
           </div>
+          <button type="button" id="tvLimpar2" onclick="anonaLimparPasso(2)" class="tv-limpar" disabled><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Nenhuma tabela para limpar</span></button>
         </div>
       </details>
 
@@ -654,6 +657,7 @@
             <summary>O que vem no relatório</summary>
             <p class="tv-hint">Só as famílias que se repetiram, com os dados dos dois meses lado a lado; <strong>uma aba por técnico</strong> (só quem ficou com o mesmo técnico nos dois meses) e uma aba separada <strong>“Mudaram de técnico”</strong> para quem trocou de mão na divisão.</p>
           </details>
+          <button type="button" id="tvLimpar3" onclick="anonaLimparPasso(3)" class="tv-limpar" disabled><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Nenhuma planilha para limpar</span></button>
         </div>
       </details>
 
@@ -729,6 +733,7 @@
               <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
             </button>
             <p id="unificarOrdemInfo0" class="tv-hint mt-2 hidden" role="status"></p>
+            <button type="button" id="tvLimparBloco0" onclick="anonaLimparBloco(0)" class="tv-limpar-mini" disabled><i data-lucide="trash-2" class="w-3 h-3"></i> Limpar este bloco</button>
           </div>
 
           <div class="tv-sub-card">
@@ -747,15 +752,18 @@
               <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Sugerir ordem de visita
             </button>
             <p id="unificarOrdemInfo1" class="tv-hint mt-2 hidden" role="status"></p>
+            <button type="button" id="tvLimparBloco1" onclick="anonaLimparBloco(1)" class="tv-limpar-mini" disabled><i data-lucide="trash-2" class="w-3 h-3"></i> Limpar este bloco</button>
           </div>
           <details class="tv-more">
             <summary>Como a ordem é sugerida</summary>
             <p class="tv-hint">Ao adicionar as folhas, o app lê <strong>rua, número e bairro</strong> direto do PDF (só no seu aparelho — nome, NIS e CPF não são lidos nem enviados). Folhas <strong>escaneadas</strong> (PDF que é só uma imagem) são lidas por OCR, também no aparelho e só no quadro “Endereço da família”; na primeira vez o app baixa o leitor de imagem (precisa de internet). Assim que termina de ler as folhas de um bloco, o Paulus já deixa a rota organizada; confira o endereço de cada família no campo abaixo do arquivo e corrija se preciso. “Organizar rota automaticamente” pede ao Paulus a ordem de visita: começa pela rua de partida e, em cada rua, sobe pelos números ímpares e volta pelos pares. Quanto às ruas, se o app tem as coordenadas (arquivo <code>geografia.json</code>) o Paulus escolhe a ordem de <strong>menor deslocamento</strong> e mostra a estimativa em km; sem elas, segue rua por rua dentro do bairro pelo texto do endereço, que é só uma aproximação. Tudo é calculado no aparelho, sem IA externa e sem internet. Se você conhece um caminho melhor, use as setinhas: ao gerar o PDF o app <strong>aprende quais ruas você põe em sequência</strong> e usa isso nas próximas rotas. O PDF final traz uma página de <strong>roteiro</strong> com a ordem de visita; os arquivos originais não são alterados.</p>
             <p class="tv-hint mt-1"><span id="rotaVizinhancaTexto">O app ainda não aprendeu nenhum ajuste seu.</span> <button type="button" id="rotaVizinhancaApagar" onclick="rotaVizinhancaApagar()" class="underline font-semibold hidden" style="color:var(--verde)">Apagar o que foi aprendido</button></p>
           </details>
+          <label class="flex items-start gap-2 mb-2 text-[11px] text-slate-600 cursor-pointer"><input type="checkbox" id="tvManterRota" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)" onchange="tvSalvarManter('anonaManterRota', this.checked)"><span><b>Manter as folhas depois de gerar o PDF</b> (para gerar de novo, mudando a ordem, por exemplo). Desmarcado, elas saem da lista, com “Desfazer”.</span></label>
           <button onclick="unificarGerarPDF()" id="unificarGerarPDFBtn" class="tv-btn w-full text-white px-3 py-2 rounded-xl text-xs font-bold transition hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-wait mt-3" style="background:var(--azul)">
             <i data-lucide="file-output" class="w-3.5 h-3.5"></i> <span>Gerar PDF unificado da rota</span>
           </button>
+          <button type="button" id="tvLimpar5" onclick="anonaLimparPasso(5)" class="tv-limpar" disabled><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Nenhuma folha para limpar</span></button>
         </div>
       </details>
 
@@ -771,6 +779,7 @@
         <div class="tv-body">
           <p class="tv-hint mb-2">Envie as folhas resumo (PDF) das famílias de cada abrigo, <strong>já separadas por efeito</strong>. Escolha o mês de repercussão e gere um relatório por vez — cada abrigo tem seu botão, com capa da equipe de proteção social e as folhas na ordem Alerta → Bloqueio → Suspensão.</p>
           <p id="abrigoStatusGeral" class="tv-status">0/60 arquivos · 0,0 MB de 80 MB</p>
+          <label class="flex items-start gap-2 mb-2 text-[11px] text-slate-600 cursor-pointer"><input type="checkbox" id="tvManterAbrigos" class="w-4 h-4 rounded mt-0.5 flex-shrink-0" style="accent-color:var(--verde)" onchange="tvSalvarManter('anonaManterAbrigos', this.checked)"><span><b>Manter as folhas depois de gerar o PDF</b> (para gerar de novo, mudando a ordem, por exemplo). Desmarcado, elas saem da lista, com “Desfazer”.</span></label>
           <div class="mb-3">
             <label id="abrigoMesRepercussaoLabel" for="abrigoMesRepercussao" class="tv-label">Mês de repercussão</label>
             <select id="abrigoMesRepercussao" class="tv-select" style="border-color:var(--line)">
@@ -781,7 +790,7 @@
             <div class="tv-sub-card tv-abrigo">
               <div class="tv-rowhead">
                 <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 1</p>
-                <span class="tv-count tv-count-wide" id="abrigoTotal0">0 folhas</span>
+                <span class="tv-rowend"><button type="button" id="tvLimparAbrigo0" onclick="anonaLimparAbrigo(0)" class="tv-limpar-mini" disabled aria-label="Limpar as folhas deste abrigo"><i data-lucide="trash-2" class="w-3 h-3"></i> Limpar</button><span class="tv-count tv-count-wide" id="abrigoTotal0">0 folhas</span></span>
               </div>
               <div class="tv-efeito" style="--c:#B7791F">
                 <div class="tv-rowhead">
@@ -823,7 +832,7 @@
             <div class="tv-sub-card tv-abrigo">
               <div class="tv-rowhead">
                 <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Rondon 5</p>
-                <span class="tv-count tv-count-wide" id="abrigoTotal1">0 folhas</span>
+                <span class="tv-rowend"><button type="button" id="tvLimparAbrigo1" onclick="anonaLimparAbrigo(1)" class="tv-limpar-mini" disabled aria-label="Limpar as folhas deste abrigo"><i data-lucide="trash-2" class="w-3 h-3"></i> Limpar</button><span class="tv-count tv-count-wide" id="abrigoTotal1">0 folhas</span></span>
               </div>
               <div class="tv-efeito" style="--c:#B7791F">
                 <div class="tv-rowhead">
@@ -865,7 +874,7 @@
             <div class="tv-sub-card tv-abrigo">
               <div class="tv-rowhead">
                 <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> PRA</p>
-                <span class="tv-count tv-count-wide" id="abrigoTotal2">0 folhas</span>
+                <span class="tv-rowend"><button type="button" id="tvLimparAbrigo2" onclick="anonaLimparAbrigo(2)" class="tv-limpar-mini" disabled aria-label="Limpar as folhas deste abrigo"><i data-lucide="trash-2" class="w-3 h-3"></i> Limpar</button><span class="tv-count tv-count-wide" id="abrigoTotal2">0 folhas</span></span>
               </div>
               <div class="tv-efeito" style="--c:#B7791F">
                 <div class="tv-rowhead">
@@ -907,7 +916,7 @@
             <div class="tv-sub-card tv-abrigo">
               <div class="tv-rowhead">
                 <p class="tv-card-title"><i data-lucide="tent" class="w-3.5 h-3.5" style="color:var(--verde)"></i> Tuaronoko</p>
-                <span class="tv-count tv-count-wide" id="abrigoTotal3">0 folhas</span>
+                <span class="tv-rowend"><button type="button" id="tvLimparAbrigo3" onclick="anonaLimparAbrigo(3)" class="tv-limpar-mini" disabled aria-label="Limpar as folhas deste abrigo"><i data-lucide="trash-2" class="w-3 h-3"></i> Limpar</button><span class="tv-count tv-count-wide" id="abrigoTotal3">0 folhas</span></span>
               </div>
               <div class="tv-efeito" style="--c:#B7791F">
                 <div class="tv-rowhead">
@@ -948,6 +957,7 @@
             </div>
           </div>
           <p class="tv-hint">Use as setinhas para reordenar as famílias dentro de cada efeito. Nada é enviado à internet — o PDF é gerado no seu aparelho e os originais não são alterados. Cada abrigo é gerado e baixado de forma independente, com a sua própria capa.</p>
+          <button type="button" id="tvLimpar6" onclick="anonaLimparPasso(6)" class="tv-limpar" disabled><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> <span>Nenhuma folha para limpar</span></button>
         </div>
       </details>
 
@@ -1001,6 +1011,7 @@
               <label class="mp-btn mp-btn-arq" for="mapaFolhasArq"><i data-lucide="file-up" class="w-3.5 h-3.5"></i> Importar folhas resumo (PDF)</label>
               <input type="file" id="mapaFolhasArq" accept="application/pdf,.pdf" class="sr-only">
               <button type="button" id="mapaFolhasProx" class="mp-btn hidden"></button>
+              <button type="button" id="mapaFolhasLimpar" class="mp-btn mp-btn-sec" disabled><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Limpar lista</button>
             </div>
             <small class="mp-lista-dica">Só o endereço — nada de nome de pessoa, NIS ou CPF. No PDF, o app lê só o quadro “Endereço da família”.</small>
           </details>
@@ -4236,6 +4247,7 @@ window.AnonaImpressao = (function () {
     `).join('');
     if (window.lucide) lucide.createIcons();
     renderUnificarStatusGeral();
+    tvLimparAtualizar();
   }
 
   window.unificarSetEndereco = (bloco, i, valor) => {
@@ -4434,7 +4446,7 @@ window.AnonaImpressao = (function () {
     renderUnificarLista(bloco);
     // lê um de cada vez, para não pesar em celulares mais fracos
     (async () => {
-      for (const n of novos) await unificarIniciarLeitura(n);
+      for (const n of novos) { if (n.cancelado) continue; await unificarIniciarLeitura(n); }
       await unificarEncerrarOcr();
       // O Paulus já organiza a rota sozinho assim que termina de ler as folhas (a pessoa só ajusta, se quiser).
       try {
@@ -4707,9 +4719,9 @@ window.AnonaImpressao = (function () {
       document.body.appendChild(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
 
-      unificarListas.forEach((_, i) => { unificarListas[i] = []; });
-      UNIFICAR_BLOCOS.forEach((_, i) => renderUnificarLista(i));
       alert('PDF unificado gerado e baixado com sucesso!');
+      // Limpa as folhas (a menos que a pessoa tenha marcado "manter"), com "Desfazer" caso o download se perca.
+      if (!tvManter('anonaManterRota')) tvRodar([() => tvAcaoRota(UNIFICAR_BLOCOS.map((_, b) => b))], 'Folhas da Rota de Visita limpas depois de gerar o PDF.');
     } catch (e) {
       console.error(e);
       alert(e && e.message ? e.message : 'Não consegui unificar as folhas enviadas. Confirme se todos os arquivos são PDFs válidos.');
@@ -4908,6 +4920,7 @@ window.AnonaImpressao = (function () {
     `).join('');
     if (window.lucide) lucide.createIcons();
     renderAbrigoStatusGeral();
+    tvLimparAtualizar();
   }
 
   window.__handleAbrigoUpload = (input, grupo) => {
@@ -4949,6 +4962,237 @@ window.AnonaImpressao = (function () {
     abrigoUnificarListas[grupo].splice(i, 1);
     renderAbrigoLista(grupo);
   };
+
+  // =====================================================================
+  // LIMPAR ARQUIVOS DE CADA SEÇÃO — cada passo do fluxo mensal tem o seu
+  // botão "Limpar" e só mexe nos arquivos da própria seção:
+  // 1 = planilhas do MDS guardadas neste aparelho (pede confirmação; não tem "Desfazer")
+  // 2 = tabela da divisão da equipe volante      3 = planilhas de Recorrentes
+  // 5 = folhas da Rota de Visita (também por bloco)   6 = folhas dos Abrigos (também por abrigo)
+  // O passo 4 (Relatório Individual) não guarda nada: o PDF sai na hora.
+  // As limpezas das seções 2, 3, 5 e 6 mostram um aviso com "Desfazer" por 12 s.
+  // Ao sair da conta (ou por inatividade) as seções 2 a 6 são limpas sozinhas.
+  // =====================================================================
+  // Preferência (lembrada neste aparelho): manter as folhas depois de gerar o PDF, para poder gerar de novo.
+  function tvManter(chave) { try { return localStorage.getItem(chave) === '1'; } catch (e) { return false; } }
+  window.tvSalvarManter = (chave, marcado) => { try { localStorage.setItem(chave, marcado ? '1' : '0'); } catch (e) {} };
+  ['tvManterRota:anonaManterRota', 'tvManterAbrigos:anonaManterAbrigos'].forEach(par => {
+    const [id, chave] = par.split(':'), el = document.getElementById(id);
+    if (el) el.checked = tvManter(chave);
+  });
+
+  let tvToastTimer = null;
+  function tvToast(texto, desfazer) {
+    let el = document.getElementById('tvToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'tvToast'; el.className = 'tv-toast';
+      el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    el.textContent = '';
+    const t = document.createElement('span'); t.textContent = texto; el.appendChild(t);
+    if (desfazer) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = 'Desfazer';
+      b.onclick = () => { clearTimeout(tvToastTimer); el.classList.remove('show'); desfazer(); };
+      el.appendChild(b);
+    }
+    el.classList.add('show');
+    clearTimeout(tvToastTimer);
+    tvToastTimer = setTimeout(() => el.classList.remove('show'), 12000);
+  }
+
+  const tvPlural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+  // Cada ação limpa uma parte e devolve a função que desfaz (ou null se não havia nada).
+  function tvAcaoDivisao() {
+    const antes = ultimaDivisaoVolante;
+    if (!antes) return null;
+    ultimaDivisaoVolante = null;
+    const inp = document.getElementById('volanteInput'); if (inp) { try { inp.value = ''; } catch (e) {} }
+    const btn = document.getElementById('gerarRelatoriosVolanteBtn'); if (btn) btn.disabled = true;
+    const av = document.getElementById('gerarRelatoriosVolanteAviso');
+    const textoAntes = av ? av.textContent : '';
+    if (av) av.textContent = 'Envie a tabela acima primeiro; depois de dividida, este botão fica liberado para gerar um PDF de Relatório de Repercussão Individual para cada um dos três, sem precisar enviar a tabela de novo.';
+    return () => {
+      ultimaDivisaoVolante = antes;
+      if (btn) btn.disabled = false;
+      if (av) av.textContent = textoAntes;
+    };
+  }
+
+  function tvAcaoRecorrentes() {
+    const antes = window.__comparacaoVolante || {};
+    if (!antes.anterior && !antes.atual) return null;
+    const ids = { anterior: ['comparacaoAnteriorLabel', 'Planilha do mês anterior'], atual: ['comparacaoAtualLabel', 'Planilha do mês atual'] };
+    const textosAntes = {};
+    window.__comparacaoVolante = { anterior: null, atual: null };
+    Object.keys(ids).forEach(papel => {
+      const lbl = document.getElementById(ids[papel][0]);
+      if (!lbl) return;
+      textosAntes[papel] = lbl.textContent;
+      lbl.textContent = ids[papel][1];
+      const wrap = lbl.closest('label'), inp = wrap && wrap.querySelector('input[type="file"]');
+      if (inp) { try { inp.value = ''; } catch (e) {} inp.disabled = false; }
+    });
+    return () => {
+      window.__comparacaoVolante = antes;
+      Object.keys(textosAntes).forEach(papel => {
+        const lbl = document.getElementById(ids[papel][0]); if (lbl) lbl.textContent = textosAntes[papel];
+      });
+    };
+  }
+
+  function tvAcaoRota(blocos) {
+    const salvos = blocos
+      .map(b => ({ b, itens: (unificarListas[b] || []).slice(), ajustado: unificarAjustadoAMao[b] }))
+      .filter(x => x.itens.length);
+    if (!salvos.length) return null;
+    salvos.forEach(({ b, itens }) => {
+      itens.forEach(i => { i.cancelado = true; });   // leituras que ainda não começaram são puladas
+      unificarListas[b].length = 0;
+      unificarAjustadoAMao[b] = false;
+      renderUnificarLista(b);
+      const info = document.getElementById(`unificarOrdemInfo${b}`);
+      if (info) { info.textContent = ''; info.classList.add('hidden'); }
+    });
+    return async () => {
+      salvos.forEach(({ b, itens, ajustado }) => {
+        itens.forEach(i => { i.cancelado = false; });
+        unificarListas[b].push(...itens);
+        unificarAjustadoAMao[b] = ajustado;
+        renderUnificarLista(b);
+      });
+      // folhas cuja leitura do endereço foi pulada voltam a ser lidas
+      for (const { itens } of salvos) {
+        for (const i of itens) { if (i.status === 'lendo' || i.status === 'ocr') await unificarIniciarLeitura(i); }
+      }
+      try { await unificarEncerrarOcr(); } catch (e) { console.warn(e); }
+    };
+  }
+
+  function tvAcaoAbrigos(grupos) {
+    const salvos = grupos
+      .map(g => ({ g, itens: (abrigoUnificarListas[g] || []).slice() }))
+      .filter(x => x.itens.length);
+    if (!salvos.length) return null;
+    salvos.forEach(({ g }) => { abrigoUnificarListas[g].length = 0; renderAbrigoLista(g); });
+    return () => { salvos.forEach(({ g, itens }) => { abrigoUnificarListas[g].push(...itens); renderAbrigoLista(g); }); };
+  }
+
+  // Roda as ações, atualiza os botões e mostra o aviso com "Desfazer".
+  function tvRodar(acoes, texto) {
+    const desfazeres = acoes.map(f => f()).filter(Boolean);
+    tvLimparAtualizar();
+    if (!desfazeres.length) return false;
+    tvToast(texto, async () => {
+      try { for (const d of desfazeres) await d(); } catch (e) { console.error(e); }
+      tvLimparAtualizar();
+      if (window.lucide) lucide.createIcons();
+    });
+    if (window.lucide) lucide.createIcons();
+    return true;
+  }
+
+  const tvTodosAbrigos = () => abrigoUnificarListas.map((_, g) => g);
+
+  window.anonaLimparPasso = async (n) => {
+    try {
+      if (n === 1) {
+        if (!reports.length) return;
+        const ok = await window.anonaConfirm(
+          `Apagar as ${reports.length} planilha(s) guardada(s) neste aparelho? Se quiser uma cópia, baixe o backup antes. Essa ação não pode ser desfeita.`,
+          { confirmLabel: 'Apagar tudo', cancelLabel: 'Cancelar' });
+        if (!ok) return;
+        safeStorageSet(lsKey(LS_PLANILHAS), '[]');
+        await loadReports();
+        const sel = document.getElementById('reportFileFilter');
+        if (sel) sel.value = '';
+        if (typeof window.loadReportFilterOptions === 'function') await window.loadReportFilterOptions();
+        tvLimparAtualizar();
+      } else if (n === 2) {
+        tvRodar([tvAcaoDivisao], 'Tabela da divisão limpa.');
+      } else if (n === 3) {
+        tvRodar([tvAcaoRecorrentes], 'Planilhas de Recorrentes limpas.');
+      } else if (n === 5) {
+        const q = unificarTotais().arquivos;
+        tvRodar([() => tvAcaoRota(UNIFICAR_BLOCOS.map((_, b) => b))], `${tvPlural(q, 'folha limpa', 'folhas limpas')} da Rota de Visita.`);
+      } else if (n === 6) {
+        const q = abrigoUnificarTotais().arquivos;
+        tvRodar([() => tvAcaoAbrigos(tvTodosAbrigos())], `${tvPlural(q, 'folha limpa', 'folhas limpas')} dos Abrigos.`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Não consegui limpar os arquivos desta seção. Atualize a página e tente de novo.');
+    }
+  };
+
+  window.anonaLimparBloco = (b) => {
+    const q = (unificarListas[b] || []).length;
+    tvRodar([() => tvAcaoRota([b])], `${tvPlural(q, 'folha limpa', 'folhas limpas')} do Bloco ${b + 1}.`);
+  };
+
+  window.anonaLimparAbrigo = (a) => {
+    const grupos = [0, 1, 2].map(k => a * 3 + k).filter(g => g < abrigoUnificarListas.length);
+    const q = grupos.reduce((soma, g) => soma + abrigoUnificarListas[g].length, 0);
+    const nome = (typeof ABRIGO_UNIFICAR_ABRIGOS !== 'undefined' && ABRIGO_UNIFICAR_ABRIGOS[a]) || `abrigo ${a + 1}`;
+    tvRodar([() => tvAcaoAbrigos(grupos)], `${tvPlural(q, 'folha limpa', 'folhas limpas')} de ${nome}.`);
+  };
+
+  // Botão do topo: limpa de uma vez tudo o que é temporário (seções 2, 3, 5 e 6).
+  // As planilhas guardadas da seção 1 não entram — elas têm botão e confirmação próprios.
+  window.anonaLimparTemporarios = () => {
+    tvRodar([tvAcaoDivisao, tvAcaoRecorrentes, () => tvAcaoRota(UNIFICAR_BLOCOS.map((_, b) => b)), () => tvAcaoAbrigos(tvTodosAbrigos())],
+      'Arquivos das seções 2 a 6 limpos.');
+  };
+
+  // Estado dos botões: mostram quanto há para limpar e ficam apagados quando não há nada.
+  function tvLimparAtualizar() {
+    try {
+      const def = (id, n, vazio, cheio) => {
+        const b = document.getElementById(id); if (!b) return;
+        b.disabled = !n; b.setAttribute('aria-disabled', String(!n));
+        const sp = b.querySelector('span'); if (sp) sp.textContent = n ? cheio : vazio;
+      };
+      const comp = window.__comparacaoVolante || {};
+      const n1 = reports.length;
+      const n2 = ultimaDivisaoVolante ? 1 : 0;
+      const n3 = (comp.anterior ? 1 : 0) + (comp.atual ? 1 : 0);
+      const n5 = unificarTotais().arquivos;
+      const n6 = abrigoUnificarTotais().arquivos;
+      def('tvLimpar1', n1, 'Nenhuma planilha guardada', `Apagar ${tvPlural(n1, 'planilha guardada', 'planilhas guardadas')}`);
+      def('tvLimpar2', n2, 'Nenhuma tabela para limpar', 'Limpar a tabela dividida');
+      def('tvLimpar3', n3, 'Nenhuma planilha para limpar', `Limpar ${tvPlural(n3, 'planilha', 'planilhas')}`);
+      def('tvLimpar5', n5, 'Nenhuma folha para limpar', `Limpar ${tvPlural(n5, 'folha', 'folhas')}`);
+      def('tvLimpar6', n6, 'Nenhuma folha para limpar', `Limpar ${tvPlural(n6, 'folha', 'folhas')}`);
+      def('tvLimparTudo', n2 + n3 + n5 + n6, 'Nada para limpar nas seções 2 a 6', 'Limpar os arquivos das seções 2 a 6');
+      unificarListas.forEach((l, b) => { const el = document.getElementById(`tvLimparBloco${b}`); if (el) el.disabled = !l.length; });
+      for (let a = 0; document.getElementById(`tvLimparAbrigo${a}`); a++) {
+        const q = [0, 1, 2].reduce((soma, k) => soma + ((abrigoUnificarListas[a * 3 + k] || []).length), 0);
+        document.getElementById(`tvLimparAbrigo${a}`).disabled = !q;
+      }
+    } catch (e) { /* ainda carregando: tenta de novo no próximo render */ }
+  }
+
+  // As seções 2 e 3 guardam o arquivo depois do envio: atualiza os botões quando o envio termina.
+  ['__handleVolanteUpload', '__handleComparacaoUpload'].forEach(nome => {
+    const orig = window[nome];
+    if (typeof orig !== 'function') return;
+    window[nome] = async function () {
+      try { return await orig.apply(this, arguments); } finally { tvLimparAtualizar(); }
+    };
+  });
+
+  // Privacidade: ao sair da conta (ou por inatividade), os arquivos temporários das seções 2 a 6 saem da memória.
+  window.addEventListener('anona:auth', (e) => {
+    if (e && e.detail && e.detail.logado) return;
+    [tvAcaoDivisao, tvAcaoRecorrentes, () => tvAcaoRota(UNIFICAR_BLOCOS.map((_, b) => b)), () => tvAcaoAbrigos(tvTodosAbrigos())]
+      .forEach(f => { try { f(); } catch (err) { console.warn(err); } });
+    tvLimparAtualizar();
+  });
+
+  tvLimparAtualizar();
 
   // Gera o PDF de UM abrigo por vez (independente dos demais), a pedido do
   // usuário: cada abrigo tem seu próprio botão "Gerar PDF". A primeira
@@ -5057,12 +5301,11 @@ window.AnonaImpressao = (function () {
 
       // Limpa só os arquivos deste abrigo — os demais abrigos continuam
       // com suas folhas, já que cada um é gerado de forma independente.
-      for (let efeitoIdx = 0; efeitoIdx < ABRIGO_UNIFICAR_EFEITOS.length; efeitoIdx++) {
-        abrigoUnificarListas[inicio + efeitoIdx] = [];
-        renderAbrigoLista(inicio + efeitoIdx);
-      }
-
       alert(`PDF do abrigo ${abrigo} gerado e baixado com sucesso!`);
+      if (!tvManter('anonaManterAbrigos')) {
+        const gruposDoAbrigo = ABRIGO_UNIFICAR_EFEITOS.map((_, efeitoIdx) => inicio + efeitoIdx);
+        tvRodar([() => tvAcaoAbrigos(gruposDoAbrigo)], `Folhas de ${abrigo} limpas depois de gerar o PDF.`);
+      }
     } catch (e) {
       console.error(e);
       alert(e && e.message ? e.message : `Não consegui gerar o PDF do abrigo ${abrigo}. Confirme se todos os arquivos são PDFs válidos.`);
@@ -5438,6 +5681,7 @@ window.AnonaImpressao = (function () {
   };
 
   function renderReports() {
+    tvLimparAtualizar();
     const wrap = document.getElementById('reportsList');
     const anoFilterEl = document.getElementById('reportAnoFilter');
     if (!wrap) return;
