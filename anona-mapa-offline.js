@@ -72,6 +72,8 @@
     let v = HW[t.highway][2];
     const m = /^(\d{2,3})(?:\s*km\/h)?$/.exec(String(t.maxspeed || '').trim());
     if (m && v) v = Math.max(3, Math.min(22, +m[1] * 0.75 / 3.6));
+    // chão de terra/areia/cascalho (comum na zona rural e nas bordas de Boa Vista): bem mais devagar, principalmente em via que seria "rápida"
+    if (v && /^(unpaved|dirt|earth|ground|sand|gravel|fine_gravel|compacted|mud|grass|pebblestone)$/.test(String(t.surface || ''))) v = Math.min(v, t.surface === 'compacted' || t.surface === 'fine_gravel' ? 7 : 5);
     return v;
   }
 
@@ -79,14 +81,38 @@
   const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   const ABREV = { av: 'avenida', avd: 'avenida', r: 'rua', tv: 'travessa', trav: 'travessa', pc: 'praca', pca: 'praca', al: 'alameda', rod: 'rodovia', est: 'estrada',
     pres: 'presidente', dr: 'doutor', dra: 'doutora', prof: 'professor', profa: 'professora', cel: 'coronel', gal: 'general', cap: 'capitao', ten: 'tenente',
-    sen: 'senador', dep: 'deputado', eng: 'engenheiro', sta: 'santa', sto: 'santo', gov: 'governador', vereador: 'vereador', ver: 'vereador' };
-  const NUMEXT = { dois: '2', tres: '3', quatro: '4', cinco: '5', seis: '6', sete: '7', oito: '8', nove: '9', dez: '10' };   // "Rua Sete de Setembro" = "Rua 7 de Setembro"
-  const IGNORAR = new Set(['quero', 'gostaria', 'favor', 'por', 'de', 'da', 'do', 'das', 'dos', 'e', 'ir', 'vou', 'para', 'pra', 'ate', 'numero', 'n', 'bairro', 'cep', 'levar', 'leve', 'me', 'navegar', 'destino', 'endereco', 'rota', 'roraima', 'rr', 'brasil', 'no', 'na', 'em']);
+    sen: 'senador', dep: 'deputado', eng: 'engenheiro', sta: 'santa', sto: 'santo', gov: 'governador', ver: 'vereador',
+    mal: 'marechal', brig: 'brigadeiro', maj: 'major', alm: 'almirante', cmte: 'comandante', des: 'desembargador', min: 'ministro', fr: 'frei',
+    jd: 'jardim', jard: 'jardim', conj: 'conjunto', cj: 'conjunto', res: 'residencial', resid: 'residencial', vl: 'vila', lot: 'loteamento', sra: 'senhora' };
+  // Números por extenso (voz e ortografia): "Rua Sete de Setembro" = "Rua 7 de Setembro"; "Treze de Setembro" = "13 de Setembro";
+  // "Trinta e Um de Março" = "31 de Março". "um" sozinho fica como está ("Rua Um"); só vira número depois de vinte/trinta ("vinte e um").
+  const NUMEXT = { primeiro: '1', dois: '2', tres: '3', quatro: '4', cinco: '5', seis: '6', sete: '7', oito: '8', nove: '9', dez: '10', onze: '11', doze: '12',
+    treze: '13', catorze: '14', quatorze: '14', quinze: '15', dezesseis: '16', dezessete: '17', dezoito: '18', dezenove: '19', vinte: '20', trinta: '30' };
+  const UNIDADE = { um: 1, dois: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9 };
+  function numerosPorExtenso(t) {      // junta "vinte e cinco" → "25" antes de tirar as palavras de ligação
+    const o = [];
+    for (let i = 0; i < t.length; i++) {
+      const d = t[i];
+      if ((d === 'vinte' || d === 'trinta') && t[i + 1] === 'e' && UNIDADE[t[i + 2]]) { o.push(String(NUMEXT[d] * 1 + UNIDADE[t[i + 2]])); i += 2; }
+      else o.push(d);
+    }
+    return o;
+  }
+  // Siglas de lugares que as pessoas dizem/digitam em Boa Vista ("HGR", "UBS", "CRAS"...): valem para a busca de LOCAIS (nome do local e consulta são expandidos igual).
+  const SIGLAS = { hgr: 'hospital geral roraima', hmi: 'hospital materno infantil', hcl: 'hospital coronel mota', ufrr: 'universidade federal roraima', ifrr: 'instituto federal roraima',
+    uerr: 'universidade estadual roraima', ubs: 'unidade basica saude', upa: 'unidade pronto atendimento', cras: 'centro referencia assistencia social',
+    creas: 'centro referencia especializado assistencia social', caps: 'centro atencao psicossocial', emef: 'escola municipal ensino fundamental',
+    emei: 'escola municipal educacao infantil', cmei: 'centro municipal educacao infantil', inss: 'instituto nacional seguro social', tjrr: 'tribunal justica roraima',
+    mprr: 'ministerio publico roraima', detran: 'departamento transito', semsa: 'secretaria municipal saude', semads: 'secretaria municipal desenvolvimento assistencia social',
+    sesc: 'servico social comercio', senac: 'servico nacional aprendizagem comercial', senai: 'servico nacional aprendizagem industrial', rodoviaria: 'rodoviaria terminal' };
+  const IGNORAR = new Set(['quero', 'gostaria', 'favor', 'por', 'de', 'da', 'do', 'das', 'dos', 'e', 'ir', 'vou', 'para', 'pra', 'ate', 'numero', 'n', 'bairro', 'cep', 'levar', 'leve', 'me', 'navegar', 'destino', 'endereco', 'rota', 'roraima', 'rr', 'brasil', 'no', 'na', 'em', 'qual', 'onde', 'fica']);
   const SOFT = new Set(['boa', 'vista']);
   const GENERICAS = new Set(['rua', 'avenida', 'travessa', 'alameda', 'praca', 'estrada', 'rodovia', 'beco', 'vila', 'via', 'largo', 'passagem']);
-  const tokens = (s) => { const t = norm(s).split(' ').filter(Boolean).map(x => ABREV[x] || NUMEXT[x] || x); const u = t.filter(x => !IGNORAR.has(x)); return u.length ? u : t; };
+  const tokens = (s) => { const t = numerosPorExtenso(norm(s).split(' ').filter(Boolean)).map(x => ABREV[x] || NUMEXT[x] || x); const u = t.filter(x => !IGNORAR.has(x)); return u.length ? u : t; };
+  const tokensLocal = (s) => { const o = []; for (const t of tokens(s)) { if (SIGLAS[t]) { o.push(t); o.push(...SIGLAS[t].split(' ')); } else o.push(t); } return o; };
   const ehNum = (t) => /^\d+$/.test(t);
   const requerido = (t) => !GENERICAS.has(t) && !SOFT.has(t);
+  const nomeRequerido = (t) => requerido(t) && !ehNum(t);          // palavra do nome (número sozinho não identifica rua)
   function lev(a, b) {
     const m = a.length, n = b.length; let p = new Array(n + 1), q = new Array(n + 1);
     for (let j = 0; j <= n; j++) p[j] = j;
@@ -121,7 +147,7 @@
     const a = t.amenity || '';
     if (t.healthcare || /^(clinic|hospital|doctors|dentist|pharmacy)$/.test(a)) return 's';
     if (/^(school|kindergarten|college|university|library)$/.test(a)) return 'e';
-    if (/^(social_facility|townhall|community_centre|courthouse|police|fire_station)$/.test(a) || t.office === 'government') return 'g';
+    if (/^(social_facility|townhall|community_centre|courthouse|police|fire_station|post_office|nursing_home|childcare)$/.test(a) || t.office === 'government') return 'g';
     if (t.shop || /^(bank|marketplace|fuel|restaurant)$/.test(a)) return 'c';
     return 'o';
   }
@@ -155,11 +181,20 @@
         const la = e.lat !== undefined ? e.lat : e.center && e.center.lat, lo = e.lon !== undefined ? e.lon : e.center && e.center.lon;
         if (!isFinite(la) || !isFinite(lo)) continue;
         const t = e.tags;
-        if (/^(suburb|neighbourhood|quarter|city_district|village|hamlet|town|locality)$/.test(t.place || '') && t.name) {
+        const ehBairro = /^(suburb|neighbourhood|quarter|city_district|village|hamlet|town|locality)$/.test(t.place || '') || (t.boundary === 'administrative' && t.admin_level === '10');
+        if (ehBairro && t.name) {
           const nk = norm(t.name); if (!nomesBairro.has(nk)) { nomesBairro.add(nk); bairros.push({ n: t.name, lat: la, lng: lo }); }
         }
-        if (t['addr:street'] && t['addr:housenumber']) enderecos.push({ r: t['addr:street'], n: String(t['addr:housenumber']), lat: la, lng: lo });
-        if (t.name && (t.amenity || t.healthcare || t.shop || t.leisure || t.tourism || t.office === 'government') && !t.place) locais.push({ n: t.name, lat: la, lng: lo, k: catLocal(t) });
+        if (t['addr:street'] && t['addr:housenumber']) {
+          const e1 = { r: t['addr:street'], n: String(t['addr:housenumber']), lat: la, lng: lo }, bb = t['addr:suburb'] || t['addr:neighbourhood'] || t['addr:quarter'];
+          if (bb) e1.b = String(bb);      // bairro escrito no próprio endereço: é o dado mais confiável para dizer em que bairro um ponto está
+          enderecos.push(e1);
+        }
+        if (t.name && (t.amenity || t.healthcare || t.shop || t.leisure || t.tourism || t.office === 'government') && !t.place && !t.boundary) {
+          const l1 = { n: t.name, lat: la, lng: lo, k: catLocal(t) }, ap = t.short_name || t.alt_name;
+          if (ap && norm(ap) !== norm(t.name)) l1.a = String(ap).slice(0, 80);       // "HGR" para o Hospital Geral de Roraima
+          locais.push(l1);
+        }
       }
     }
     function finalizar(opc) {
@@ -172,7 +207,17 @@
   // ---------- motor ----------
   function criarMotor(p) {
     const nlat = p.nlat, nlng = p.nlng, sa = p.segs.a, sb = p.segs.b, sw = p.segs.w, ways = p.ruas, S = sa.length, N = nlat.length;
-    const lugares = p.bairros || [], ends = p.enderecos || [], locs = p.locais || [], AREA = p.ampliada ? AMPLIADA : BBOX;
+    const ends = p.enderecos || [], locs = p.locais || [], AREA = p.ampliada ? AMPLIADA : BBOX;
+    // Bairros: os pontos/limites do OpenStreetMap + os bairros escritos nos endereços (addr:suburb), no centro dos endereços de cada um.
+    const lugares = (p.bairros || []).slice(), jaTem = new Map(lugares.map(b => [norm(b.n), b]));
+    {
+      const soma = new Map();
+      for (const a of ends) { if (!a.b) continue; const k = norm(a.b); if (!k) continue; let o = soma.get(k); if (!o) soma.set(k, o = { n: String(a.b), la: 0, lo: 0, c: 0 }); o.la += a.lat; o.lo += a.lng; o.c++; }
+      for (const [k, o] of soma) if (!jaTem.has(k) && o.c >= 3) { const b = { n: o.n, lat: o.la / o.c, lng: o.lo / o.c }; lugares.push(b); jaTem.set(k, b); }
+    }
+    // grade dos endereços que dizem o bairro: o bairro de um ponto = o das casas vizinhas (até 200 m), antes de recorrer ao centro do bairro mais próximo
+    const gradeB = new Map(), CB = 0.002, chB = (la, lo) => Math.floor((la + 90) / CB) * 400000 + Math.floor((lo + 180) / CB);
+    for (const a of ends) if (a.b) { const k = chB(a.lat, a.lng); let l = gradeB.get(k); if (!l) gradeB.set(k, l = []); l.push(a); }
     const slen = new Float32Array(S);
     for (let s = 0; s < S; s++) slen[s] = dist(nlat[sa[s]], nlng[sa[s]], nlat[sb[s]], nlng[sb[s]]);
 
@@ -422,11 +467,20 @@
     }
     const listaRuas = [...ruasPorNome.values()];
     const bairrosIdx = lugares.map(b => ({ b, toks: tokens(b.n) }));
-    const locaisIdx = locs.map(l => ({ l, toks: tokens(l.n) }));
+    const locaisIdx = locs.map(l => ({ l, toks: tokensLocal(l.n + (l.a ? ' ' + l.a : '')) }));
     const endsPorRua = new Map();
     for (const a of ends) { const k = tokens(a.r).join(' '); let l = endsPorRua.get(k); if (!l) endsPorRua.set(k, l = []); l.push({ num: parseInt(a.n, 10), lat: a.lat, lng: a.lng }); }
 
     function bairroPerto(lat, lng) {
+      if (gradeB.size) {
+        let ma = null, da = 200;
+        const y0 = Math.floor((lat + 90) / CB), x0 = Math.floor((lng + 180) / CB);
+        for (let y = y0 - 1; y <= y0 + 1; y++) for (let x = x0 - 1; x <= x0 + 1; x++) {
+          const l = gradeB.get(y * 400000 + x); if (!l) continue;
+          for (const a of l) { const d = dist(lat, lng, a.lat, a.lng); if (d < da) { da = d; ma = a; } }
+        }
+        if (ma) return jaTem.get(norm(ma.b)) || { n: ma.b, lat: ma.lat, lng: ma.lng };
+      }
       let m = null, dm = Infinity;
       for (const b of lugares) { const d = dist(lat, lng, b.lat, b.lng); if (d < dm) { dm = d; m = b; } }
       return m;
@@ -503,7 +557,7 @@
       for (let i = 1; i >= 0; i--) {                         // bairro citado em qualquer um dos lados ("... com Rua B, Calungá")
         const b = achaBairro(partes[i]); if (!b) continue;
         const resto = partes[i].filter((t, k) => !b.usados.has(k));
-        if (resto.some(requerido)) { bpt = bpt || b.bi.b; partes[i] = resto; }
+        if (resto.some(nomeRequerido)) { bpt = bpt || b.bi.b; partes[i] = resto; }
       }
       const A = ruasQue(partes[0]).slice(0, 4), B = ruasQue(partes[1]).slice(0, 4), itens = [];
       for (const ra of A) for (const rb of B) {
@@ -527,7 +581,7 @@
       const cz = cruzamentos(texto, max, perto); if (cz && cz.length) return cz;
       const toks = tokens(texto); if (!toks.length) return [];
       let b = achaBairro(toks), rest = toks;
-      if (b) { rest = toks.filter((t, i) => !b.usados.has(i)); if (!rest.some(requerido)) { rest = toks; b = null; } }
+      if (b) { rest = toks.filter((t, i) => !b.usados.has(i)); if (!rest.some(nomeRequerido)) { rest = toks; b = null; } }   // rua com o mesmo nome do bairro ("Rua Pricumã, 12"): sobra só o número, então não tira o bairro
       const bpt = b ? b.bi.b : perto, itens = [];      // sem bairro citado, usa a posição de referência para escolher entre ruas de mesmo nome
       if (rest.some(requerido)) {
         const dig = rest.map((t, i) => ehNum(t) && t.length <= 5 ? i : -1).filter(i => i >= 0);
@@ -541,7 +595,7 @@
           }
         }
         if (!feito) ruasQue(rest).forEach(m => itens.push(Object.assign(itemDeRua(m.r, '', bpt), { _s: m.score })));
-        const req = rest.filter(requerido);
+        const req = rest.flatMap(t => SIGLAS[t] ? [t].concat(SIGLAS[t].split(' ')) : [t]).filter(requerido);
         for (const li of locaisIdx) if (req.every(q => li.toks.some(t => casaToken(q, t)))) itens.push({ lat: li.l.lat, lng: li.l.lng, rotulo: rot(li.l.n, li.l.lat, li.l.lng), tipo: 'local', exato: false, aviso: '', _s: 0.5 + 0.5 * Math.min(1, req.length / li.toks.length) });
       }
       const reqT = toks.filter(requerido);
@@ -586,8 +640,9 @@
   const consultaExtras = () => {
     const bx = caixa(BBOX.sul, BBOX.oeste, BBOX.norte, BBOX.leste);
     return '[out:json][timeout:120];(nwr["place"~"^(suburb|neighbourhood|quarter|city_district|village|hamlet|town|locality)$"]["name"]' + bx +
+      ';rel["boundary"="administrative"]["admin_level"="10"]["name"]' + bx +
       ';nwr["addr:housenumber"]["addr:street"]' + bx +
-      ';nwr["name"]["amenity"~"^(school|kindergarten|college|university|library|clinic|hospital|doctors|dentist|pharmacy|social_facility|townhall|courthouse|police|fire_station|community_centre|bank|marketplace|place_of_worship|bus_station|fuel)$"]' + bx +
+      ';nwr["name"]["amenity"~"^(school|kindergarten|college|university|library|clinic|hospital|doctors|dentist|pharmacy|social_facility|townhall|courthouse|police|fire_station|community_centre|bank|marketplace|place_of_worship|bus_station|fuel|post_office|childcare|nursing_home|theatre|cinema|arts_centre)$"]' + bx +
       ';nwr["name"]["healthcare"]' + bx +
       ';nwr["name"]["shop"~"^(supermarket|mall|department_store)$"]' + bx +
       ';nwr["name"]["leisure"~"^(park|stadium|sports_centre)$"]' + bx +
@@ -608,8 +663,9 @@
   const dorme = (ms) => new Promise(r => setTimeout(r, ms));
 
   // Guarda só o que o pacote usa: pedaços interrompidos ocupam bem menos espaço.
-  const TAGS_VIA = ['highway', 'name', 'ref', 'oneway', 'junction', 'maxspeed', 'access', 'motorcar', 'motor_vehicle', 'vehicle', 'foot', 'bicycle', 'service'];
-  const TAGS_EXTRA = ['place', 'name', 'addr:street', 'addr:housenumber', 'amenity', 'healthcare', 'shop', 'leisure', 'tourism', 'office'];
+  const TAGS_VIA = ['highway', 'name', 'ref', 'oneway', 'junction', 'maxspeed', 'access', 'motorcar', 'motor_vehicle', 'vehicle', 'foot', 'bicycle', 'service', 'surface'];
+  const TAGS_EXTRA = ['place', 'name', 'short_name', 'alt_name', 'addr:street', 'addr:housenumber', 'addr:suburb', 'addr:neighbourhood', 'addr:quarter', 'boundary', 'admin_level',
+    'amenity', 'healthcare', 'shop', 'leisure', 'tourism', 'office'];
   function enxuto(e) {
     if (!e || !e.tags) return null;
     const lista = e.type === 'way' && e.geometry ? TAGS_VIA : TAGS_EXTRA, tags = {};
@@ -726,7 +782,7 @@
   const apagar = () => ide('readwrite', (st) => { st.delete('pacote'); st.delete('meta'); st.delete(IDBKeyRange.bound('parcial:', 'parcial:\uffff')); st.delete('parcial-info'); });
 
   const api = { BBOX, AMPLIADA, parciais, baixar, criarMotor, novoConstrutor, carregar, apagar, lerMeta, guardar,
-    _teste: { rumo, angulo, modDe, acessoVia, oneway, tokens, casaToken, fon, enxuto, catLocal } };
+    _teste: { rumo, angulo, modDe, acessoVia, oneway, tokens, tokensLocal, casaToken, fon, enxuto, catLocal, velCarro } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AnonaMapaOffline = api;
 })(typeof window !== 'undefined' ? window : this);
