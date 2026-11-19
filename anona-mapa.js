@@ -197,7 +197,11 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
   }
   async function buscarEndereco(q) {
     if (usarOffline()) return buscarOffline(q);
-    try { return await buscarOnline(q); }
+    try {
+      const rs = await buscarOnline(q);
+      if (!rs.length && motor) { const off = buscarOffline(q); if (off.length) return off; }   // o Nominatim não achou: o mapa offline entende abreviação, fonética e nome por extenso
+      return rs;
+    }
     catch (e) { if (motor && e && e.rede) return buscarOffline(q); throw e; }
   }
   async function buscarCoordenada(lat, lng) {
@@ -271,7 +275,7 @@ const LIMITE_ROTA_FORA = 120;                       // metros: acima disso, no m
         const r = await buscarEndereco(PARTIDA.consulta);
         if (!r.length) throw new Error('Não consegui localizar o endereço de partida no mapa. Use "Outro endereço".');
         const achada = { lat: +r[0].lat, lng: +r[0].lon, rotulo: PARTIDA.rotulo };
-        if (r[0]._rotulo) return achada;     // vindo do mapa offline (meio da rua, aproximado): não fixa nem guarda
+        if (r[0]._rotulo || r[0]._aviso) return achada;     // aproximado (mapa offline ou rua sem o número 193): usa nesta rota, mas não fixa nem guarda para sempre
         partidaCache = achada; gravarPref(PARTIDA_CHAVE, JSON.stringify({ lat: achada.lat, lng: achada.lng }));
       }
       return partidaCache;
