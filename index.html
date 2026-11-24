@@ -3142,6 +3142,33 @@ window.AnonaImpressao = (function () {
       }
     }
 
+    // Remove integrantes DUPLICADOS: a planilha pode trazer o mesmo integrante mais de uma vez na mesma família
+    // (ex.: o 1º integrante repetido no fim do grupo), e ele saía dobrado no PDF e inflava o "Total de registros".
+    // Duplicado = mesma família (NIS/CPF/nome do responsável) + mesmo integrante (NIS; sem NIS, o nome).
+    // Linhas sem NIS nem nome de integrante nunca são descartadas. Fica a 1ª ocorrência.
+    {
+      const nh = headersFinais.map(h => normalizeText(h));
+      const iNisResp = nh.findIndex(h => h.includes('nis') && h.includes('responsavel'));
+      const iCpf = nh.findIndex(h => h.includes('cpf'));
+      const iNomeResp = nh.findIndex(h => h.includes('nome') && h.includes('responsavel'));
+      const iNisInt = nh.findIndex(h => h.includes('nis') && h.includes('integrante'));
+      const iNomeInt = nh.findIndex(h => h.includes('nome') && h.includes('integrante'));
+      const soDigitos = v => String(v == null ? '' : v).replace(/\D+/g, '');
+      if (iNisInt >= 0 || iNomeInt >= 0) {
+        const vistos = new Set();
+        for (let k = 0; k < dataRowsFinais.length; k++) {
+          const r = dataRowsFinais[k];
+          const fam = relatorioIndividualChaveFamilia(r, iNisResp, iCpf, iNomeResp) || ('linha' + k);
+          const nisInt = iNisInt >= 0 ? soDigitos(r[iNisInt]) : '';
+          const nomeInt = iNomeInt >= 0 ? normalizeText(r[iNomeInt]) : '';
+          const idInt = nisInt || nomeInt;
+          if (!idInt) continue;
+          const chave = fam + '|' + idInt;
+          if (vistos.has(chave)) { dataRowsFinais.splice(k, 1); k--; } else vistos.add(chave);
+        }
+      }
+    }
+
     // Guarda o texto do "Mês da Repercussão" separadamente (mesmo que essa
     // coluna não apareça mais na tabela do PDF), para continuar exibindo
     // "Repercussão de Setembro/2026" no título e no cabeçalho do relatório.
