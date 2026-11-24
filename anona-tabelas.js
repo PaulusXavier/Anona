@@ -73,6 +73,23 @@
   // Mesma regra do cfFmt() da tela: 1 casa decimal, MAS se o arredondamento "encostar" em 60, 75 ou 100 sem o valor real
   // ter chegado lá (74,96% virando "75,0%" e, ao lado, "Baixa frequência"), mostra 2 casas sem arredondar para o limite.
   // Antes a tela mostrava 74,96% e a impressão/CSV/cópia mostravam 75,0% para o mesmo mês.
+  // Relatório bruto do MDS: além da aba consolidada (todas as famílias), vem UMA ABA POR CRAS com as
+  // mesmas famílias repetidas. Ler todas as abas dobrava as famílias (ex.: 2040 integrantes + 1874 repetidos).
+  // Recebe [{nome, nis:[NIS dos integrantes]}] na ordem das abas e devolve os NOMES das abas redundantes —
+  // as que têm todos os integrantes já presentes em outra aba que fica (a maior; em empate, a primeira).
+  // Abas sem NIS de integrante (resumos etc.) e abas com dados próprios (ex.: divisão por técnico) nunca saem.
+  function abasRedundantes(abas) {
+    const dig = v => String(v == null ? '' : v).replace(/\D/g, '');
+    const conj = (abas || []).map(a => ({ nome: a.nome, set: new Set((a.nis || []).map(dig).filter(Boolean)) }));
+    const fora = new Set();
+    conj.forEach((a, i) => {
+      if (!a.set.size) return;
+      const coberta = conj.some((b, j) => j !== i && !fora.has(b.nome) && (b.set.size > a.set.size || (b.set.size === a.set.size && j < i)) && [...a.set].every(n => b.set.has(n)));
+      if (coberta) fora.add(a.nome);
+    });
+    return [...fora];
+  }
+
   function fmtNum(n) {
     if (typeof n !== 'number' || !Number.isFinite(n)) return '';      // antes saía "NaN"/"Infinity" na folha, no CSV e na cópia
     const r1 = Math.round(n * 10) / 10;
@@ -540,7 +557,7 @@
   }
 
   root.AnonaTabelas = {
-    lerInteiro, minPresencas, avaliar, panorama, fmtPct,
+    lerInteiro, minPresencas, avaliar, panorama, fmtPct, abasRedundantes,
     csv, tabelaHTML, tabelaImpressao, textoParaPdf, tsv, copiarTabela,
     estilizar, destacarEfeitos, ajustarMedidas, alturaTexto, linhasDoTexto, larguraTexto, fmtNum, abaDeDados, abaResumoComFormulas, celulaFormula, escrever, escreverPolido, polirXlsx, bytesParaBase64, baixarBlob, MIME_XLSX, nomeArquivoSeguro, clarear,
     panoramaWorkbook, panoramaParaMatriz
