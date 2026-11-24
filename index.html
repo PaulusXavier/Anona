@@ -2159,6 +2159,22 @@ window.AnonaImpressao = (function () {
     return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
   }
 
+  // Abas do relatório bruto do MDS que valem a pena ler: tira as que repetem famílias já presentes em outra
+  // aba (a aba consolidada + uma aba por CRAS traziam cada família duas vezes). `nomes` limita a lista.
+  function abasRepercussaoUteis(wb, nomes) {
+    const lista = (nomes && nomes.length) ? nomes : wb.SheetNames;
+    if (lista.length < 2 || !window.AnonaTabelas || !AnonaTabelas.abasRedundantes) return lista.slice();
+    const abas = lista.map(nome => {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[nome], {header:1, defval:''});
+      const hi = rows.slice(0, 25).findIndex(r => r.some(v => normalizeText(v) === 'efeito'));
+      if (hi < 0) return { nome, nis: [] };
+      const idx = rows[hi].findIndex(v => { const l = normalizeText(v); return l.includes('nis') && l.includes('integrante'); });
+      return { nome, nis: idx < 0 ? [] : rows.slice(hi + 1).map(r => r[idx]) };
+    });
+    const fora = new Set(AnonaTabelas.abasRedundantes(abas));
+    return lista.filter(n => !fora.has(n));
+  }
+
   // Cor da guia de cada técnico/equipe: a MESMA em todas as planilhas (organizada, filtrada...). A planilha filtrada tentava ler
   // a cor da planilha original, mas a biblioteca não devolve esse dado — todas as guias saíam azuis.
   const CORES_ABAS_TECNICO = {
@@ -2202,7 +2218,8 @@ window.AnonaImpressao = (function () {
     const bairrosNaoMapeados = new Map();
     let rawHeader = null;
     const informacoesRelatorio = ['CRAS Cristiana Vicente Nunes'];
-    source.SheetNames.forEach(sheetName => {
+    const nisVistos = new Set(); // mesmo integrante em duas abas (consolidada x CRAS) entra uma vez só
+    abasRepercussaoUteis(source).forEach(sheetName => {
       const rows = XLSX.utils.sheet_to_json(source.Sheets[sheetName], {header:1, defval:''});
       const headerIndex = rows.findIndex(row => {
         const labels = row.map(v => normalizeText(v));
@@ -2219,6 +2236,7 @@ window.AnonaImpressao = (function () {
       const bairroIdx = h.findIndex(v => normalizeText(v) === 'bairro');
       const responsavelIdx = h.findIndex(v => normalizeText(v) === 'nome do responsavel familiar');
       const efeitoIdx = h.findIndex(v => normalizeText(v) === 'efeito');
+      const nisIntegIdx = h.findIndex(v => { const l = normalizeText(v); return l.includes('nis') && l.includes('integrante'); });
       let currentBairro = '';
       let currentResponsavel = '';
       let currentEfeito = '';
@@ -2266,6 +2284,8 @@ window.AnonaImpressao = (function () {
           return;
         }
         const [team, formacao, bairroNome] = config;
+        const nisInteg = nisIntegIdx >= 0 ? String(fullRow[nisIntegIdx] || '').replace(/\D/g, '') : '';
+        if (nisInteg) { if (nisVistos.has(nisInteg)) return; nisVistos.add(nisInteg); }
         if (!groups.has(team)) groups.set(team, {rows:[], bairros:new Set(), formacao});
         const g = groups.get(team);
         g.rows.push([bairroNome, team, formacao, ...fullRow]);
@@ -2730,7 +2750,7 @@ window.AnonaImpressao = (function () {
     // é a fonte confiável de quem é o técnico responsável, porque a coluna
     // "Técnico/equipe" das planilhas do Território Volante só traz o valor
     // genérico "Território Volante" / "Equipe volante" em todas as linhas.
-    const abasComDados = wb.SheetNames.filter(sn => !normalizeText(sn).includes('resumo'));
+    const abasComDados = abasRepercussaoUteis(wb).filter(sn => !normalizeText(sn).includes('resumo'));
     const dividioPorTecnico = abasComDados.length > 1;
     abasComDados.forEach(sheetName => {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''})
@@ -3056,7 +3076,7 @@ window.AnonaImpressao = (function () {
       return headerIndexGlobal.get(norm);
     }
 
-    const sheetNames = (sheetNamesFiltro && sheetNamesFiltro.length) ? sheetNamesFiltro : wb.SheetNames;
+    const sheetNames = abasRepercussaoUteis(wb, sheetNamesFiltro);
     sheetNames.forEach(sheetName => {
       if (normalizeText(sheetName).startsWith('resumo')) return;
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:''});
@@ -4139,7 +4159,7 @@ window.AnonaImpressao = (function () {
       // Território Volante) e gera um PDF separado para cada uma — em vez
       // de só um relatório combinado (comportamento antigo, que sempre
       // saía no nome de uma única pessoa).
-      const nomesAbas = wb.SheetNames.filter(nome => !normalizeText(nome).startsWith('resumo'));
+      const nomesAbas = abasRepercussaoUteis(wb).filter(nome => !normalizeText(nome).startsWith('resumo'));
       const abasValidas = nomesAbas
         .map(nome => ({ nome, dados: relatorioIndividualExtrairDadosDoWorkbook(wb, [nome]) }))
         .filter(item => item.dados && item.dados.rows.length);
