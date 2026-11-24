@@ -2165,7 +2165,7 @@ window.AnonaImpressao = (function () {
     'Resumo do território': '0B2F7A',
     'Fernanda Gomes': '159947',
     'Cléo Sousa': '7C3AED',
-    'Bárbara Parente': 'DB2777',
+    'Marina Silvestre': 'DB2777',
     'Susy Andrade': 'D97706',
     'Paloma de Assis': '0891B2',
     'Rafaela Garcia': '4F46E5',
@@ -2180,9 +2180,9 @@ window.AnonaImpressao = (function () {
       'CAIMBE':['Fernanda Gomes','Psicóloga','Caimbé'],
       'LIBERDADE':['Cléo Sousa','Assistente Social','Liberdade'],
       'PRICUMA':['Cléo Sousa','Assistente Social','Pricumã'],
-      'CAMBARA':['Bárbara Parente','Assistente Social','Cambará'],
-      'OLIMPICO':['Bárbara Parente','Assistente Social','Olímpico'],
-      'TANCREDO NEVES':['Bárbara Parente','Assistente Social','Tancredo Neves'],
+      'CAMBARA':['Marina Silvestre','Assistente Social','Cambará'],
+      'OLIMPICO':['Marina Silvestre','Assistente Social','Olímpico'],
+      'TANCREDO NEVES':['Marina Silvestre','Assistente Social','Tancredo Neves'],
       'CENTENARIO':['Susy Andrade','Pedagoga','Centenário'],
       'NOVA CANAA':['Susy Andrade','Pedagoga','Nova Canaã'],
       'CINTURAO VERDE':['Paloma de Assis','Assistente Social','Cinturão Verde'],
@@ -2260,7 +2260,7 @@ window.AnonaImpressao = (function () {
         let config = mapaBairros[key];
         if (!config && key.includes('ARACELI') && key.includes('SOUTO')) config = ['Território Volante','Equipe volante','Professora Araceli Souto Maior'];
         if (!config && key.includes('PROF') && key.includes('ARACEL')) config = ['Território Volante','Equipe volante','Professora Araceli Souto Maior'];
-        if (!config && key.includes('TANCREDO')) config = ['Bárbara Parente','Assistente Social','Tancredo Neves'];
+        if (!config && key.includes('TANCREDO')) config = ['Marina Silvestre','Assistente Social','Tancredo Neves'];
         if (!config) {
           bairrosNaoMapeados.set(currentBairro, (bairrosNaoMapeados.get(currentBairro) || 0) + 1);
           return;
@@ -2286,7 +2286,7 @@ window.AnonaImpressao = (function () {
       let clean=base,n=2; while(used.has(clean.toLowerCase())) clean=limpar(base.slice(0,28)+' '+n++);
       used.add(clean.toLowerCase()); return clean;
     };
-    const ordemTecnicos = ['Fernanda Gomes','Cléo Sousa','Bárbara Parente','Susy Andrade','Paloma de Assis','Rafaela Garcia','Território Volante'];
+    const ordemTecnicos = ['Fernanda Gomes','Cléo Sousa','Marina Silvestre','Susy Andrade','Paloma de Assis','Rafaela Garcia','Território Volante'];
     const gruposOrdenados = [...groups.entries()].sort((a,b) => ordemTecnicos.indexOf(a[0]) - ordemTecnicos.indexOf(b[0]));
     const summary = [['Técnico/equipe','Formação','Bairros agrupados','Nº de bairros','Registros no relatório']];
     gruposOrdenados.forEach(([team,g]) => {
@@ -2346,7 +2346,7 @@ window.AnonaImpressao = (function () {
     const coresResumo = {
       'Fernanda Gomes': 'E8F5E9',
       'Cléo Sousa': 'F3E8FF',
-      'Bárbara Parente': 'FCE7F3',
+      'Marina Silvestre': 'FCE7F3',
       'Susy Andrade': 'FFF3E0',
       'Paloma de Assis': 'E0F7FA',
       'Rafaela Garcia': 'E8EAF6',
