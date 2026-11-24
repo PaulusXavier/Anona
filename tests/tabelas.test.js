@@ -22,6 +22,24 @@ assert.strictEqual(T.avaliar(22, 23, 75).estado, 'erro');
 assert.strictEqual(T.avaliar(0, 1, 75).estado, 'sem-dias');
 assert.strictEqual(T.avaliar(22, NaN, 75).estado, 'vazio');
 
+// abas redundantes do relatório bruto do MDS (consolidada + uma aba por CRAS)
+{
+  const A = [
+    { nome: 'Consolidada', nis: ['1', '2', '3', '4', '5', '6'] },
+    { nome: 'CRAS A', nis: ['2', '3'] },
+    { nome: 'CRAS B', nis: ['4', '5'] },
+    { nome: 'Plan9', nis: [] }
+  ];
+  assert.deepStrictEqual(T.abasRedundantes(A).sort(), ['CRAS A', 'CRAS B']);
+  // abas com integrantes próprios (divisão por técnico) nunca saem
+  assert.deepStrictEqual(T.abasRedundantes([{ nome: 'Ana', nis: ['1', '2'] }, { nome: 'Bia', nis: ['3'] }]), []);
+  // abas idênticas: fica a primeira
+  assert.deepStrictEqual(T.abasRedundantes([{ nome: 'X', nis: ['1'] }, { nome: 'Y', nis: ['1'] }]), ['Y']);
+  // CRAS com integrante que não está na consolidada: não some (perderia dado)
+  assert.deepStrictEqual(T.abasRedundantes([{ nome: 'Cons', nis: ['1', '2'] }, { nome: 'CRAS', nis: ['2', '9'] }]), []);
+  console.log('ok abas redundantes');
+}
+
 // panorama
 const PER = [{ nome: 'p1', meses: [2, 3] }, { nome: 'p2', meses: [4, 5] }];
 let p = T.panorama([{ mes: 2, dias: 18, faltas: 2 }, { mes: 3, dias: 22, faltas: 8 }, { mes: 4, dias: 20, faltas: '' }, { mes: 5, dias: 21, faltas: 1 }], PER, 75);
